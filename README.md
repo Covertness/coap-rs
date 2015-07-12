@@ -2,6 +2,8 @@
 
 A [Constrained Application Protocol(CoAP)](https://tools.ietf.org/html/rfc7252) library implemented in Rust.
 
+[Documentation](http://covertness.github.io/coap-rs/coap/index.html)
+
 ## Installation
 
 First add this to your `Cargo.toml`:
