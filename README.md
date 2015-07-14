@@ -2,7 +2,7 @@
 
 [![crates.io](http://meritbadge.herokuapp.com/coap)](https://crates.io/crates/coap)
 [![Travis Build Status](https://travis-ci.org/Covertness/coap-rs.svg?branch=master)](https://travis-ci.org/Covertness/coap-rs)
-[![Windows Build Status]()](https://ci.appveyor.com/project/Covertness/coap-rs)
+[![Windows Build Status](https://ci.appveyor.com/api/projects/status/ic36jdu4xy6doc59?svg=true)](https://ci.appveyor.com/project/Covertness/coap-rs)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 A [Constrained Application Protocol(CoAP)](https://tools.ietf.org/html/rfc7252) library implemented in Rust.
