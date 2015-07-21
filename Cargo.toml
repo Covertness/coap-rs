@@ -13,3 +13,4 @@ keywords = ["CoAP"]
 bincode = "0.3.0"
 rustc-serialize = "0.3"
 mio = "0.3.7"
+threadpool = "0.1"

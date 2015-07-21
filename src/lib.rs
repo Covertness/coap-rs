@@ -78,6 +78,7 @@
 extern crate bincode;
 extern crate rustc_serialize;
 extern crate mio;
+extern crate threadpool;
 
 pub use server::CoAPServer;
 pub use client::CoAPClient;
