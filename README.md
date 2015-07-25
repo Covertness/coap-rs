@@ -1,7 +1,8 @@
 # coap-rs
 
-[![crates.io](http://meritbadge.herokuapp.com/coap)](https://crates.io/crates/coap)
 [![Travis Build Status](https://travis-ci.org/Covertness/coap-rs.svg?branch=master)](https://travis-ci.org/Covertness/coap-rs)
+![Downloads](https://img.shields.io/crates/d/coap.svg?style=flat)
+[![crates.io](http://meritbadge.herokuapp.com/coap)](https://crates.io/crates/coap)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/ic36jdu4xy6doc59?svg=true)](https://ci.appveyor.com/project/Covertness/coap-rs)
 [![Coverage Status](https://coveralls.io/repos/Covertness/coap-rs/badge.svg?branch=master&service=github)](https://coveralls.io/github/Covertness/coap-rs?branch=master)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
@@ -16,7 +17,7 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.1.0"
+coap = "0.1.1"
 ```
 
 Then, add this to your crate root:
