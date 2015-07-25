@@ -9,6 +9,7 @@ addons:
 
 # run builds for both all the trains
 rust:
+  - nightly
   - beta
   - stable
 
@@ -23,7 +24,7 @@ script:
   - |
       travis-cargo build &&
       travis-cargo test &&
-      travis-cargo bench &&
+      travis-cargo --only nightly bench &&
       travis-cargo --only stable doc
 after_success:
   # upload the documentation from the build with beta (automatically only actually
