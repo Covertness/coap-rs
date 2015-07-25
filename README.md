@@ -6,7 +6,7 @@
 [![Coverage Status](https://coveralls.io/repos/Covertness/coap-rs/badge.svg?branch=master&service=github)](https://coveralls.io/github/Covertness/coap-rs?branch=master)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-A [Constrained Application Protocol(CoAP)](https://tools.ietf.org/html/rfc7252) library implemented in Rust.
+A fast and stable [Constrained Application Protocol(CoAP)](https://tools.ietf.org/html/rfc7252) library implemented in Rust.
 
 [Documentation](http://covertness.github.io/coap-rs/coap/index.html)
 
@@ -79,3 +79,12 @@ fn main() {
 	println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
 }
 ```
+
+## Benchmark
+### Using one thread
+![image](benches/one_thread_summary.png)
+
+### Using eight thread
+![image](benches/eight_thread_summary.png)
+
+Tests were performed using [basho_bench](https://github.com/basho/basho_bench).
