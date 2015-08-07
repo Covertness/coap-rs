@@ -1,6 +1,9 @@
 use std::io::{Result, Error, ErrorKind};
 use std::net::{ToSocketAddrs, SocketAddr, UdpSocket};
-use packet::Packet;
+use url::{UrlParser, SchemeType};
+use num;
+use rand::{thread_rng, random, Rng};
+use packet::{Packet, PacketType, OptionType};
 
 pub struct CoAPClient {
     socket: UdpSocket,
@@ -33,6 +36,58 @@ impl CoAPClient {
 		})
 	}
 
+	/// Execute a request with the coap url.
+	pub fn request(url: &str) -> Result<Packet> {
+		let mut url_parser = UrlParser::new();
+		url_parser.scheme_type_mapper(Self::coap_scheme_type_mapper);
+
+		match url_parser.parse(url) {
+			Ok(url_params) => {
+				let mut packet = Packet::new();
+				packet.header.set_version(1);
+				packet.header.set_type(PacketType::Confirmable);
+				packet.header.set_code("0.01");
+
+				let message_id = thread_rng().gen_range(0, num::pow(2u32, 16)) as u16;
+				packet.header.set_message_id(message_id);
+
+				let mut token: Vec<u8> = vec!(1, 1, 1, 1);
+				for x in token.iter_mut() {
+				    *x = random()
+				}
+				packet.set_token(token.clone());
+
+				let domain = match url_params.domain() {
+					Some(d) => d,
+					None => return Err(Error::new(ErrorKind::InvalidInput, "domain error"))
+				};
+				let port = url_params.port_or_default().unwrap();
+
+				if let Some(path) = url_params.path() {
+					for p in path.iter() {
+						packet.add_option(OptionType::UriPath, p.clone().into_bytes().to_vec());
+					}
+				};
+
+				let client = try!(Self::new((domain, port)));
+				try!(client.send(&packet));
+
+				match client.receive() {
+				 	Ok(receive_packet) => {
+				 		if receive_packet.header.get_message_id() == message_id 
+				 			&& *receive_packet.get_token() == token {
+				 				return Ok(receive_packet)
+				 			} else {
+				 				return Err(Error::new(ErrorKind::Other, "receive invalid data"))
+				 			}
+				 	},
+				 	Err(e) => Err(e)
+				}
+			},
+			Err(_) => Err(Error::new(ErrorKind::InvalidInput, "url error"))
+		}
+	}
+
 	/// Execute a request.
 	pub fn send(&self, packet: &Packet) -> Result<()> {
 		match packet.to_bytes() {
@@ -56,6 +111,13 @@ impl CoAPClient {
 		match Packet::from_bytes(&buf[..nread]) {
 			Ok(packet) => Ok(packet),
 			Err(_) => Err(Error::new(ErrorKind::InvalidInput, "packet error"))
+		}
+	}
+
+	fn coap_scheme_type_mapper(scheme: &str) -> SchemeType {
+		match scheme {
+			"coap" => SchemeType::Relative(5683),
+			_ => SchemeType::NonRelative,
 		}
 	}
 }

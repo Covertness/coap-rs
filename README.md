@@ -17,7 +17,7 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.1.1"
+coap = "0.2.0"
 ```
 
 Then, add this to your crate root:
@@ -62,21 +62,10 @@ use coap::packet::*;
 use coap::CoAPClient;
 
 fn main() {
-	let addr = "127.0.0.1:5683";
-	let request = "test";
-		
-	let client = CoAPClient::new(addr).unwrap();
-	let mut packet = Packet::new();
-	packet.header.set_version(1);
-	packet.header.set_type(PacketType::Confirmable);
-	packet.header.set_code("0.01");
-	packet.header.set_message_id(1);
-	packet.set_token(vec!(0x51, 0x55, 0x77, 0xE8));
-	packet.add_option(OptionType::UriPath, request.to_string().into_bytes());
-	client.send(&packet).unwrap();
-	println!("Client request: coap://{}/{}", addr, request);
+	let url = "coap://127.0.0.1:5683/Rust";
+	println!("Client request: {}", url);
 
-	let response = client.receive().unwrap();
+	let response: Packet = CoAPClient::request(url).unwrap();
 	println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
 }
 ```

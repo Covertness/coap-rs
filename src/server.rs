@@ -123,6 +123,7 @@ impl CoAPServer {
 		}
 	}
 
+	/// Set the number of threads for handling requests
 	pub fn set_worker_num(&mut self, worker_num: usize) {
 		self.worker_num = worker_num;
 	}

@@ -6,7 +6,7 @@ use coap::CoAPClient;
 fn main() {
 	let addr = "127.0.0.1:5683";
 	let request = "test";
-		
+
 	let client = CoAPClient::new(addr).unwrap();
 	let mut packet = Packet::new();
 	packet.header.set_version(1);
@@ -18,6 +18,12 @@ fn main() {
 	client.send(&packet).unwrap();
 	println!("Client request: coap://{}/{}", addr, request);
 
-	let response = client.receive().unwrap();
-	println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
+	match client.receive() {
+		Ok(response) => {
+			println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
+		},
+		Err(e) => {
+			println!("Request error: {:?}", e);
+		}
+	}
 }
