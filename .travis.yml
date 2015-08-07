@@ -21,6 +21,7 @@ before_script:
 after_success:
   # upload the documentation from the build with beta (automatically only actually
   # runs on the master branch)
+  - travis-cargo --only stable doc
   - travis-cargo --only stable doc-upload
   # measure code coverage and upload to coveralls.io
   - travis-cargo coveralls --no-sudo
