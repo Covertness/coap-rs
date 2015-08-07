@@ -51,15 +51,15 @@
 //! ## Client:
 //! ```no_run
 //! extern crate coap;
-//! 
+//!
 //! use coap::packet::*;
 //! use coap::CoAPClient;
-//! 
+//!
 //! fn main() {
 //! 	let url = "coap://127.0.0.1:5683/Rust";
 //! 	println!("Client request: {}", url);
-//! 
-//!	let response: Packet = CoAPClient::request(url).unwrap();
+//!
+//! 	let response: Packet = CoAPClient::request(url).unwrap();
 //! 	println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
 //! }
 //! ```
