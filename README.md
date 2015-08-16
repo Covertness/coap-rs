@@ -17,7 +17,7 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.2.0"
+coap = "0.2.1"
 ```
 
 Then, add this to your crate root:

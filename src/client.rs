@@ -88,6 +88,24 @@ impl CoAPClient {
 		}
 	}
 
+	/// Response the client with the specifc payload.
+	pub fn reply(&self, request_packet: &Packet, payload: Vec<u8>) -> Result<()> {
+		let mut packet = Packet::new();
+
+		packet.header.set_version(1);
+		let response_type = match request_packet.header.get_type() {
+			PacketType::Confirmable => PacketType::Acknowledgement,
+			PacketType::NonConfirmable => PacketType::NonConfirmable,
+			_ => return Err(Error::new(ErrorKind::InvalidInput, "request type error"))
+		};
+		packet.header.set_type(response_type);
+		packet.header.set_code("2.05");
+		packet.header.set_message_id(request_packet.header.get_message_id());
+		packet.set_token(request_packet.get_token().clone());
+		packet.payload = payload;
+		self.send(&packet)
+	}
+
 	/// Execute a request.
 	pub fn send(&self, packet: &Packet) -> Result<()> {
 		match packet.to_bytes() {
