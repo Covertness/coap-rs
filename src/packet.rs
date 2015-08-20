@@ -229,9 +229,16 @@ impl Packet {
 						idx += 1;
 
 						if delta == 13 {
+							if idx >= buf.len() {
+								return Err(ParseError::InvalidOptionLength);
+							}
 							delta = buf[idx] as usize + 13;
 							idx += 1;
 						} else if delta == 14 {
+							if idx + 1 >= buf.len() {
+								return Err(ParseError::InvalidOptionLength);
+							}
+
 							delta = (u16::from_be(u8_to_unsigned_be!(buf, idx, idx + 1, u16)) + 269) as usize;
 							idx += 2;
 						} else if delta == 15 {
@@ -239,9 +246,17 @@ impl Packet {
 						}
 
 						if length == 13 {
+							if idx >= buf.len() {
+								return Err(ParseError::InvalidOptionLength);
+							}
+
 							length = buf[idx] as usize + 13;
 							idx += 1;
 						} else if length == 14 {
+							if idx + 1 >= buf.len() {
+								return Err(ParseError::InvalidOptionLength);
+							}
+
 							length = (u16::from_be(u8_to_unsigned_be!(buf, idx, idx + 1, u16)) + 269) as usize;
 							idx += 2;
 						} else if length == 15 {
@@ -251,6 +266,9 @@ impl Packet {
 						options_number += delta;
 
 						let end = idx + length;
+						if end > buf.len() {
+							return Err(ParseError::InvalidOptionLength);
+						}
 						let options_value = buf[idx..end].to_vec();
 
 						if options.contains_key(&options_number) {
@@ -473,5 +491,20 @@ mod test {
 		packet.set_token(vec!(0xD0, 0xE2, 0x4D, 0xAC));
 		packet.payload = "Hello".as_bytes().to_vec();
 		assert_eq!(packet.to_bytes().unwrap(), vec!(0x64, 0x45, 0x13, 0xFD, 0xD0, 0xE2, 0x4D, 0xAC, 0xFF, 0x48, 0x65, 0x6C, 0x6C, 0x6F));
+	}
+
+	#[test]
+	fn test_malicious_packet() {
+		use quickcheck::{QuickCheck, TestResult};
+
+		fn run(x: Vec<u8>) -> TestResult {
+			match Packet::from_bytes(&x[..]) {
+				Ok(packet) => {
+					TestResult::from_bool(packet.get_token().len() == packet.header.get_token_length() as usize)
+				},
+				Err(_) => TestResult::passed()
+			}
+		}
+		QuickCheck::new().tests(10000).quickcheck(run as fn(Vec<u8>) -> TestResult)
 	}
 }

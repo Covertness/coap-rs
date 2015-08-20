@@ -139,3 +139,25 @@ impl CoAPClient {
 		}
 	}
 }
+
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	use packet::{Packet, PacketType};
+
+	#[test]
+	fn test_request_error_url() {
+		assert!(CoAPClient::request("http://127.0.0.1").is_err());
+		assert!(CoAPClient::request("coap://127.0.0.").is_err());
+		assert!(CoAPClient::request("127.0.0.1").is_err());
+	}
+
+	#[test]
+	fn test_reply_error() {
+		let client = CoAPClient::new("127.0.0.1:5683").unwrap();
+		let mut packet = Packet::new();
+		packet.header.set_type(PacketType::Acknowledgement);
+		assert!(client.reply(&packet, b"Test".to_vec()).is_err());
+	}
+}

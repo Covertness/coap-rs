@@ -71,6 +71,7 @@ extern crate threadpool;
 extern crate url;
 extern crate num;
 extern crate rand;
+#[cfg(test)] extern crate quickcheck;
 
 pub use server::CoAPServer;
 pub use client::CoAPClient;
