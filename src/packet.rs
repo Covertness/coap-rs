@@ -495,7 +495,8 @@ mod test {
 
 	#[test]
 	fn test_malicious_packet() {
-		use quickcheck::{QuickCheck, TestResult};
+		use rand;
+		use quickcheck::{QuickCheck, StdGen, TestResult};
 
 		fn run(x: Vec<u8>) -> TestResult {
 			match Packet::from_bytes(&x[..]) {
@@ -505,6 +506,6 @@ mod test {
 				Err(_) => TestResult::passed()
 			}
 		}
-		QuickCheck::new().tests(10000).quickcheck(run as fn(Vec<u8>) -> TestResult)
+		QuickCheck::new().tests(10000).gen(StdGen::new(rand::thread_rng(), 1500)).quickcheck(run as fn(Vec<u8>) -> TestResult)
 	}
 }
