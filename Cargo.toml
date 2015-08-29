@@ -12,7 +12,8 @@ keywords = ["CoAP"]
 [dependencies]
 bincode = "0.3.0"
 rustc-serialize = "0.3"
-mio = "0.3.7"
+bytes = "0.2.11"
+mio = "0.4"
 threadpool = "0.1"
 url = "0.2.36"
 num = "0.1"

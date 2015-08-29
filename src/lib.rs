@@ -66,6 +66,7 @@
 
 extern crate bincode;
 extern crate rustc_serialize;
+extern crate bytes;
 extern crate mio;
 extern crate threadpool;
 extern crate url;
