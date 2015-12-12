@@ -43,7 +43,7 @@ impl CoAPClient {
 		})
 	}
 
-	// Execute a request with the coap url and a specific timeout. Default timeout is 5s.
+	/// Execute a request with the coap url and a specific timeout. Default timeout is 5s.
 	pub fn request_with_timeout(url: &str, timeout: Option<Duration>) -> Result<Packet> {
 		let mut url_parser = UrlParser::new();
 		url_parser.scheme_type_mapper(Self::coap_scheme_type_mapper);
