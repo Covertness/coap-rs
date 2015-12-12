@@ -4,8 +4,9 @@ use std::io;
 use coap::packet::*;
 use coap::{CoAPServer, CoAPClient};
 
-fn request_handler(req: Packet, _resp: CoAPClient) {
+fn request_handler(req: Packet, resp: CoAPClient) {
 	println!("Receive request: {:?}", req);
+	resp.reply(&req, b"OK".to_vec()).unwrap();
 }
 
 fn main() {

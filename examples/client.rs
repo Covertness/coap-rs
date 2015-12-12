@@ -1,5 +1,6 @@
 extern crate coap;
 
+use std::io::ErrorKind;
 use coap::packet::*;
 use coap::CoAPClient;
 
@@ -23,7 +24,10 @@ fn main() {
 			println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
 		},
 		Err(e) => {
-			println!("Request error: {:?}", e);
+			match e.kind() {
+			    ErrorKind::WouldBlock => println!("Request timeout"),
+			    _ => println!("Request error: {:?}", e),
+			}
 		}
 	}
 }
