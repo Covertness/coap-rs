@@ -25,7 +25,8 @@ fn main() {
 		},
 		Err(e) => {
 			match e.kind() {
-			    ErrorKind::WouldBlock => println!("Request timeout"),
+			    ErrorKind::WouldBlock => println!("Request timeout"),   // Unix
+			    ErrorKind::TimedOut => println!("Request timeout"),     // Windows
 			    _ => println!("Request error: {:?}", e),
 			}
 		}

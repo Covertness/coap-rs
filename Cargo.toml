@@ -1,6 +1,6 @@
 [package]
 name = "coap"
-version = "0.3.0"
+version = "0.3.1"
 description = "A CoAP library"
 readme = "README.md"
 documentation = "http://covertness.github.io/coap-rs/coap/index.html"
@@ -12,8 +12,7 @@ keywords = ["CoAP"]
 [dependencies]
 bincode = "0.3.0"
 rustc-serialize = "0.3"
-bytes = "0.2.11"
-mio = "0.4"
+mio = "0.5"
 threadpool = "0.1"
 url = "0.2.36"
 num = "0.1"

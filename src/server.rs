@@ -7,7 +7,6 @@ use mio::udp::UdpSocket;
 use packet::Packet;
 use client::CoAPClient;
 use threadpool::ThreadPool;
-use bytes::RingBuf;
 
 const DEFAULT_WORKER_NUM: usize = 4;
 
@@ -51,12 +50,12 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
 	fn ready(&mut self, _: &mut EventLoop<UdpHandler<H>>, _: Token, events: EventSet) {
         if events.is_readable() {
         	let coap_handler = self.coap_handler;
-        	let mut buf = RingBuf::new(1500);
+        	let mut buf = [0; 1500];
 
 			match self.socket.recv_from(&mut buf) {
-				Ok(Some(src)) => {
+				Ok(Some((nread, src))) => {
 					self.thread_pool.execute(move || {
-						match Packet::from_bytes(buf.bytes()) {
+						match Packet::from_bytes(&buf[..nread]) {
 							Ok(packet) => {
 								let client = CoAPClient::new(src).unwrap();
 								coap_handler.handle(packet, client);
@@ -112,7 +111,7 @@ impl CoAPServer {
 						let thread = thread::spawn(move || {
 							let thread_pool = ThreadPool::new(worker_num);
 							let mut event_loop = EventLoop::new().unwrap();
-							event_loop.register(&socket, Token(0)).unwrap();
+							event_loop.register(&socket, Token(0), EventSet::readable(), PollOpt::edge()).unwrap();
 
 							tx.send(event_loop.channel()).unwrap();
 

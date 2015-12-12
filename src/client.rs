@@ -191,6 +191,10 @@ mod test {
 		server.handle(request_handler).unwrap();
 
 		let error = CoAPClient::request_with_timeout("coap://127.0.0.1:5684/Rust", Some(Duration::new(1, 0))).unwrap_err();
-		assert_eq!(error.kind(), ErrorKind::WouldBlock);
+		if cfg!(windows) {
+			assert_eq!(error.kind(), ErrorKind::TimedOut);
+		} else {
+			assert_eq!(error.kind(), ErrorKind::WouldBlock);
+		}
 	}
 }
