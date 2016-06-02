@@ -199,94 +199,93 @@ impl Packet {
 		match header_result {
 			Ok(header) => {
 				let token_length = header.get_token_length();
-				let (mut token, mut payload) = (Vec::new(), Vec::new());
-				let mut options: BTreeMap<usize, LinkedList<Vec<u8>>> = BTreeMap::new();
+				let options_start: usize = 4 + token_length as usize;
 
-				if token_length > 0 {
-					if token_length > 8 {
-						return Err(ParseError::InvalidTokenLength);
-					}
-
-					let options_start: usize = 4 + token_length as usize;
-					if options_start > buf.len() {
-						return Err(ParseError::InvalidTokenLength);
-					}
-
-					token = buf[4..options_start].to_vec();
-
-					let mut idx = options_start;
-					let mut options_number = 0;
-					while idx < buf.len() {
-						let byte = buf[idx];
-
-						if byte == 255 || idx > buf.len() {
-							break;
-						}
-
-						let mut delta = (byte >> 4) as usize;
-						let mut length = (byte & 0xF) as usize;
-
-						idx += 1;
-
-						if delta == 13 {
-							if idx >= buf.len() {
-								return Err(ParseError::InvalidOptionLength);
-							}
-							delta = buf[idx] as usize + 13;
-							idx += 1;
-						} else if delta == 14 {
-							if idx + 1 >= buf.len() {
-								return Err(ParseError::InvalidOptionLength);
-							}
-
-							delta = (u16::from_be(u8_to_unsigned_be!(buf, idx, idx + 1, u16)) + 269) as usize;
-							idx += 2;
-						} else if delta == 15 {
-							return Err(ParseError::InvalidOptionDelta);
-						}
-
-						if length == 13 {
-							if idx >= buf.len() {
-								return Err(ParseError::InvalidOptionLength);
-							}
-
-							length = buf[idx] as usize + 13;
-							idx += 1;
-						} else if length == 14 {
-							if idx + 1 >= buf.len() {
-								return Err(ParseError::InvalidOptionLength);
-							}
-
-							length = (u16::from_be(u8_to_unsigned_be!(buf, idx, idx + 1, u16)) + 269) as usize;
-							idx += 2;
-						} else if length == 15 {
-							return Err(ParseError::InvalidOptionLength);
-						}
-
-						options_number += delta;
-
-						let end = idx + length;
-						if end > buf.len() {
-							return Err(ParseError::InvalidOptionLength);
-						}
-						let options_value = buf[idx..end].to_vec();
-
-						if options.contains_key(&options_number) {
-							let mut options_list = options.get_mut(&options_number).unwrap();
-							options_list.push_back(options_value);
-						} else {
-							let mut list = LinkedList::new();
-							list.push_back(options_value);
-							options.insert(options_number, list);
-						}
-
-						idx += length;
-					}
-
-					if idx < buf.len() {
-						payload = buf[(idx + 1)..buf.len()].to_vec();
-					}
+				if token_length > 8 {
+					return Err(ParseError::InvalidTokenLength);
 				}
+
+				if options_start > buf.len() {
+					return Err(ParseError::InvalidTokenLength);
+				}
+
+				let token = buf[4..options_start].to_vec();
+
+				let mut idx = options_start;
+				let mut options_number = 0;
+				let mut options: BTreeMap<usize, LinkedList<Vec<u8>>> = BTreeMap::new();
+				while idx < buf.len() {
+					let byte = buf[idx];
+
+					if byte == 255 || idx > buf.len() {
+						break;
+					}
+
+					let mut delta = (byte >> 4) as usize;
+					let mut length = (byte & 0xF) as usize;
+
+					idx += 1;
+
+					if delta == 13 {
+						if idx >= buf.len() {
+							return Err(ParseError::InvalidOptionLength);
+						}
+						delta = buf[idx] as usize + 13;
+						idx += 1;
+					} else if delta == 14 {
+						if idx + 1 >= buf.len() {
+							return Err(ParseError::InvalidOptionLength);
+						}
+
+						delta = (u16::from_be(u8_to_unsigned_be!(buf, idx, idx + 1, u16)) + 269) as usize;
+						idx += 2;
+					} else if delta == 15 {
+						return Err(ParseError::InvalidOptionDelta);
+					}
+
+					if length == 13 {
+						if idx >= buf.len() {
+							return Err(ParseError::InvalidOptionLength);
+						}
+
+						length = buf[idx] as usize + 13;
+						idx += 1;
+					} else if length == 14 {
+						if idx + 1 >= buf.len() {
+							return Err(ParseError::InvalidOptionLength);
+						}
+
+						length = (u16::from_be(u8_to_unsigned_be!(buf, idx, idx + 1, u16)) + 269) as usize;
+						idx += 2;
+					} else if length == 15 {
+						return Err(ParseError::InvalidOptionLength);
+					}
+
+					options_number += delta;
+
+					let end = idx + length;
+					if end > buf.len() {
+						return Err(ParseError::InvalidOptionLength);
+					}
+					let options_value = buf[idx..end].to_vec();
+
+					if options.contains_key(&options_number) {
+						let mut options_list = options.get_mut(&options_number).unwrap();
+						options_list.push_back(options_value);
+					} else {
+						let mut list = LinkedList::new();
+						list.push_back(options_value);
+						options.insert(options_number, list);
+					}
+
+					idx += length;
+				}
+
+				let mut payload = Vec::new();
+				if idx < buf.len() {
+					payload = buf[(idx + 1)..buf.len()].to_vec();
+				}
+
 
 				Ok(Packet {
 					header: header,
