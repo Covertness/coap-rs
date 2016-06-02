@@ -8,5 +8,8 @@ install:
 
 build: false
 
+environment:
+  RUST_TEST_THREADS: 1
+
 test_script:
   - cargo test --verbose
