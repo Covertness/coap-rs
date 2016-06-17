@@ -74,6 +74,9 @@ extern crate num;
 extern crate rand;
 #[cfg(test)] extern crate quickcheck;
 
+#[macro_use]
+extern crate log;
+
 pub use server::CoAPServer;
 pub use client::CoAPClient;
 

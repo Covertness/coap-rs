@@ -1,8 +1,9 @@
 use std;
+use std::io::{Error, ErrorKind};
 use std::thread;
 use std::net::{ToSocketAddrs, SocketAddr};
 use std::sync::mpsc;
-use mio::*;
+use mio::{EventLoop, PollOpt, EventSet, Handler, Sender, Token};
 use mio::udp::UdpSocket;
 use packet::Packet;
 use threadpool::ThreadPool;
@@ -57,38 +58,56 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
 	type Message = ();
 
 	fn ready(&mut self, _: &mut EventLoop<UdpHandler<H>>, _: Token, events: EventSet) {
-		if events.is_readable() {
-			let coap_handler = self.coap_handler;
-			let mut buf = [0; 1500];
-
-			match self.socket.recv_from(&mut buf) {
-				Ok(Some((nread, src))) => {
-					let response_q = self.tx_sender.clone();
-					self.thread_pool.execute(move || {
-						match Packet::from_bytes(&buf[..nread]) {
-							Ok(packet) => {
-								// Dispatch user handler, if there is a response packet
-								//   send the reply via the TX thread
-								match coap_handler.handle(packet) {
-									Some(response) => {
-										response_q.send(CoAPResponse{
-											address: src,
-											response: response
-										}).unwrap();
-									},
-									None => {}
-								};
-							},
-							Err(_) => return
-						};
-					});
-				},
-				_ => {}, //panic!("unexpected error"),
-			}
+		if !events.is_readable() {
+			warn!("Unreadable Event");
+			return;
 		}
+
+		let coap_handler = self.coap_handler;
+		let mut buf = [0; 1500];
+
+		match self.socket.recv_from(&mut buf) {
+			Ok(Some((nread, src))) => {
+				debug!("Handling request from {}", src);
+				let response_q = self.tx_sender.clone();
+				self.thread_pool.execute(move || {
+
+					match Packet::from_bytes(&buf[..nread]) {
+						Ok(packet) => {
+							// Dispatch user handler, if there is a response packet
+							//   send the reply via the TX thread
+							match coap_handler.handle(packet) {
+								Some(response) => {
+									debug!("Response: {:?}", response);
+									response_q.send(CoAPResponse{
+										address: src,
+										response: response
+									}).unwrap();
+								},
+								None => {
+									debug!("No response");
+								}
+							};
+						},
+						Err(_) => {
+							error!("Failed to parse request");
+							return;
+						}
+					};
+
+
+				});
+			},
+			_ => {
+				error!("Failed to read from socket");
+				panic!("unexpected error");
+			},
+		}
+
 	}
 
 	fn notify(&mut self, event_loop: &mut EventLoop<UdpHandler<H>>, _: ()) {
+		info!("Shutting down request handler");
         event_loop.shutdown();
     }
 }
@@ -115,7 +134,7 @@ impl CoAPServer {
 						worker_num: DEFAULT_WORKER_NUM,
 					}))
 				},
-				None => Err(std::io::Error::new(std::io::ErrorKind::Other, "no address"))
+				None => Err(Error::new(ErrorKind::Other, "no address"))
 			}
 		})
 	}
@@ -126,6 +145,7 @@ impl CoAPServer {
 
 		// Early return error checking
 		if let Some(_) = self.event_sender {
+			error!("Handler already running!");
 			return Err(CoAPServerError::AnotherHandlerIsRunning);
 		}
 		match self.socket.try_clone() {
@@ -133,6 +153,7 @@ impl CoAPServer {
 				socket = good_socket
 			},
 			Err(_) => {
+				error!("Network Error!");
 				return Err(CoAPServerError::NetworkError);
 			},
 		}
@@ -200,12 +221,15 @@ fn transmit_handler(tx_recv: RxQueue, tx_only: UdpSocket) {
 					Ok(bytes) => {
 						let _ = tx_only.send_to(&bytes[..], &q_res.address);
 					},
-					Err(_) => {}
+					Err(_) => {
+						error!("Failed to decode response");
+					}
 				}
 			},
 			// recv error occurs when all transmitters are terminited
 			//   (when all UDP Handlers are closed)
 			Err(_) => {
+				info!("Shutting down Transmit Handler");
 				break;
 			}
 		}
