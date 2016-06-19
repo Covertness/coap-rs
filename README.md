@@ -36,9 +36,9 @@ use std::io;
 use coap::packet::*;
 use coap::{CoAPServer, CoAPClient};
 
-fn request_handler(req: Packet) -> Option<Packet> {
+fn request_handler(req: Packet, response: Option<Packet>) -> Option<Packet> {
 	println!("Receive request: {:?}", req);
-	None
+	response
 }
 
 fn main() {
