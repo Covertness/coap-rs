@@ -3,15 +3,15 @@ extern crate coap;
 use coap::packet::*;
 use coap::{CoAPServer, CoAPClient};
 
-fn request_handler(req: Packet) -> Option<Packet> {
+fn request_handler(req: Packet, response: Option<Packet>) -> Option<Packet> {
 	let uri_path = req.get_option(OptionType::UriPath).unwrap();
 
-	return match coap::packet::auto_response(req) {
-	Ok(mut response) => {
-		response.set_payload(uri_path.front().unwrap().clone());
-		Some(response)
-	},
-	Err(_) => None
+	return match response {
+		Some(mut packet) => {
+			packet.set_payload(uri_path.front().unwrap().clone());
+			Some(packet)
+		},
+		_ => None
     };
 }
 

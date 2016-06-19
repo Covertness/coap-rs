@@ -5,7 +5,7 @@ use std::net::{ToSocketAddrs, SocketAddr};
 use std::sync::mpsc;
 use mio::{EventLoop, PollOpt, EventSet, Handler, Sender, Token};
 use mio::udp::UdpSocket;
-use packet::Packet;
+use packet::{Packet, auto_response};
 use threadpool::ThreadPool;
 
 const DEFAULT_WORKER_NUM: usize = 4;
@@ -26,12 +26,12 @@ pub struct CoAPResponse {
 }
 
 pub trait CoAPHandler: Sync + Send + Copy {
-	fn handle(&self, Packet) -> Option<Packet>;
+	fn handle(&self, Packet, Option<Packet>) -> Option<Packet>;
 }
 
-impl<F> CoAPHandler for F where F: Fn(Packet) -> Option<Packet>, F: Sync + Send + Copy {
-	fn handle(&self, request: Packet) -> Option<Packet> {
-		return self(request);
+impl<F> CoAPHandler for F where F: Fn(Packet, Option<Packet>) -> Option<Packet>, F: Sync + Send + Copy {
+	fn handle(&self, request: Packet, response: Option<Packet>) -> Option<Packet> {
+		return self(request, response);
 	}
 }
 
@@ -71,12 +71,13 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
 				debug!("Handling request from {}", src);
 				let response_q = self.tx_sender.clone();
 				self.thread_pool.execute(move || {
-
 					match Packet::from_bytes(&buf[..nread]) {
 						Ok(packet) => {
+							// Pre-generate a response
+							let auto_resp = auto_response(&packet);
 							// Dispatch user handler, if there is a response packet
 							//   send the reply via the TX thread
-							match coap_handler.handle(packet) {
+							match coap_handler.handle(packet, auto_resp) {
 								Some(response) => {
 									debug!("Response: {:?}", response);
 									response_q.send(CoAPResponse{
@@ -94,8 +95,6 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
 							return;
 						}
 					};
-
-
 				});
 			},
 			_ => {
@@ -108,16 +107,16 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
 
 	fn notify(&mut self, event_loop: &mut EventLoop<UdpHandler<H>>, _: ()) {
 		info!("Shutting down request handler");
-        event_loop.shutdown();
-    }
+		event_loop.shutdown();
+	}
 }
 
 pub struct CoAPServer {
-    socket: UdpSocket,
-    event_sender: Option<Sender<()>>,
-    event_thread: Option<thread::JoinHandle<()>>,
-    tx_thread: Option<thread::JoinHandle<()>>,
-    worker_num: usize,
+	socket: UdpSocket,
+	event_sender: Option<Sender<()>>,
+	event_thread: Option<thread::JoinHandle<()>>,
+	tx_thread: Option<thread::JoinHandle<()>>,
+	worker_num: usize,
 }
 
 impl CoAPServer {
@@ -237,29 +236,29 @@ fn transmit_handler(tx_recv: RxQueue, tx_only: UdpSocket) {
 }
 
 impl Drop for CoAPServer {
-    fn drop(&mut self) {
-        self.stop();
-    }
+	fn drop(&mut self) {
+		self.stop();
+	}
 }
 
 
 #[cfg(test)]
 mod test {
 	use super::*;
-	use packet::{Packet, PacketType, OptionType, auto_response};
+	use packet::{Packet, PacketType, OptionType};
 	use client::CoAPClient;
 
-	fn request_handler(req: Packet) -> Option<Packet> {
+	fn request_handler(req: Packet, response: Option<Packet>) -> Option<Packet> {
 		let uri_path_list = req.get_option(OptionType::UriPath).unwrap();
 		assert!(uri_path_list.len() == 1);
 
-		return match auto_response(req) {
-			Ok(mut response) => {
-				response.set_payload(uri_path_list.front().unwrap().clone());
-				Some(response)
+		match response {
+			Some(mut packet) => {
+				packet.set_payload(uri_path_list.front().unwrap().clone());
+				Some(packet)
 			},
-			Err(_) => None
-		};
+			_ => None
+		}
 	}
 
 	#[test]

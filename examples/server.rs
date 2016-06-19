@@ -4,14 +4,14 @@ use std::io;
 use coap::packet::*;
 use coap::CoAPServer;
 
-fn request_handler(req: Packet) -> Option<Packet> {
-    return match coap::packet::auto_response(req) {
-        Ok(mut response) => {
-		response.set_payload(b"OK".to_vec());
-		Some(response)
-	},
-        Err(_) => None
-    };
+fn request_handler(_: Packet, response: Option<Packet>) -> Option<Packet> {
+	return match response {
+		Some(mut packet) => {
+			packet.set_payload(b"OK".to_vec());
+			Some(packet)
+		},
+		_ => None
+	};
 }
 
 fn main() {

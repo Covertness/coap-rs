@@ -1,28 +1,27 @@
 use bincode;
 use std::collections::BTreeMap;
 use std::collections::LinkedList;
-use std;
 
 macro_rules! u8_to_unsigned_be {
-    ($src:ident, $start:expr, $end:expr, $t:ty) => ({
-        (0 .. $end - $start + 1).rev().fold(0, |acc, i| acc | $src[$start+i] as $t << i * 8)
-    })
+	($src:ident, $start:expr, $end:expr, $t:ty) => ({
+		(0 .. $end - $start + 1).rev().fold(0, |acc, i| acc | $src[$start+i] as $t << i * 8)
+	})
 }
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum PacketType {
-    Confirmable,
-    NonConfirmable,
-    Acknowledgement,
-    Reset,
-    Invalid,
+	Confirmable,
+	NonConfirmable,
+	Acknowledgement,
+	Reset,
+	Invalid,
 }
 
 #[derive(Default, Debug, RustcEncodable, RustcDecodable)]
 pub struct PacketHeader {
-    ver_type_tkl: u8,
-    code: u8,
-    message_id: u16
+	ver_type_tkl: u8,
+	code: u8,
+	message_id: u16
 }
 
 impl PacketHeader {
@@ -109,9 +108,9 @@ impl PacketHeader {
 #[derive(Debug)]
 pub enum ParseError {
 	InvalidHeader,
-    InvalidTokenLength,
-    InvalidOptionDelta,
-    InvalidOptionLength,
+	InvalidTokenLength,
+	InvalidOptionDelta,
+	InvalidOptionLength,
 }
 
 #[derive(Debug)]
@@ -122,32 +121,32 @@ pub enum PackageError {
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum OptionType {
-    IfMatch,
-    UriHost,
-    ETag,
-    IfNoneMatch,
-    Observe,
-    UriPort,
-    LocationPath,
-    UriPath,
-    ContentFormat,
-    MaxAge,
-    UriQuery,
-    Accept,
-    LocationQuery,
-    Block2,
-    Block1,
-    ProxyUri,
-    ProxyScheme,
-    Size1
+	IfMatch,
+	UriHost,
+	ETag,
+	IfNoneMatch,
+	Observe,
+	UriPort,
+	LocationPath,
+	UriPath,
+	ContentFormat,
+	MaxAge,
+	UriQuery,
+	Accept,
+	LocationQuery,
+	Block2,
+	Block1,
+	ProxyUri,
+	ProxyScheme,
+	Size1
 }
 
 #[derive(Debug)]
 pub struct Packet {
-    pub header: PacketHeader,
-    token: Vec<u8>,
-    options: BTreeMap<usize, LinkedList<Vec<u8>>>,
-    pub payload: Vec<u8>,
+	pub header: PacketHeader,
+	token: Vec<u8>,
+	options: BTreeMap<usize, LinkedList<Vec<u8>>>,
+	pub payload: Vec<u8>,
 }
 
 impl Packet {
@@ -363,14 +362,14 @@ impl Packet {
 				options_delta_length += delta;
 
 				options_bytes.reserve(header.len() + value.len());
-		        unsafe {
-		        	use std::ptr;
-		            let buf_len = options_bytes.len();
-		            ptr::copy(header.as_ptr(), options_bytes.as_mut_ptr().offset(buf_len as isize), header.len());
-		            ptr::copy(value.as_ptr(), options_bytes.as_mut_ptr().offset((buf_len + header.len()) as isize), value.len());
-		            options_bytes.set_len(buf_len + header.len() + value.len());
-		        }
-		    }
+				unsafe {
+					use std::ptr;
+					let buf_len = options_bytes.len();
+					ptr::copy(header.as_ptr(), options_bytes.as_mut_ptr().offset(buf_len as isize), header.len());
+					ptr::copy(value.as_ptr(), options_bytes.as_mut_ptr().offset((buf_len + header.len()) as isize), value.len());
+					options_bytes.set_len(buf_len + header.len() + value.len());
+				}
+			}
 		}
 
 		let mut buf_length = 4 + self.payload.len() + self.token.len();
@@ -388,23 +387,23 @@ impl Packet {
 		match header_result {
 			Ok(_) => {
 				buf.reserve(self.token.len() + options_bytes.len());
-		        unsafe {
-		        	use std::ptr;
-		            let buf_len = buf.len();
-		            ptr::copy(self.token.as_ptr(), buf.as_mut_ptr().offset(buf_len as isize), self.token.len());
-		            ptr::copy(options_bytes.as_ptr(), buf.as_mut_ptr().offset((buf_len + self.token.len()) as isize), options_bytes.len());
-		            buf.set_len(buf_len + self.token.len() + options_bytes.len());
-		        }
+				unsafe {
+					use std::ptr;
+					let buf_len = buf.len();
+					ptr::copy(self.token.as_ptr(), buf.as_mut_ptr().offset(buf_len as isize), self.token.len());
+					ptr::copy(options_bytes.as_ptr(), buf.as_mut_ptr().offset((buf_len + self.token.len()) as isize), options_bytes.len());
+					buf.set_len(buf_len + self.token.len() + options_bytes.len());
+				}
 
 				if self.header.get_code() != "0.00" && self.payload.len() != 0 {
 					buf.push(0xFF);
 					buf.reserve(self.payload.len());
-			        unsafe {
-			        	use std::ptr;
-			            let buf_len = buf.len();
-			            ptr::copy(self.payload.as_ptr(), buf.as_mut_ptr().offset(buf.len() as isize), self.payload.len());
-			            buf.set_len(buf_len + self.payload.len());
-			        }
+					unsafe {
+						use std::ptr;
+						let buf_len = buf.len();
+						ptr::copy(self.payload.as_ptr(), buf.as_mut_ptr().offset(buf.len() as isize), self.payload.len());
+						buf.set_len(buf_len + self.payload.len());
+					}
 				}
 				Ok(buf)
 			},
@@ -437,23 +436,23 @@ impl Packet {
 }
 
 /// Convert a request to a response
-pub fn auto_response(request_packet: Packet) -> std::io::Result<Packet> {
+pub fn auto_response(request_packet: &Packet) -> Option<Packet> {
 		let mut packet = Packet::new();
 
 		packet.header.set_version(1);
 		let response_type = match request_packet.header.get_type() {
 			PacketType::Confirmable => PacketType::Acknowledgement,
 			PacketType::NonConfirmable => PacketType::NonConfirmable,
-			_ => return Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, "request type error"))
+			_ => return None
 		};
 		packet.header.set_type(response_type);
 		packet.header.set_code("2.05");
 		packet.header.set_message_id(request_packet.header.get_message_id());
 		packet.set_token(request_packet.get_token().clone());
 
-		packet.payload = request_packet.payload;
+		packet.payload = request_packet.payload.clone();
 
-		Ok(packet)
+		Some(packet)
 	}
 
 #[cfg(test)]

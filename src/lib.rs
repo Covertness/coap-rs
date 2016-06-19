@@ -29,7 +29,7 @@
 //! use coap::packet::*;
 //! use coap::{CoAPServer, CoAPClient};
 
-//! fn request_handler(req: Packet) -> Option<Packet> {
+//! fn request_handler(req: Packet, resp: Option<Packet>) -> Option<Packet> {
 //! 	println!("Receive request: {:?}", req);
 //!     None
 //! }
