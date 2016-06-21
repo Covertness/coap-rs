@@ -3,16 +3,16 @@
 //! This library provides both a client interface (`CoAPClient`) and a server interface (`CoAPServer`).
 //!
 //! [spec]: https://tools.ietf.org/html/rfc7252
-//! 
+//!
 //! # Installation
-//! 
+//!
 //! First add this to your `Cargo.toml`:
-//! 
+//!
 //! ```toml
 //! [dependencies]
 //! coap = "0.3"
 //! ```
-//! 
+//!
 //! Then, add this to your crate root:
 //!
 //! ```
@@ -29,21 +29,22 @@
 //! use coap::packet::*;
 //! use coap::{CoAPServer, CoAPClient};
 
-//! fn request_handler(req: Packet, _resp: CoAPClient) {
+//! fn request_handler(req: Packet, resp: Option<Packet>) -> Option<Packet> {
 //! 	println!("Receive request: {:?}", req);
+//!     None
 //! }
 
 //! fn main() {
 //! 	let addr = "127.0.0.1:5683";
-//! 
+//!
 //! 	let mut server = CoAPServer::new(addr).unwrap();
 //! 	server.handle(request_handler).unwrap();
-//! 		
+//!
 //! 	println!("Server up on {}", addr);
 //!     println!("Press any key to stop...");
 //!
 //! 	io::stdin().read_line(&mut String::new()).unwrap();
-//! 
+//!
 //! 	println!("Server shutdown");
 //! }
 //! ```
@@ -72,6 +73,9 @@ extern crate url;
 extern crate num;
 extern crate rand;
 #[cfg(test)] extern crate quickcheck;
+
+#[macro_use]
+extern crate log;
 
 pub use server::CoAPServer;
 pub use client::CoAPClient;

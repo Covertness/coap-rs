@@ -17,7 +17,7 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.3"
+coap = "0.4"
 ```
 
 Then, add this to your crate root:
@@ -36,8 +36,9 @@ use std::io;
 use coap::packet::*;
 use coap::{CoAPServer, CoAPClient};
 
-fn request_handler(req: Packet, _resp: CoAPClient) {
+fn request_handler(req: Packet, response: Option<Packet>) -> Option<Packet> {
 	println!("Receive request: {:?}", req);
+	response
 }
 
 fn main() {
@@ -45,7 +46,7 @@ fn main() {
 
 	let mut server = CoAPServer::new(addr).unwrap();
 	server.handle(request_handler).unwrap();
-		
+
 	println!("Server up on {}", addr);
     println!("Press any key to stop...");
 	io::stdin().read_line(&mut String::new()).unwrap();

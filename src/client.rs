@@ -9,8 +9,8 @@ use packet::{Packet, PacketType, OptionType};
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 5;  // 5s
 
 pub struct CoAPClient {
-    socket: UdpSocket,
-    peer_addr: SocketAddr,
+	socket: UdpSocket,
+	peer_addr: SocketAddr,
 }
 
 impl CoAPClient {
@@ -60,7 +60,7 @@ impl CoAPClient {
 
 				let mut token: Vec<u8> = vec!(1, 1, 1, 1);
 				for x in token.iter_mut() {
-				    *x = random()
+					*x = random()
 				}
 				packet.set_token(token.clone());
 
@@ -81,15 +81,15 @@ impl CoAPClient {
 
 				try!(client.set_receive_timeout(timeout));
 				match client.receive() {
-				 	Ok(receive_packet) => {
-				 		if receive_packet.header.get_message_id() == message_id 
-				 			&& *receive_packet.get_token() == token {
-				 				return Ok(receive_packet)
-				 			} else {
-				 				return Err(Error::new(ErrorKind::Other, "receive invalid data"))
-				 			}
-				 	},
-				 	Err(e) => Err(e)
+					Ok(receive_packet) => {
+						if receive_packet.header.get_message_id() == message_id
+							&& *receive_packet.get_token() == token {
+								return Ok(receive_packet)
+							} else {
+								return Err(Error::new(ErrorKind::Other, "receive invalid data"))
+							}
+					},
+					Err(e) => Err(e)
 				}
 			},
 			Err(_) => Err(Error::new(ErrorKind::InvalidInput, "url error"))
@@ -99,24 +99,6 @@ impl CoAPClient {
 	/// Execute a request with the coap url.
 	pub fn request(url: &str) -> Result<Packet> {
 		Self::request_with_timeout(url, Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)))
-	}
-
-	/// Response the client with the specifc payload.
-	pub fn reply(&self, request_packet: &Packet, payload: Vec<u8>) -> Result<()> {
-		let mut packet = Packet::new();
-
-		packet.header.set_version(1);
-		let response_type = match request_packet.header.get_type() {
-			PacketType::Confirmable => PacketType::Acknowledgement,
-			PacketType::NonConfirmable => PacketType::NonConfirmable,
-			_ => return Err(Error::new(ErrorKind::InvalidInput, "request type error"))
-		};
-		packet.header.set_type(response_type);
-		packet.header.set_code("2.05");
-		packet.header.set_message_id(request_packet.header.get_message_id());
-		packet.set_token(request_packet.get_token().clone());
-		packet.payload = payload;
-		self.send(&packet)
 	}
 
 	/// Execute a request.
@@ -147,7 +129,7 @@ impl CoAPClient {
 
 	/// Set the receive timeout.
 	pub fn set_receive_timeout(&self, dur: Option<Duration>) -> Result<()> {
-	    self.socket.set_read_timeout(dur)
+		self.socket.set_read_timeout(dur)
 	}
 
 	fn coap_scheme_type_mapper(scheme: &str) -> SchemeType {
@@ -164,7 +146,7 @@ mod test {
 	use super::*;
 	use std::time::Duration;
 	use std::io::ErrorKind;
-	use packet::{Packet, PacketType};
+	use packet::Packet;
 	use server::CoAPServer;
 
 	#[test]
@@ -174,15 +156,8 @@ mod test {
 		assert!(CoAPClient::request("127.0.0.1").is_err());
 	}
 
-	#[test]
-	fn test_reply_error() {
-		let client = CoAPClient::new("127.0.0.1:5683").unwrap();
-		let mut packet = Packet::new();
-		packet.header.set_type(PacketType::Acknowledgement);
-		assert!(client.reply(&packet, b"Test".to_vec()).is_err());
-	}
-
-	fn request_handler(_: Packet, _: CoAPClient) {
+	fn request_handler(_: Packet, _:Option<Packet>) -> Option<Packet> {
+		None
 	}
 
 	#[test]
