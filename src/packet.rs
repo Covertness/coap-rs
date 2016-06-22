@@ -18,13 +18,172 @@ pub enum PacketType {
 }
 
 #[derive(Default, Debug, RustcEncodable, RustcDecodable)]
-pub struct PacketHeader {
+pub struct PacketHeaderRaw {
 	ver_type_tkl: u8,
 	code: u8,
 	message_id: u16
 }
 
+#[derive(Debug)]
+pub struct PacketHeader {
+	ver_type_tkl: u8,
+	pub code: PacketClass,
+	message_id: u16
+}
+
+#[derive(Debug, PartialEq)]
+pub enum PacketClass {
+	Empty,
+	Request(Requests),
+	Response(Responses),
+	Reserved
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Requests {
+	Get,
+	Post,
+	Put,
+	Delete
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Responses {
+	// 200 Codes
+	Created,
+	Deleted,
+	Valid,
+	Changed,
+	Content,
+
+	// 400 Codes
+	BadRequest,
+	Unauthorized,
+	BadOption,
+	Forbidden,
+	NotFound,
+	MethodNotAllowed,
+	NotAcceptable,
+	PreconditionFailed,
+	RequestEntityTooLarge,
+	UnsupportedContentFormat,
+
+	// 500 Codes
+	InternalServerError,
+	NotImplemented,
+	BadGateway,
+	ServiceUnavailable,
+	GatewayTimeout,
+	ProxyingNotSupported
+}
+
+pub fn class_to_code(class: &PacketClass) -> u8 {
+	return match *class {
+		PacketClass::Empty => 0x00,
+
+		PacketClass::Request(Requests::Get) => 0x01,
+		PacketClass::Request(Requests::Post) => 0x02,
+		PacketClass::Request(Requests::Put) => 0x03,
+		PacketClass::Request(Requests::Delete) => 0x04,
+
+		PacketClass::Response(Responses::Created) => 0x41,
+		PacketClass::Response(Responses::Deleted) => 0x42,
+		PacketClass::Response(Responses::Valid) => 0x43,
+		PacketClass::Response(Responses::Changed) => 0x44,
+		PacketClass::Response(Responses::Content) => 0x45,
+
+		PacketClass::Response(Responses::BadRequest) => 0x80,
+		PacketClass::Response(Responses::Unauthorized) => 0x81,
+		PacketClass::Response(Responses::BadOption) => 0x82,
+		PacketClass::Response(Responses::Forbidden) => 0x83,
+		PacketClass::Response(Responses::NotFound) => 0x84,
+		PacketClass::Response(Responses::MethodNotAllowed) => 0x85,
+		PacketClass::Response(Responses::NotAcceptable) => 0x86,
+		PacketClass::Response(Responses::PreconditionFailed) => 0x8C,
+		PacketClass::Response(Responses::RequestEntityTooLarge) => 0x8D,
+		PacketClass::Response(Responses::UnsupportedContentFormat) => 0x8F,
+
+		PacketClass::Response(Responses::InternalServerError) => 0x90,
+		PacketClass::Response(Responses::NotImplemented) => 0x91,
+		PacketClass::Response(Responses::BadGateway) => 0x92,
+		PacketClass::Response(Responses::ServiceUnavailable) => 0x93,
+		PacketClass::Response(Responses::GatewayTimeout) => 0x94,
+		PacketClass::Response(Responses::ProxyingNotSupported) => 0x95,
+
+		_ => 0xFF,
+	} as u8
+}
+
+pub fn code_to_class(code: &u8) -> PacketClass {
+	match *code {
+		0x00 => PacketClass::Empty,
+
+		0x01 => PacketClass::Request(Requests::Get),
+		0x02 => PacketClass::Request(Requests::Post),
+		0x03 => PacketClass::Request(Requests::Put),
+		0x04 => PacketClass::Request(Requests::Delete),
+
+		0x41 => PacketClass::Response(Responses::Created),
+		0x42 => PacketClass::Response(Responses::Deleted),
+		0x43 => PacketClass::Response(Responses::Valid),
+		0x44 => PacketClass::Response(Responses::Changed),
+		0x45 => PacketClass::Response(Responses::Content),
+
+		0x80 => PacketClass::Response(Responses::BadRequest),
+		0x81 => PacketClass::Response(Responses::Unauthorized),
+		0x82 => PacketClass::Response(Responses::BadOption),
+		0x83 => PacketClass::Response(Responses::Forbidden),
+		0x84 => PacketClass::Response(Responses::NotFound),
+		0x85 => PacketClass::Response(Responses::MethodNotAllowed),
+		0x86 => PacketClass::Response(Responses::NotAcceptable),
+		0x8C => PacketClass::Response(Responses::PreconditionFailed),
+		0x8D => PacketClass::Response(Responses::RequestEntityTooLarge),
+		0x8F => PacketClass::Response(Responses::UnsupportedContentFormat),
+
+		0x90 => PacketClass::Response(Responses::InternalServerError),
+		0x91 => PacketClass::Response(Responses::NotImplemented),
+		0x92 => PacketClass::Response(Responses::BadGateway),
+		0x93 => PacketClass::Response(Responses::ServiceUnavailable),
+		0x94 => PacketClass::Response(Responses::GatewayTimeout),
+		0x95 => PacketClass::Response(Responses::ProxyingNotSupported),
+
+		_ => PacketClass::Reserved,
+	}
+}
+
+pub fn code_to_str(code: &u8) -> String {
+	let class_code = (0xE0 & code) >> 5;
+	let detail_code = 0x1F & code;
+
+	return format!("{}.{:02}", class_code, detail_code);
+}
+
+pub fn class_to_str(class: &PacketClass) -> String {
+	return code_to_str(&class_to_code(class));
+}
+
 impl PacketHeader {
+
+	pub fn new() -> PacketHeader {
+		return PacketHeader::from_raw(&PacketHeaderRaw::default());
+	}
+
+	pub fn from_raw(raw: &PacketHeaderRaw) -> PacketHeader {
+		return PacketHeader {
+			ver_type_tkl: raw.ver_type_tkl,
+			code: code_to_class(&raw.code),
+			message_id: raw.message_id,
+		}
+	}
+
+	pub fn to_raw(&self) -> PacketHeaderRaw {
+		return PacketHeaderRaw {
+			ver_type_tkl: self.ver_type_tkl,
+			code: class_to_code(&self.code),
+			message_id: self.message_id,
+		}
+	}
+
 	#[inline]
 	pub fn set_version(&mut self, v: u8) {
 		let type_tkl = 0x3F & self.ver_type_tkl;
@@ -84,14 +243,11 @@ impl PacketHeader {
 		assert_eq!(0xF8 & class_code, 0);
 		assert_eq!(0xE0 & detail_code, 0);
 
-		self.code = class_code << 5 | detail_code;
+		self.code = code_to_class(&(class_code << 5 | detail_code));
 	}
 
 	pub fn get_code(&self) -> String {
-		let class_code = (0xE0 & self.code) >> 5;
-		let detail_code = 0x1F & self.code;
-
-		return format!("{}.{:02}", class_code, detail_code);
+		class_to_str(&self.code)
 	}
 
 	#[inline]
@@ -152,7 +308,7 @@ pub struct Packet {
 impl Packet {
 	pub fn new() -> Packet {
 		Packet {
-			header: PacketHeader::default(),
+			header: PacketHeader::new(),
 			token: Vec::new(),
 			options: BTreeMap::new(),
 			payload: Vec::new(),
@@ -202,9 +358,10 @@ impl Packet {
 
 	/// Decodes a byte slice and construct the equivalent Packet.
 	pub fn from_bytes(buf: &[u8]) -> Result<Packet, ParseError> {
-		let header_result: bincode::DecodingResult<PacketHeader> = bincode::decode(buf);
+		let header_result: bincode::DecodingResult<PacketHeaderRaw> = bincode::decode(buf);
 		match header_result {
-			Ok(header) => {
+			Ok(raw_header) => {
+				let header = PacketHeader::from_raw(&raw_header);
 				let token_length = header.get_token_length();
 				let options_start: usize = 4 + token_length as usize;
 
@@ -373,7 +530,7 @@ impl Packet {
 		}
 
 		let mut buf_length = 4 + self.payload.len() + self.token.len();
-		if self.header.get_code() != "0.00" && self.payload.len() != 0 {
+		if self.header.code != PacketClass::Empty && self.payload.len() != 0 {
 			buf_length += 1;
 		}
 		buf_length += options_bytes.len();
@@ -383,7 +540,7 @@ impl Packet {
 		}
 
 		let mut buf: Vec<u8> = Vec::with_capacity(buf_length);
-		let header_result: bincode::EncodingResult<()> = bincode::encode_into(&self.header, &mut buf, bincode::SizeLimit::Infinite);
+		let header_result: bincode::EncodingResult<()> = bincode::encode_into(&self.header.to_raw(), &mut buf, bincode::SizeLimit::Infinite);
 		match header_result {
 			Ok(_) => {
 				buf.reserve(self.token.len() + options_bytes.len());
@@ -395,7 +552,7 @@ impl Packet {
 					buf.set_len(buf_len + self.token.len() + options_bytes.len());
 				}
 
-				if self.header.get_code() != "0.00" && self.payload.len() != 0 {
+				if self.header.code != PacketClass::Empty && self.payload.len() != 0 {
 					buf.push(0xFF);
 					buf.reserve(self.payload.len());
 					unsafe {
@@ -446,7 +603,7 @@ pub fn auto_response(request_packet: &Packet) -> Option<Packet> {
 			_ => return None
 		};
 		packet.header.set_type(response_type);
-		packet.header.set_code("2.05");
+		packet.header.code = PacketClass::Response(Responses::Content);
 		packet.header.set_message_id(request_packet.header.get_message_id());
 		packet.set_token(request_packet.get_token().clone());
 
@@ -461,6 +618,22 @@ mod test {
 	use std::collections::LinkedList;
 
 	#[test]
+	fn test_header_codes() {
+		for code in 0..255 {
+			let class = code_to_class(&code);
+			let code_str = code_to_str(&code);
+			let class_str = class_to_str(&class);
+
+			// Reserved class could technically be many codes
+			//   so only check valid items
+			if class != PacketClass::Reserved {
+				assert_eq!(class_to_code(&class), code);
+				assert_eq!(code_str, class_str);
+			}
+		}
+	}
+
+	#[test]
 	fn test_decode_packet_with_options() {
 		let buf = [0x44, 0x01, 0x84, 0x9e, 0x51, 0x55, 0x77, 0xe8, 0xb2, 0x48, 0x69, 0x04, 0x54, 0x65, 0x73, 0x74, 0x43, 0x61, 0x3d, 0x31];
 		let packet = Packet::from_bytes(&buf);
@@ -469,7 +642,7 @@ mod test {
 		assert_eq!(packet.header.get_version(), 1);
 		assert_eq!(packet.header.get_type(), PacketType::Confirmable);
 		assert_eq!(packet.header.get_token_length(), 4);
-		assert_eq!(packet.header.get_code(), "0.01");
+		assert_eq!(packet.header.code, PacketClass::Request(Requests::Get));
 		assert_eq!(packet.header.get_message_id(), 33950);
 		assert_eq!(*packet.get_token(), vec!(0x51, 0x55, 0x77, 0xE8));
 		assert_eq!(packet.options.len(), 2);
@@ -499,7 +672,7 @@ mod test {
 		assert_eq!(packet.header.get_version(), 1);
 		assert_eq!(packet.header.get_type(), PacketType::Acknowledgement);
 		assert_eq!(packet.header.get_token_length(), 4);
-		assert_eq!(packet.header.get_code(), "2.05");
+		assert_eq!(packet.header.code, PacketClass::Response(Responses::Content));
 		assert_eq!(packet.header.get_message_id(), 5117);
 		assert_eq!(*packet.get_token(), vec!(0xD0, 0xE2, 0x4D, 0xAC));
 		assert_eq!(packet.payload, "Hello".as_bytes().to_vec());
@@ -510,7 +683,7 @@ mod test {
 		let mut packet = Packet::new();
 		packet.header.set_version(1);
 		packet.header.set_type(PacketType::Confirmable);
-		packet.header.set_code("0.01");
+		packet.header.code = PacketClass::Request(Requests::Get);
 		packet.header.set_message_id(33950);
 		packet.set_token(vec!(0x51, 0x55, 0x77, 0xE8));
 		packet.add_option(OptionType::UriPath, b"Hi".to_vec());
@@ -524,7 +697,7 @@ mod test {
 		let mut packet = Packet::new();
 		packet.header.set_version(1);
 		packet.header.set_type(PacketType::Acknowledgement);
-		packet.header.set_code("2.05");
+		packet.header.code = PacketClass::Response(Responses::Content);
 		packet.header.set_message_id(5117);
 		packet.set_token(vec!(0xD0, 0xE2, 0x4D, 0xAC));
 		packet.payload = "Hello".as_bytes().to_vec();
