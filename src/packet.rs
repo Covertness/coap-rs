@@ -31,7 +31,7 @@ pub struct PacketHeader {
 	message_id: u16
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum PacketClass {
 	Empty,
 	Request(RequestRegistry),
@@ -39,7 +39,7 @@ pub enum PacketClass {
 	Reserved
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum RequestRegistry {
 	Get,
 	Post,
@@ -47,7 +47,7 @@ pub enum RequestRegistry {
 	Delete
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ResponseRegistry {
 	// 200 Codes
 	Created,
@@ -616,6 +616,22 @@ pub fn auto_response(request_packet: &Packet) -> Option<Packet> {
 mod test {
 	use super::*;
 	use std::collections::LinkedList;
+
+	#[test]
+	fn test_header_codes() {
+		for code in 0..255 {
+			let class = code_to_class(&code);
+			let code_str = code_to_str(&code);
+			let class_str = class_to_str(&class);
+
+			// Reserved class could technically be many codes
+			//   so only check valid items
+			if class != PacketClass::Reserved {
+				assert_eq!(class_to_code(&class), code);
+				assert_eq!(code_str, class_str);
+			}
+		}
+	}
 
 	#[test]
 	fn test_decode_packet_with_options() {
