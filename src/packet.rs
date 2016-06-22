@@ -18,13 +18,172 @@ pub enum PacketType {
 }
 
 #[derive(Default, Debug, RustcEncodable, RustcDecodable)]
-pub struct PacketHeader {
+pub struct PacketHeaderRaw {
 	ver_type_tkl: u8,
 	code: u8,
 	message_id: u16
 }
 
+#[derive(Debug)]
+pub struct PacketHeader {
+	ver_type_tkl: u8,
+	code: PacketClass,
+	message_id: u16
+}
+
+#[derive(Debug)]
+pub enum PacketClass {
+	Empty,
+	Request(RequestRegistry),
+	Response(ResponseRegistry),
+	Reserved
+}
+
+#[derive(Debug)]
+pub enum RequestRegistry {
+	Get,
+	Post,
+	Put,
+	Delete
+}
+
+#[derive(Debug)]
+pub enum ResponseRegistry {
+	// 200 Codes
+	Created,
+	Deleted,
+	Valid,
+	Changed,
+	Content,
+
+	// 400 Codes
+	BadRequest,
+	Unauthorized,
+	BadOption,
+	Forbidden,
+	NotFound,
+	MethodNotAllowed,
+	NotAcceptable,
+	PreconditionFailed,
+	RequestEntityTooLarge,
+	UnsupportedContentFormat,
+
+	// 500 Codes
+	InternalServerError,
+	NotImplemented,
+	BadGateway,
+	ServiceUnavailable,
+	GatewayTimeout,
+	ProxyingNotSupported
+}
+
+pub fn class_to_code(class: &PacketClass) -> u8 {
+	return match *class {
+		PacketClass::Empty => 0x00,
+
+		PacketClass::Request(RequestRegistry::Get) => 0x01,
+		PacketClass::Request(RequestRegistry::Post) => 0x02,
+		PacketClass::Request(RequestRegistry::Put) => 0x03,
+		PacketClass::Request(RequestRegistry::Delete) => 0x04,
+
+		PacketClass::Response(ResponseRegistry::Created) => 0x41,
+		PacketClass::Response(ResponseRegistry::Deleted) => 0x42,
+		PacketClass::Response(ResponseRegistry::Valid) => 0x43,
+		PacketClass::Response(ResponseRegistry::Changed) => 0x44,
+		PacketClass::Response(ResponseRegistry::Content) => 0x45,
+
+		PacketClass::Response(ResponseRegistry::BadRequest) => 0x80,
+		PacketClass::Response(ResponseRegistry::Unauthorized) => 0x81,
+		PacketClass::Response(ResponseRegistry::BadOption) => 0x82,
+		PacketClass::Response(ResponseRegistry::Forbidden) => 0x83,
+		PacketClass::Response(ResponseRegistry::NotFound) => 0x84,
+		PacketClass::Response(ResponseRegistry::MethodNotAllowed) => 0x85,
+		PacketClass::Response(ResponseRegistry::NotAcceptable) => 0x86,
+		PacketClass::Response(ResponseRegistry::PreconditionFailed) => 0x8C,
+		PacketClass::Response(ResponseRegistry::RequestEntityTooLarge) => 0x8D,
+		PacketClass::Response(ResponseRegistry::UnsupportedContentFormat) => 0x8F,
+
+		PacketClass::Response(ResponseRegistry::InternalServerError) => 0x90,
+		PacketClass::Response(ResponseRegistry::NotImplemented) => 0x91,
+		PacketClass::Response(ResponseRegistry::BadGateway) => 0x92,
+		PacketClass::Response(ResponseRegistry::ServiceUnavailable) => 0x93,
+		PacketClass::Response(ResponseRegistry::GatewayTimeout) => 0x94,
+		PacketClass::Response(ResponseRegistry::ProxyingNotSupported) => 0x95,
+
+		_ => 0xFF,
+	} as u8
+}
+
+pub fn code_to_class(code: &u8) -> PacketClass {
+	match *code {
+		0x00 => PacketClass::Empty,
+
+		0x01 => PacketClass::Request(RequestRegistry::Get),
+		0x02 => PacketClass::Request(RequestRegistry::Post),
+		0x03 => PacketClass::Request(RequestRegistry::Put),
+		0x04 => PacketClass::Request(RequestRegistry::Delete),
+
+		0x41 => PacketClass::Response(ResponseRegistry::Created),
+		0x42 => PacketClass::Response(ResponseRegistry::Deleted),
+		0x43 => PacketClass::Response(ResponseRegistry::Valid),
+		0x44 => PacketClass::Response(ResponseRegistry::Changed),
+		0x45 => PacketClass::Response(ResponseRegistry::Content),
+
+		0x80 => PacketClass::Response(ResponseRegistry::BadRequest),
+		0x81 => PacketClass::Response(ResponseRegistry::Unauthorized),
+		0x82 => PacketClass::Response(ResponseRegistry::BadOption),
+		0x83 => PacketClass::Response(ResponseRegistry::Forbidden),
+		0x84 => PacketClass::Response(ResponseRegistry::NotFound),
+		0x85 => PacketClass::Response(ResponseRegistry::MethodNotAllowed),
+		0x86 => PacketClass::Response(ResponseRegistry::NotAcceptable),
+		0x8C => PacketClass::Response(ResponseRegistry::PreconditionFailed),
+		0x8D => PacketClass::Response(ResponseRegistry::RequestEntityTooLarge),
+		0x8F => PacketClass::Response(ResponseRegistry::UnsupportedContentFormat),
+
+		0x90 => PacketClass::Response(ResponseRegistry::InternalServerError),
+		0x91 => PacketClass::Response(ResponseRegistry::NotImplemented),
+		0x92 => PacketClass::Response(ResponseRegistry::BadGateway),
+		0x93 => PacketClass::Response(ResponseRegistry::ServiceUnavailable),
+		0x94 => PacketClass::Response(ResponseRegistry::GatewayTimeout),
+		0x95 => PacketClass::Response(ResponseRegistry::ProxyingNotSupported),
+
+		_ => PacketClass::Reserved,
+	}
+}
+
+pub fn code_to_str(code: &u8) -> String {
+	let class_code = (0xE0 & code) >> 5;
+	let detail_code = 0x1F & code;
+
+	return format!("{}.{:02}", class_code, detail_code);
+}
+
+pub fn class_to_str(class: &PacketClass) -> String {
+	return code_to_str(&class_to_code(class));
+}
+
 impl PacketHeader {
+
+	pub fn new() -> PacketHeader {
+		return PacketHeader::from_raw(&PacketHeaderRaw::default());
+	}
+
+	pub fn from_raw(raw: &PacketHeaderRaw) -> PacketHeader {
+		return PacketHeader {
+			ver_type_tkl: raw.ver_type_tkl,
+			code: code_to_class(&raw.code),
+			message_id: raw.message_id,
+		}
+	}
+
+	pub fn to_raw(&self) -> PacketHeaderRaw {
+		return PacketHeaderRaw {
+			ver_type_tkl: self.ver_type_tkl,
+			code: class_to_code(&self.code),
+			message_id: self.message_id,
+		}
+	}
+
 	#[inline]
 	pub fn set_version(&mut self, v: u8) {
 		let type_tkl = 0x3F & self.ver_type_tkl;
@@ -84,14 +243,11 @@ impl PacketHeader {
 		assert_eq!(0xF8 & class_code, 0);
 		assert_eq!(0xE0 & detail_code, 0);
 
-		self.code = class_code << 5 | detail_code;
+		self.code = code_to_class(&(class_code << 5 | detail_code));
 	}
 
 	pub fn get_code(&self) -> String {
-		let class_code = (0xE0 & self.code) >> 5;
-		let detail_code = 0x1F & self.code;
-
-		return format!("{}.{:02}", class_code, detail_code);
+		class_to_str(&self.code)
 	}
 
 	#[inline]
@@ -152,7 +308,7 @@ pub struct Packet {
 impl Packet {
 	pub fn new() -> Packet {
 		Packet {
-			header: PacketHeader::default(),
+			header: PacketHeader::new(),
 			token: Vec::new(),
 			options: BTreeMap::new(),
 			payload: Vec::new(),
@@ -202,9 +358,10 @@ impl Packet {
 
 	/// Decodes a byte slice and construct the equivalent Packet.
 	pub fn from_bytes(buf: &[u8]) -> Result<Packet, ParseError> {
-		let header_result: bincode::DecodingResult<PacketHeader> = bincode::decode(buf);
+		let header_result: bincode::DecodingResult<PacketHeaderRaw> = bincode::decode(buf);
 		match header_result {
-			Ok(header) => {
+			Ok(raw_header) => {
+				let header = PacketHeader::from_raw(&raw_header);
 				let token_length = header.get_token_length();
 				let options_start: usize = 4 + token_length as usize;
 
@@ -383,7 +540,7 @@ impl Packet {
 		}
 
 		let mut buf: Vec<u8> = Vec::with_capacity(buf_length);
-		let header_result: bincode::EncodingResult<()> = bincode::encode_into(&self.header, &mut buf, bincode::SizeLimit::Infinite);
+		let header_result: bincode::EncodingResult<()> = bincode::encode_into(&self.header.to_raw(), &mut buf, bincode::SizeLimit::Infinite);
 		match header_result {
 			Ok(_) => {
 				buf.reserve(self.token.len() + options_bytes.len());
