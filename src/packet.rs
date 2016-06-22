@@ -27,7 +27,7 @@ pub struct PacketHeaderRaw {
 #[derive(Debug)]
 pub struct PacketHeader {
 	ver_type_tkl: u8,
-	code: PacketClass,
+	pub code: PacketClass,
 	message_id: u16
 }
 
@@ -530,7 +530,7 @@ impl Packet {
 		}
 
 		let mut buf_length = 4 + self.payload.len() + self.token.len();
-		if self.header.get_code() != "0.00" && self.payload.len() != 0 {
+		if self.header.code != PacketClass::Empty && self.payload.len() != 0 {
 			buf_length += 1;
 		}
 		buf_length += options_bytes.len();
@@ -552,7 +552,7 @@ impl Packet {
 					buf.set_len(buf_len + self.token.len() + options_bytes.len());
 				}
 
-				if self.header.get_code() != "0.00" && self.payload.len() != 0 {
+				if self.header.code != PacketClass::Empty && self.payload.len() != 0 {
 					buf.push(0xFF);
 					buf.reserve(self.payload.len());
 					unsafe {
@@ -603,7 +603,7 @@ pub fn auto_response(request_packet: &Packet) -> Option<Packet> {
 			_ => return None
 		};
 		packet.header.set_type(response_type);
-		packet.header.set_code("2.05");
+		packet.header.code = PacketClass::Response(ResponseRegistry::Content);
 		packet.header.set_message_id(request_packet.header.get_message_id());
 		packet.set_token(request_packet.get_token().clone());
 
@@ -642,7 +642,7 @@ mod test {
 		assert_eq!(packet.header.get_version(), 1);
 		assert_eq!(packet.header.get_type(), PacketType::Confirmable);
 		assert_eq!(packet.header.get_token_length(), 4);
-		assert_eq!(packet.header.get_code(), "0.01");
+		assert_eq!(packet.header.code, PacketClass::Request(RequestRegistry::Get));
 		assert_eq!(packet.header.get_message_id(), 33950);
 		assert_eq!(*packet.get_token(), vec!(0x51, 0x55, 0x77, 0xE8));
 		assert_eq!(packet.options.len(), 2);
@@ -672,7 +672,7 @@ mod test {
 		assert_eq!(packet.header.get_version(), 1);
 		assert_eq!(packet.header.get_type(), PacketType::Acknowledgement);
 		assert_eq!(packet.header.get_token_length(), 4);
-		assert_eq!(packet.header.get_code(), "2.05");
+		assert_eq!(packet.header.code, PacketClass::Response(ResponseRegistry::Content));
 		assert_eq!(packet.header.get_message_id(), 5117);
 		assert_eq!(*packet.get_token(), vec!(0xD0, 0xE2, 0x4D, 0xAC));
 		assert_eq!(packet.payload, "Hello".as_bytes().to_vec());
@@ -683,7 +683,7 @@ mod test {
 		let mut packet = Packet::new();
 		packet.header.set_version(1);
 		packet.header.set_type(PacketType::Confirmable);
-		packet.header.set_code("0.01");
+		packet.header.code = PacketClass::Request(RequestRegistry::Get);
 		packet.header.set_message_id(33950);
 		packet.set_token(vec!(0x51, 0x55, 0x77, 0xE8));
 		packet.add_option(OptionType::UriPath, b"Hi".to_vec());
@@ -697,7 +697,7 @@ mod test {
 		let mut packet = Packet::new();
 		packet.header.set_version(1);
 		packet.header.set_type(PacketType::Acknowledgement);
-		packet.header.set_code("2.05");
+		packet.header.code = PacketClass::Response(ResponseRegistry::Content);
 		packet.header.set_message_id(5117);
 		packet.set_token(vec!(0xD0, 0xE2, 0x4D, 0xAC));
 		packet.payload = "Hello".as_bytes().to_vec();
