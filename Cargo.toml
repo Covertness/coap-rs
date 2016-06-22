@@ -20,4 +20,4 @@ rand = "0.3"
 log = "0.3"
 
 [dev-dependencies]
-quickcheck = "*"
+quickcheck = "0.2.27"
