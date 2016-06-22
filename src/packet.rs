@@ -34,13 +34,13 @@ pub struct PacketHeader {
 #[derive(Debug, PartialEq)]
 pub enum PacketClass {
 	Empty,
-	Request(RequestRegistry),
-	Response(ResponseRegistry),
+	Request(Requests),
+	Response(Responses),
 	Reserved
 }
 
 #[derive(Debug, PartialEq)]
-pub enum RequestRegistry {
+pub enum Requests {
 	Get,
 	Post,
 	Put,
@@ -48,7 +48,7 @@ pub enum RequestRegistry {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ResponseRegistry {
+pub enum Responses {
 	// 200 Codes
 	Created,
 	Deleted,
@@ -81,34 +81,34 @@ pub fn class_to_code(class: &PacketClass) -> u8 {
 	return match *class {
 		PacketClass::Empty => 0x00,
 
-		PacketClass::Request(RequestRegistry::Get) => 0x01,
-		PacketClass::Request(RequestRegistry::Post) => 0x02,
-		PacketClass::Request(RequestRegistry::Put) => 0x03,
-		PacketClass::Request(RequestRegistry::Delete) => 0x04,
+		PacketClass::Request(Requests::Get) => 0x01,
+		PacketClass::Request(Requests::Post) => 0x02,
+		PacketClass::Request(Requests::Put) => 0x03,
+		PacketClass::Request(Requests::Delete) => 0x04,
 
-		PacketClass::Response(ResponseRegistry::Created) => 0x41,
-		PacketClass::Response(ResponseRegistry::Deleted) => 0x42,
-		PacketClass::Response(ResponseRegistry::Valid) => 0x43,
-		PacketClass::Response(ResponseRegistry::Changed) => 0x44,
-		PacketClass::Response(ResponseRegistry::Content) => 0x45,
+		PacketClass::Response(Responses::Created) => 0x41,
+		PacketClass::Response(Responses::Deleted) => 0x42,
+		PacketClass::Response(Responses::Valid) => 0x43,
+		PacketClass::Response(Responses::Changed) => 0x44,
+		PacketClass::Response(Responses::Content) => 0x45,
 
-		PacketClass::Response(ResponseRegistry::BadRequest) => 0x80,
-		PacketClass::Response(ResponseRegistry::Unauthorized) => 0x81,
-		PacketClass::Response(ResponseRegistry::BadOption) => 0x82,
-		PacketClass::Response(ResponseRegistry::Forbidden) => 0x83,
-		PacketClass::Response(ResponseRegistry::NotFound) => 0x84,
-		PacketClass::Response(ResponseRegistry::MethodNotAllowed) => 0x85,
-		PacketClass::Response(ResponseRegistry::NotAcceptable) => 0x86,
-		PacketClass::Response(ResponseRegistry::PreconditionFailed) => 0x8C,
-		PacketClass::Response(ResponseRegistry::RequestEntityTooLarge) => 0x8D,
-		PacketClass::Response(ResponseRegistry::UnsupportedContentFormat) => 0x8F,
+		PacketClass::Response(Responses::BadRequest) => 0x80,
+		PacketClass::Response(Responses::Unauthorized) => 0x81,
+		PacketClass::Response(Responses::BadOption) => 0x82,
+		PacketClass::Response(Responses::Forbidden) => 0x83,
+		PacketClass::Response(Responses::NotFound) => 0x84,
+		PacketClass::Response(Responses::MethodNotAllowed) => 0x85,
+		PacketClass::Response(Responses::NotAcceptable) => 0x86,
+		PacketClass::Response(Responses::PreconditionFailed) => 0x8C,
+		PacketClass::Response(Responses::RequestEntityTooLarge) => 0x8D,
+		PacketClass::Response(Responses::UnsupportedContentFormat) => 0x8F,
 
-		PacketClass::Response(ResponseRegistry::InternalServerError) => 0x90,
-		PacketClass::Response(ResponseRegistry::NotImplemented) => 0x91,
-		PacketClass::Response(ResponseRegistry::BadGateway) => 0x92,
-		PacketClass::Response(ResponseRegistry::ServiceUnavailable) => 0x93,
-		PacketClass::Response(ResponseRegistry::GatewayTimeout) => 0x94,
-		PacketClass::Response(ResponseRegistry::ProxyingNotSupported) => 0x95,
+		PacketClass::Response(Responses::InternalServerError) => 0x90,
+		PacketClass::Response(Responses::NotImplemented) => 0x91,
+		PacketClass::Response(Responses::BadGateway) => 0x92,
+		PacketClass::Response(Responses::ServiceUnavailable) => 0x93,
+		PacketClass::Response(Responses::GatewayTimeout) => 0x94,
+		PacketClass::Response(Responses::ProxyingNotSupported) => 0x95,
 
 		_ => 0xFF,
 	} as u8
@@ -118,34 +118,34 @@ pub fn code_to_class(code: &u8) -> PacketClass {
 	match *code {
 		0x00 => PacketClass::Empty,
 
-		0x01 => PacketClass::Request(RequestRegistry::Get),
-		0x02 => PacketClass::Request(RequestRegistry::Post),
-		0x03 => PacketClass::Request(RequestRegistry::Put),
-		0x04 => PacketClass::Request(RequestRegistry::Delete),
+		0x01 => PacketClass::Request(Requests::Get),
+		0x02 => PacketClass::Request(Requests::Post),
+		0x03 => PacketClass::Request(Requests::Put),
+		0x04 => PacketClass::Request(Requests::Delete),
 
-		0x41 => PacketClass::Response(ResponseRegistry::Created),
-		0x42 => PacketClass::Response(ResponseRegistry::Deleted),
-		0x43 => PacketClass::Response(ResponseRegistry::Valid),
-		0x44 => PacketClass::Response(ResponseRegistry::Changed),
-		0x45 => PacketClass::Response(ResponseRegistry::Content),
+		0x41 => PacketClass::Response(Responses::Created),
+		0x42 => PacketClass::Response(Responses::Deleted),
+		0x43 => PacketClass::Response(Responses::Valid),
+		0x44 => PacketClass::Response(Responses::Changed),
+		0x45 => PacketClass::Response(Responses::Content),
 
-		0x80 => PacketClass::Response(ResponseRegistry::BadRequest),
-		0x81 => PacketClass::Response(ResponseRegistry::Unauthorized),
-		0x82 => PacketClass::Response(ResponseRegistry::BadOption),
-		0x83 => PacketClass::Response(ResponseRegistry::Forbidden),
-		0x84 => PacketClass::Response(ResponseRegistry::NotFound),
-		0x85 => PacketClass::Response(ResponseRegistry::MethodNotAllowed),
-		0x86 => PacketClass::Response(ResponseRegistry::NotAcceptable),
-		0x8C => PacketClass::Response(ResponseRegistry::PreconditionFailed),
-		0x8D => PacketClass::Response(ResponseRegistry::RequestEntityTooLarge),
-		0x8F => PacketClass::Response(ResponseRegistry::UnsupportedContentFormat),
+		0x80 => PacketClass::Response(Responses::BadRequest),
+		0x81 => PacketClass::Response(Responses::Unauthorized),
+		0x82 => PacketClass::Response(Responses::BadOption),
+		0x83 => PacketClass::Response(Responses::Forbidden),
+		0x84 => PacketClass::Response(Responses::NotFound),
+		0x85 => PacketClass::Response(Responses::MethodNotAllowed),
+		0x86 => PacketClass::Response(Responses::NotAcceptable),
+		0x8C => PacketClass::Response(Responses::PreconditionFailed),
+		0x8D => PacketClass::Response(Responses::RequestEntityTooLarge),
+		0x8F => PacketClass::Response(Responses::UnsupportedContentFormat),
 
-		0x90 => PacketClass::Response(ResponseRegistry::InternalServerError),
-		0x91 => PacketClass::Response(ResponseRegistry::NotImplemented),
-		0x92 => PacketClass::Response(ResponseRegistry::BadGateway),
-		0x93 => PacketClass::Response(ResponseRegistry::ServiceUnavailable),
-		0x94 => PacketClass::Response(ResponseRegistry::GatewayTimeout),
-		0x95 => PacketClass::Response(ResponseRegistry::ProxyingNotSupported),
+		0x90 => PacketClass::Response(Responses::InternalServerError),
+		0x91 => PacketClass::Response(Responses::NotImplemented),
+		0x92 => PacketClass::Response(Responses::BadGateway),
+		0x93 => PacketClass::Response(Responses::ServiceUnavailable),
+		0x94 => PacketClass::Response(Responses::GatewayTimeout),
+		0x95 => PacketClass::Response(Responses::ProxyingNotSupported),
 
 		_ => PacketClass::Reserved,
 	}
@@ -603,7 +603,7 @@ pub fn auto_response(request_packet: &Packet) -> Option<Packet> {
 			_ => return None
 		};
 		packet.header.set_type(response_type);
-		packet.header.code = PacketClass::Response(ResponseRegistry::Content);
+		packet.header.code = PacketClass::Response(Responses::Content);
 		packet.header.set_message_id(request_packet.header.get_message_id());
 		packet.set_token(request_packet.get_token().clone());
 
@@ -642,7 +642,7 @@ mod test {
 		assert_eq!(packet.header.get_version(), 1);
 		assert_eq!(packet.header.get_type(), PacketType::Confirmable);
 		assert_eq!(packet.header.get_token_length(), 4);
-		assert_eq!(packet.header.code, PacketClass::Request(RequestRegistry::Get));
+		assert_eq!(packet.header.code, PacketClass::Request(Requests::Get));
 		assert_eq!(packet.header.get_message_id(), 33950);
 		assert_eq!(*packet.get_token(), vec!(0x51, 0x55, 0x77, 0xE8));
 		assert_eq!(packet.options.len(), 2);
@@ -672,7 +672,7 @@ mod test {
 		assert_eq!(packet.header.get_version(), 1);
 		assert_eq!(packet.header.get_type(), PacketType::Acknowledgement);
 		assert_eq!(packet.header.get_token_length(), 4);
-		assert_eq!(packet.header.code, PacketClass::Response(ResponseRegistry::Content));
+		assert_eq!(packet.header.code, PacketClass::Response(Responses::Content));
 		assert_eq!(packet.header.get_message_id(), 5117);
 		assert_eq!(*packet.get_token(), vec!(0xD0, 0xE2, 0x4D, 0xAC));
 		assert_eq!(packet.payload, "Hello".as_bytes().to_vec());
@@ -683,7 +683,7 @@ mod test {
 		let mut packet = Packet::new();
 		packet.header.set_version(1);
 		packet.header.set_type(PacketType::Confirmable);
-		packet.header.code = PacketClass::Request(RequestRegistry::Get);
+		packet.header.code = PacketClass::Request(Requests::Get);
 		packet.header.set_message_id(33950);
 		packet.set_token(vec!(0x51, 0x55, 0x77, 0xE8));
 		packet.add_option(OptionType::UriPath, b"Hi".to_vec());
@@ -697,7 +697,7 @@ mod test {
 		let mut packet = Packet::new();
 		packet.header.set_version(1);
 		packet.header.set_type(PacketType::Acknowledgement);
-		packet.header.code = PacketClass::Response(ResponseRegistry::Content);
+		packet.header.code = PacketClass::Response(Responses::Content);
 		packet.header.set_message_id(5117);
 		packet.set_token(vec!(0xD0, 0xE2, 0x4D, 0xAC));
 		packet.payload = "Hello".as_bytes().to_vec();
