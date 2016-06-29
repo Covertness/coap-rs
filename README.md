@@ -33,10 +33,9 @@ extern crate coap;
 extern crate coap;
 
 use std::io;
-use coap::packet::*;
-use coap::{CoAPServer, CoAPClient};
+use coap::{CoAPResponse, CoAPRequest};
 
-fn request_handler(req: Packet, response: Option<Packet>) -> Option<Packet> {
+fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
 	println!("Receive request: {:?}", req);
 	response
 }
@@ -59,15 +58,14 @@ fn main() {
 ```rust
 extern crate coap;
 
-use coap::packet::*;
-use coap::CoAPClient;
+use coap::{CoAPClient, CoAPResponse};
 
 fn main() {
 	let url = "coap://127.0.0.1:5683/Rust";
 	println!("Client request: {}", url);
 
-	let response: Packet = CoAPClient::request(url).unwrap();
-	println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
+	let response: CoAPResponse = CoAPClient::request(url).unwrap();
+	println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 }
 ```
 

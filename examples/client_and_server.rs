@@ -1,27 +1,28 @@
 extern crate coap;
 
-use coap::packet::*;
-use coap::{CoAPServer, CoAPClient};
+use coap::{CoAPServer, CoAPClient, CoAPRequest, CoAPResponse, CoAPOption};
+use coap::IsMessage;
 
-fn request_handler(req: Packet, response: Option<Packet>) -> Option<Packet> {
-	let uri_path = req.get_option(OptionType::UriPath).unwrap();
+fn request_handler(request: CoAPRequest) -> Option<CoAPResponse> {
+    let uri_path = request.get_option(CoAPOption::UriPath).unwrap();
 
-	return match response {
-		Some(mut packet) => {
-			packet.set_payload(uri_path.front().unwrap().clone());
-			Some(packet)
-		},
-		_ => None
+    return match request.response {
+        Some(mut response) => {
+            response.set_payload(uri_path.front().unwrap().clone());
+            Some(response)
+        }
+        _ => None,
     };
 }
 
 fn main() {
-	let mut server = CoAPServer::new("127.0.0.1:5683").unwrap();
-	server.handle(request_handler).unwrap();
+    let mut server = CoAPServer::new("127.0.0.1:5683").unwrap();
+    server.handle(request_handler).unwrap();
 
-	let url = "coap://127.0.0.1:5683/Rust";
-	println!("Client request: {}", url);
+    let url = "coap://127.0.0.1:5683/Rust";
+    println!("Client request: {}", url);
 
-	let response: Packet = CoAPClient::request(url).unwrap();
-	println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
+    let response: CoAPResponse = CoAPClient::request(url).unwrap();
+    println!("Server reply: {}",
+             String::from_utf8(response.message.payload).unwrap());
 }

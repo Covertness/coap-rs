@@ -5,12 +5,14 @@ use std::net::{ToSocketAddrs, SocketAddr};
 use std::sync::mpsc;
 use mio::{EventLoop, PollOpt, EventSet, Handler, Sender, Token};
 use mio::udp::UdpSocket;
-use packet::{Packet, auto_response};
+use message::packet::Packet;
+use message::request::CoAPRequest;
+use message::response::CoAPResponse;
 use threadpool::ThreadPool;
 
 const DEFAULT_WORKER_NUM: usize = 4;
-pub type TxQueue = mpsc::Sender<CoAPResponse>;
-pub type RxQueue = mpsc::Receiver<CoAPResponse>;
+type TxQueue = mpsc::Sender<QueuedResponse>;
+type RxQueue = mpsc::Receiver<QueuedResponse>;
 
 #[derive(Debug)]
 pub enum CoAPServerError {
@@ -20,21 +22,21 @@ pub enum CoAPServerError {
 }
 
 #[derive(Debug)]
-pub struct CoAPResponse {
+struct QueuedResponse {
     pub address: SocketAddr,
-    pub response: Packet,
+    pub response: CoAPResponse,
 }
 
 pub trait CoAPHandler: Sync + Send + Copy {
-    fn handle(&self, Packet, Option<Packet>) -> Option<Packet>;
+    fn handle(&self, CoAPRequest) -> Option<CoAPResponse>;
 }
 
 impl<F> CoAPHandler for F
-    where F: Fn(Packet, Option<Packet>) -> Option<Packet>,
+    where F: Fn(CoAPRequest) -> Option<CoAPResponse>,
           F: Sync + Send + Copy
 {
-    fn handle(&self, request: Packet, response: Option<Packet>) -> Option<Packet> {
-        return self(request, response);
+    fn handle(&self, request: CoAPRequest) -> Option<CoAPResponse> {
+        return self(request);
     }
 }
 
@@ -77,17 +79,17 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
             Ok(Some((nread, src))) => {
                 debug!("Handling request from {}", src);
                 let response_q = self.tx_sender.clone();
+
                 self.thread_pool.execute(move || {
                     match Packet::from_bytes(&buf[..nread]) {
                         Ok(packet) => {
-                            // Pre-generate a response
-                            let auto_resp = auto_response(&packet);
                             // Dispatch user handler, if there is a response packet
                             //   send the reply via the TX thread
-                            match coap_handler.handle(packet, auto_resp) {
+                            let rqst = CoAPRequest::from_packet(packet, &src);
+                            match coap_handler.handle(rqst) {
                                 Some(response) => {
                                     debug!("Response: {:?}", response);
-                                    response_q.send(CoAPResponse {
+                                    response_q.send(QueuedResponse {
                                             address: src,
                                             response: response,
                                         })
@@ -224,7 +226,7 @@ fn transmit_handler(tx_recv: RxQueue, tx_only: UdpSocket) {
     loop {
         match tx_recv.recv() {
             Ok(q_res) => {
-                match q_res.response.to_bytes() {
+                match q_res.response.message.to_bytes() {
                     Ok(bytes) => {
                         let _ = tx_only.send_to(&bytes[..], &q_res.address);
                     }
@@ -252,18 +254,22 @@ impl Drop for CoAPServer {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use packet::{Packet, PacketType, OptionType};
     use client::CoAPClient;
+    use message::header;
+    use message::IsMessage;
+    use message::packet::CoAPOption;
+    use message::request::CoAPRequest;
+    use message::response::CoAPResponse;
+    use super::*;
 
-    fn request_handler(req: Packet, response: Option<Packet>) -> Option<Packet> {
-        let uri_path_list = req.get_option(OptionType::UriPath).unwrap();
+    fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
+        let uri_path_list = req.get_option(CoAPOption::UriPath).unwrap();
         assert!(uri_path_list.len() == 1);
 
-        match response {
-            Some(mut packet) => {
-                packet.set_payload(uri_path_list.front().unwrap().clone());
-                Some(packet)
+        match req.response {
+            Some(mut response) => {
+                response.set_payload(uri_path_list.front().unwrap().clone());
+                Some(response)
             }
             _ => None,
         }
@@ -275,17 +281,17 @@ mod test {
         server.handle(request_handler).unwrap();
 
         let client = CoAPClient::new("127.0.0.1:5683").unwrap();
-        let mut packet = Packet::new();
-        packet.header.set_version(1);
-        packet.header.set_type(PacketType::Confirmable);
-        packet.header.set_code("0.01");
-        packet.header.set_message_id(1);
-        packet.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
-        packet.add_option(OptionType::UriPath, b"test-echo".to_vec());
-        client.send(&packet).unwrap();
+        let mut request = CoAPRequest::new();
+        request.set_version(1);
+        request.set_type(header::MessageType::Confirmable);
+        request.set_code("0.01");
+        request.set_message_id(1);
+        request.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
+        request.add_option(CoAPOption::UriPath, b"test-echo".to_vec());
+        client.send(&request).unwrap();
 
         let recv_packet = client.receive().unwrap();
-        assert_eq!(recv_packet.payload, b"test-echo".to_vec());
+        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
     #[test]
@@ -294,15 +300,15 @@ mod test {
         server.handle(request_handler).unwrap();
 
         let client = CoAPClient::new("127.0.0.1:5683").unwrap();
-        let mut packet = Packet::new();
-        packet.header.set_version(1);
-        packet.header.set_type(PacketType::Confirmable);
-        packet.header.set_code("0.01");
-        packet.header.set_message_id(1);
-        packet.add_option(OptionType::UriPath, b"test-echo".to_vec());
+        let mut packet = CoAPRequest::new();
+        packet.set_version(1);
+        packet.set_type(header::MessageType::Confirmable);
+        packet.set_code("0.01");
+        packet.set_message_id(1);
+        packet.add_option(CoAPOption::UriPath, b"test-echo".to_vec());
         client.send(&packet).unwrap();
 
         let recv_packet = client.receive().unwrap();
-        assert_eq!(recv_packet.payload, b"test-echo".to_vec());
+        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 }

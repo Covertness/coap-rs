@@ -27,11 +27,10 @@
 //! extern crate coap;
 
 //! use std::io;
-//! use coap::packet::*;
-//! use coap::{CoAPServer, CoAPClient};
+//! use coap::{CoAPServer, CoAPClient, CoAPRequest, CoAPResponse};
 
-//! fn request_handler(req: Packet, resp: Option<Packet>) -> Option<Packet> {
-//! 	println!("Receive request: {:?}", req);
+//! fn request_handler(request: CoAPRequest) -> Option<CoAPResponse> {
+//! 	println!("Receive request: {:?}", request);
 //!     None
 //! }
 
@@ -54,15 +53,15 @@
 //! ```no_run
 //! extern crate coap;
 //!
-//! use coap::packet::*;
+//! use coap::message::response::CoAPResponse;
 //! use coap::CoAPClient;
 //!
 //! fn main() {
 //! 	let url = "coap://127.0.0.1:5683/Rust";
 //! 	println!("Client request: {}", url);
 //!
-//! 	let response: Packet = CoAPClient::request(url).unwrap();
-//! 	println!("Server reply: {}", String::from_utf8(response.payload).unwrap());
+//! 	let response: CoAPResponse = CoAPClient::request(url).unwrap();
+//! 	println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 //! }
 //! ```
 
@@ -79,9 +78,14 @@ extern crate quickcheck;
 #[macro_use]
 extern crate log;
 
-pub use server::CoAPServer;
 pub use client::CoAPClient;
+pub use message::header::MessageType;
+pub use message::IsMessage;
+pub use message::packet::CoAPOption;
+pub use message::request::CoAPRequest;
+pub use message::response::CoAPResponse;
+pub use server::CoAPServer;
 
-pub mod packet;
+pub mod message;
 pub mod client;
 pub mod server;

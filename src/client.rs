@@ -4,7 +4,11 @@ use std::time::Duration;
 use url::{UrlParser, SchemeType};
 use num;
 use rand::{thread_rng, random, Rng};
-use packet::{Packet, PacketType, OptionType};
+use message::packet::{Packet, CoAPOption};
+use message::header::MessageType;
+use message::response::CoAPResponse;
+use message::request::CoAPRequest;
+use message::IsMessage;
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 5;  // 5s
 
@@ -46,19 +50,19 @@ impl CoAPClient {
     }
 
     /// Execute a request with the coap url and a specific timeout. Default timeout is 5s.
-    pub fn request_with_timeout(url: &str, timeout: Option<Duration>) -> Result<Packet> {
+    pub fn request_with_timeout(url: &str, timeout: Option<Duration>) -> Result<CoAPResponse> {
         let mut url_parser = UrlParser::new();
         url_parser.scheme_type_mapper(Self::coap_scheme_type_mapper);
 
         match url_parser.parse(url) {
             Ok(url_params) => {
-                let mut packet = Packet::new();
-                packet.header.set_version(1);
-                packet.header.set_type(PacketType::Confirmable);
-                packet.header.set_code("0.01");
+                let mut packet = CoAPRequest::new();
+                packet.set_version(1);
+                packet.set_type(MessageType::Confirmable);
+                packet.set_code("0.01");
 
                 let message_id = thread_rng().gen_range(0, num::pow(2u32, 16)) as u16;
-                packet.header.set_message_id(message_id);
+                packet.set_message_id(message_id);
 
                 let mut token: Vec<u8> = vec![1, 1, 1, 1];
                 for x in token.iter_mut() {
@@ -74,7 +78,7 @@ impl CoAPClient {
 
                 if let Some(path) = url_params.path() {
                     for p in path.iter() {
-                        packet.add_option(OptionType::UriPath, p.clone().into_bytes().to_vec());
+                        packet.add_option(CoAPOption::UriPath, p.clone().into_bytes().to_vec());
                     }
                 };
 
@@ -84,7 +88,7 @@ impl CoAPClient {
                 try!(client.set_receive_timeout(timeout));
                 match client.receive() {
                     Ok(receive_packet) => {
-                        if receive_packet.header.get_message_id() == message_id &&
+                        if receive_packet.get_message_id() == message_id &&
                            *receive_packet.get_token() == token {
                             return Ok(receive_packet);
                         } else {
@@ -99,13 +103,13 @@ impl CoAPClient {
     }
 
     /// Execute a request with the coap url.
-    pub fn request(url: &str) -> Result<Packet> {
+    pub fn request(url: &str) -> Result<CoAPResponse> {
         Self::request_with_timeout(url, Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)))
     }
 
     /// Execute a request.
-    pub fn send(&self, packet: &Packet) -> Result<()> {
-        match packet.to_bytes() {
+    pub fn send(&self, request: &CoAPRequest) -> Result<()> {
+        match request.message.to_bytes() {
             Ok(bytes) => {
                 let size = try!(self.socket.send_to(&bytes[..], self.peer_addr));
                 if size == bytes.len() {
@@ -119,12 +123,12 @@ impl CoAPClient {
     }
 
     /// Receive a response.
-    pub fn receive(&self) -> Result<Packet> {
+    pub fn receive(&self) -> Result<CoAPResponse> {
         let mut buf = [0; 1500];
 
         let (nread, _src) = try!(self.socket.recv_from(&mut buf));
         match Packet::from_bytes(&buf[..nread]) {
-            Ok(packet) => Ok(packet),
+            Ok(packet) => Ok(CoAPResponse { message: packet }),
             Err(_) => Err(Error::new(ErrorKind::InvalidInput, "packet error")),
         }
     }
@@ -148,7 +152,8 @@ mod test {
     use super::*;
     use std::time::Duration;
     use std::io::ErrorKind;
-    use packet::Packet;
+    use message::request::CoAPRequest;
+    use message::response::CoAPResponse;
     use server::CoAPServer;
 
     #[test]
@@ -158,7 +163,7 @@ mod test {
         assert!(CoAPClient::request("127.0.0.1").is_err());
     }
 
-    fn request_handler(_: Packet, _: Option<Packet>) -> Option<Packet> {
+    fn request_handler(_: CoAPRequest) -> Option<CoAPResponse> {
         None
     }
 
