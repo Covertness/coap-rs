@@ -1,6 +1,7 @@
 //! Implementation of the [CoAP Protocol][spec].
 //!
-//! This library provides both a client interface (`CoAPClient`) and a server interface (`CoAPServer`).
+//! This library provides both a client interface (`CoAPClient`)
+//!   and a server interface (`CoAPServer`).
 //!
 //! [spec]: https://tools.ietf.org/html/rfc7252
 //!
@@ -72,7 +73,8 @@ extern crate threadpool;
 extern crate url;
 extern crate num;
 extern crate rand;
-#[cfg(test)] extern crate quickcheck;
+#[cfg(test)]
+extern crate quickcheck;
 
 #[macro_use]
 extern crate log;
