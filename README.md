@@ -33,7 +33,7 @@ extern crate coap;
 extern crate coap;
 
 use std::io;
-use coap::{CoAPResponse, CoAPRequest};
+use coap::{CoAPServer, CoAPResponse, CoAPRequest};
 
 fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
 	println!("Receive request: {:?}", req);
@@ -47,7 +47,7 @@ fn main() {
 	server.handle(request_handler).unwrap();
 
 	println!("Server up on {}", addr);
-    println!("Press any key to stop...");
+	println!("Press any key to stop...");
 	io::stdin().read_line(&mut String::new()).unwrap();
 
 	println!("Server shutdown");
