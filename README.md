@@ -36,21 +36,23 @@ use std::io;
 use coap::{CoAPServer, CoAPResponse, CoAPRequest};
 
 fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
-	println!("Receive request: {:?}", req);
-	response
+    println!("Receive request: {:?}", req);
+
+    // Return the auto-generated response
+    req.response
 }
 
 fn main() {
-	let addr = "127.0.0.1:5683";
+    let addr = "127.0.0.1:5683";
 
-	let mut server = CoAPServer::new(addr).unwrap();
-	server.handle(request_handler).unwrap();
+    let mut server = CoAPServer::new(addr).unwrap();
+    server.handle(request_handler).unwrap();
 
-	println!("Server up on {}", addr);
-	println!("Press any key to stop...");
-	io::stdin().read_line(&mut String::new()).unwrap();
+    println!("Server up on {}", addr);
+    println!("Press any key to stop...");
+    io::stdin().read_line(&mut String::new()).unwrap();
 
-	println!("Server shutdown");
+    println!("Server shutdown");
 }
 ```
 
@@ -61,11 +63,11 @@ extern crate coap;
 use coap::{CoAPClient, CoAPResponse};
 
 fn main() {
-	let url = "coap://127.0.0.1:5683/Rust";
-	println!("Client request: {}", url);
+    let url = "coap://127.0.0.1:5683/Rust";
+    println!("Client request: {}", url);
 
-	let response: CoAPResponse = CoAPClient::request(url).unwrap();
-	println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
+    let response: CoAPResponse = CoAPClient::request(url).unwrap();
+    println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 }
 ```
 
