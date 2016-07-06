@@ -2,280 +2,16 @@ use bincode;
 use std::collections::BTreeMap;
 use std::collections::LinkedList;
 
+use message::header;
+
 macro_rules! u8_to_unsigned_be {
-	($src:ident, $start:expr, $end:expr, $t:ty) => ({
-		(0 .. $end - $start + 1).rev().fold(0, |acc, i| acc | $src[$start+i] as $t << i * 8)
-	})
+    ($src:ident, $start:expr, $end:expr, $t:ty) => ({
+        (0 .. $end - $start + 1).rev().fold(0, |acc, i| acc | $src[$start+i] as $t << i * 8)
+    })
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub enum PacketType {
-    Confirmable,
-    NonConfirmable,
-    Acknowledgement,
-    Reset,
-    Invalid,
-}
-
-#[derive(Default, Debug, RustcEncodable, RustcDecodable)]
-pub struct PacketHeaderRaw {
-    ver_type_tkl: u8,
-    code: u8,
-    message_id: u16,
-}
-
-#[derive(Debug)]
-pub struct PacketHeader {
-    ver_type_tkl: u8,
-    pub code: PacketClass,
-    message_id: u16,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum PacketClass {
-    Empty,
-    Request(Requests),
-    Response(Responses),
-    Reserved,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Requests {
-    Get,
-    Post,
-    Put,
-    Delete,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Responses {
-    // 200 Codes
-    Created,
-    Deleted,
-    Valid,
-    Changed,
-    Content,
-
-    // 400 Codes
-    BadRequest,
-    Unauthorized,
-    BadOption,
-    Forbidden,
-    NotFound,
-    MethodNotAllowed,
-    NotAcceptable,
-    PreconditionFailed,
-    RequestEntityTooLarge,
-    UnsupportedContentFormat,
-
-    // 500 Codes
-    InternalServerError,
-    NotImplemented,
-    BadGateway,
-    ServiceUnavailable,
-    GatewayTimeout,
-    ProxyingNotSupported,
-}
-
-pub fn class_to_code(class: &PacketClass) -> u8 {
-    return match *class {
-        PacketClass::Empty => 0x00,
-
-        PacketClass::Request(Requests::Get) => 0x01,
-        PacketClass::Request(Requests::Post) => 0x02,
-        PacketClass::Request(Requests::Put) => 0x03,
-        PacketClass::Request(Requests::Delete) => 0x04,
-
-        PacketClass::Response(Responses::Created) => 0x41,
-        PacketClass::Response(Responses::Deleted) => 0x42,
-        PacketClass::Response(Responses::Valid) => 0x43,
-        PacketClass::Response(Responses::Changed) => 0x44,
-        PacketClass::Response(Responses::Content) => 0x45,
-
-        PacketClass::Response(Responses::BadRequest) => 0x80,
-        PacketClass::Response(Responses::Unauthorized) => 0x81,
-        PacketClass::Response(Responses::BadOption) => 0x82,
-        PacketClass::Response(Responses::Forbidden) => 0x83,
-        PacketClass::Response(Responses::NotFound) => 0x84,
-        PacketClass::Response(Responses::MethodNotAllowed) => 0x85,
-        PacketClass::Response(Responses::NotAcceptable) => 0x86,
-        PacketClass::Response(Responses::PreconditionFailed) => 0x8C,
-        PacketClass::Response(Responses::RequestEntityTooLarge) => 0x8D,
-        PacketClass::Response(Responses::UnsupportedContentFormat) => 0x8F,
-
-        PacketClass::Response(Responses::InternalServerError) => 0x90,
-        PacketClass::Response(Responses::NotImplemented) => 0x91,
-        PacketClass::Response(Responses::BadGateway) => 0x92,
-        PacketClass::Response(Responses::ServiceUnavailable) => 0x93,
-        PacketClass::Response(Responses::GatewayTimeout) => 0x94,
-        PacketClass::Response(Responses::ProxyingNotSupported) => 0x95,
-
-        _ => 0xFF,
-    } as u8;
-}
-
-pub fn code_to_class(code: &u8) -> PacketClass {
-    match *code {
-        0x00 => PacketClass::Empty,
-
-        0x01 => PacketClass::Request(Requests::Get),
-        0x02 => PacketClass::Request(Requests::Post),
-        0x03 => PacketClass::Request(Requests::Put),
-        0x04 => PacketClass::Request(Requests::Delete),
-
-        0x41 => PacketClass::Response(Responses::Created),
-        0x42 => PacketClass::Response(Responses::Deleted),
-        0x43 => PacketClass::Response(Responses::Valid),
-        0x44 => PacketClass::Response(Responses::Changed),
-        0x45 => PacketClass::Response(Responses::Content),
-
-        0x80 => PacketClass::Response(Responses::BadRequest),
-        0x81 => PacketClass::Response(Responses::Unauthorized),
-        0x82 => PacketClass::Response(Responses::BadOption),
-        0x83 => PacketClass::Response(Responses::Forbidden),
-        0x84 => PacketClass::Response(Responses::NotFound),
-        0x85 => PacketClass::Response(Responses::MethodNotAllowed),
-        0x86 => PacketClass::Response(Responses::NotAcceptable),
-        0x8C => PacketClass::Response(Responses::PreconditionFailed),
-        0x8D => PacketClass::Response(Responses::RequestEntityTooLarge),
-        0x8F => PacketClass::Response(Responses::UnsupportedContentFormat),
-
-        0x90 => PacketClass::Response(Responses::InternalServerError),
-        0x91 => PacketClass::Response(Responses::NotImplemented),
-        0x92 => PacketClass::Response(Responses::BadGateway),
-        0x93 => PacketClass::Response(Responses::ServiceUnavailable),
-        0x94 => PacketClass::Response(Responses::GatewayTimeout),
-        0x95 => PacketClass::Response(Responses::ProxyingNotSupported),
-
-        _ => PacketClass::Reserved,
-    }
-}
-
-pub fn code_to_str(code: &u8) -> String {
-    let class_code = (0xE0 & code) >> 5;
-    let detail_code = 0x1F & code;
-
-    return format!("{}.{:02}", class_code, detail_code);
-}
-
-pub fn class_to_str(class: &PacketClass) -> String {
-    return code_to_str(&class_to_code(class));
-}
-
-impl PacketHeader {
-    pub fn new() -> PacketHeader {
-        return PacketHeader::from_raw(&PacketHeaderRaw::default());
-    }
-
-    pub fn from_raw(raw: &PacketHeaderRaw) -> PacketHeader {
-        return PacketHeader {
-            ver_type_tkl: raw.ver_type_tkl,
-            code: code_to_class(&raw.code),
-            message_id: raw.message_id,
-        };
-    }
-
-    pub fn to_raw(&self) -> PacketHeaderRaw {
-        return PacketHeaderRaw {
-            ver_type_tkl: self.ver_type_tkl,
-            code: class_to_code(&self.code),
-            message_id: self.message_id,
-        };
-    }
-
-    #[inline]
-    pub fn set_version(&mut self, v: u8) {
-        let type_tkl = 0x3F & self.ver_type_tkl;
-        self.ver_type_tkl = v << 6 | type_tkl;
-    }
-
-    #[inline]
-    pub fn get_version(&self) -> u8 {
-        return self.ver_type_tkl >> 6;
-    }
-
-    #[inline]
-    pub fn set_type(&mut self, t: PacketType) {
-        let tn = match t {
-            PacketType::Confirmable => 0,
-            PacketType::NonConfirmable => 1,
-            PacketType::Acknowledgement => 2,
-            PacketType::Reset => 3,
-            _ => unreachable!(),
-        };
-
-        let ver_tkl = 0xCF & self.ver_type_tkl;
-        self.ver_type_tkl = tn << 4 | ver_tkl;
-    }
-
-    #[inline]
-    pub fn get_type(&self) -> PacketType {
-        let tn = (0x30 & self.ver_type_tkl) >> 4;
-        match tn {
-            0 => PacketType::Confirmable,
-            1 => PacketType::NonConfirmable,
-            2 => PacketType::Acknowledgement,
-            3 => PacketType::Reset,
-            _ => PacketType::Invalid,
-        }
-    }
-
-    #[inline]
-    fn set_token_length(&mut self, tkl: u8) {
-        assert_eq!(0xF0 & tkl, 0);
-
-        let ver_type = 0xF0 & self.ver_type_tkl;
-        self.ver_type_tkl = tkl | ver_type;
-    }
-
-    #[inline]
-    fn get_token_length(&self) -> u8 {
-        return 0x0F & self.ver_type_tkl;
-    }
-
-    pub fn set_code(&mut self, code: &str) {
-        let code_vec: Vec<&str> = code.split('.').collect();
-        assert_eq!(code_vec.len(), 2);
-
-        let class_code = code_vec[0].parse::<u8>().unwrap();
-        let detail_code = code_vec[1].parse::<u8>().unwrap();
-        assert_eq!(0xF8 & class_code, 0);
-        assert_eq!(0xE0 & detail_code, 0);
-
-        self.code = code_to_class(&(class_code << 5 | detail_code));
-    }
-
-    pub fn get_code(&self) -> String {
-        class_to_str(&self.code)
-    }
-
-    #[inline]
-    pub fn set_message_id(&mut self, message_id: u16) {
-        self.message_id = message_id;
-    }
-
-    #[inline]
-    pub fn get_message_id(&self) -> u16 {
-        return self.message_id;
-    }
-}
-
-#[derive(Debug)]
-pub enum ParseError {
-    InvalidHeader,
-    InvalidTokenLength,
-    InvalidOptionDelta,
-    InvalidOptionLength,
-}
-
-#[derive(Debug)]
-pub enum PackageError {
-    InvalidHeader,
-    InvalidPacketLength,
-}
-
-#[derive(PartialEq, Eq, Debug)]
-pub enum OptionType {
+pub enum CoAPOption {
     IfMatch,
     UriHost,
     ETag,
@@ -297,8 +33,22 @@ pub enum OptionType {
 }
 
 #[derive(Debug)]
+pub enum PackageError {
+    InvalidHeader,
+    InvalidPacketLength,
+}
+
+#[derive(Debug)]
+pub enum ParseError {
+    InvalidHeader,
+    InvalidTokenLength,
+    InvalidOptionDelta,
+    InvalidOptionLength,
+}
+
+#[derive(Debug)]
 pub struct Packet {
-    pub header: PacketHeader,
+    pub header: header::Header,
     token: Vec<u8>,
     options: BTreeMap<usize, LinkedList<Vec<u8>>>,
     pub payload: Vec<u8>,
@@ -307,7 +57,7 @@ pub struct Packet {
 impl Packet {
     pub fn new() -> Packet {
         Packet {
-            header: PacketHeader::new(),
+            header: header::Header::new(),
             token: Vec::new(),
             options: BTreeMap::new(),
             payload: Vec::new(),
@@ -323,7 +73,7 @@ impl Packet {
         return &self.token;
     }
 
-    pub fn set_option(&mut self, tp: OptionType, value: LinkedList<Vec<u8>>) {
+    pub fn set_option(&mut self, tp: CoAPOption, value: LinkedList<Vec<u8>>) {
         let num = Self::get_option_number(tp);
         self.options.insert(num, value);
     }
@@ -332,7 +82,7 @@ impl Packet {
         self.payload = payload;
     }
 
-    pub fn add_option(&mut self, tp: OptionType, value: Vec<u8>) {
+    pub fn add_option(&mut self, tp: CoAPOption, value: Vec<u8>) {
         let num = Self::get_option_number(tp);
         match self.options.get_mut(&num) {
             Some(list) => {
@@ -347,7 +97,7 @@ impl Packet {
         self.options.insert(num, list);
     }
 
-    pub fn get_option(&self, tp: OptionType) -> Option<LinkedList<Vec<u8>>> {
+    pub fn get_option(&self, tp: CoAPOption) -> Option<LinkedList<Vec<u8>>> {
         let num = Self::get_option_number(tp);
         match self.options.get(&num) {
             Some(options) => Some(options.clone()),
@@ -357,10 +107,10 @@ impl Packet {
 
     /// Decodes a byte slice and construct the equivalent Packet.
     pub fn from_bytes(buf: &[u8]) -> Result<Packet, ParseError> {
-        let header_result: bincode::DecodingResult<PacketHeaderRaw> = bincode::decode(buf);
+        let header_result: bincode::DecodingResult<header::HeaderRaw> = bincode::decode(buf);
         match header_result {
             Ok(raw_header) => {
-                let header = PacketHeader::from_raw(&raw_header);
+                let header = header::Header::from_raw(&raw_header);
                 let token_length = header.get_token_length();
                 let options_start: usize = 4 + token_length as usize;
 
@@ -535,7 +285,7 @@ impl Packet {
         }
 
         let mut buf_length = 4 + self.payload.len() + self.token.len();
-        if self.header.code != PacketClass::Empty && self.payload.len() != 0 {
+        if self.header.code != header::MessageClass::Empty && self.payload.len() != 0 {
             buf_length += 1;
         }
         buf_length += options_bytes.len();
@@ -564,7 +314,7 @@ impl Packet {
                     buf.set_len(buf_len + self.token.len() + options_bytes.len());
                 }
 
-                if self.header.code != PacketClass::Empty && self.payload.len() != 0 {
+                if self.header.code != header::MessageClass::Empty && self.payload.len() != 0 {
                     buf.push(0xFF);
                     buf.reserve(self.payload.len());
                     unsafe {
@@ -582,70 +332,35 @@ impl Packet {
         }
     }
 
-    fn get_option_number(tp: OptionType) -> usize {
+    fn get_option_number(tp: CoAPOption) -> usize {
         match tp {
-            OptionType::IfMatch => 1,
-            OptionType::UriHost => 3,
-            OptionType::ETag => 4,
-            OptionType::IfNoneMatch => 5,
-            OptionType::Observe => 6,
-            OptionType::UriPort => 7,
-            OptionType::LocationPath => 8,
-            OptionType::UriPath => 11,
-            OptionType::ContentFormat => 12,
-            OptionType::MaxAge => 14,
-            OptionType::UriQuery => 15,
-            OptionType::Accept => 17,
-            OptionType::LocationQuery => 20,
-            OptionType::Block2 => 23,
-            OptionType::Block1 => 27,
-            OptionType::ProxyUri => 35,
-            OptionType::ProxyScheme => 39,
-            OptionType::Size1 => 60,
+            CoAPOption::IfMatch => 1,
+            CoAPOption::UriHost => 3,
+            CoAPOption::ETag => 4,
+            CoAPOption::IfNoneMatch => 5,
+            CoAPOption::Observe => 6,
+            CoAPOption::UriPort => 7,
+            CoAPOption::LocationPath => 8,
+            CoAPOption::UriPath => 11,
+            CoAPOption::ContentFormat => 12,
+            CoAPOption::MaxAge => 14,
+            CoAPOption::UriQuery => 15,
+            CoAPOption::Accept => 17,
+            CoAPOption::LocationQuery => 20,
+            CoAPOption::Block2 => 23,
+            CoAPOption::Block1 => 27,
+            CoAPOption::ProxyUri => 35,
+            CoAPOption::ProxyScheme => 39,
+            CoAPOption::Size1 => 60,
         }
     }
-}
-
-/// Convert a request to a response
-pub fn auto_response(request_packet: &Packet) -> Option<Packet> {
-    let mut packet = Packet::new();
-
-    packet.header.set_version(1);
-    let response_type = match request_packet.header.get_type() {
-        PacketType::Confirmable => PacketType::Acknowledgement,
-        PacketType::NonConfirmable => PacketType::NonConfirmable,
-        _ => return None,
-    };
-    packet.header.set_type(response_type);
-    packet.header.code = PacketClass::Response(Responses::Content);
-    packet.header.set_message_id(request_packet.header.get_message_id());
-    packet.set_token(request_packet.get_token().clone());
-
-    packet.payload = request_packet.payload.clone();
-
-    Some(packet)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::super::header;
     use std::collections::LinkedList;
-
-    #[test]
-    fn test_header_codes() {
-        for code in 0..255 {
-            let class = code_to_class(&code);
-            let code_str = code_to_str(&code);
-            let class_str = class_to_str(&class);
-
-            // Reserved class could technically be many codes
-            //   so only check valid items
-            if class != PacketClass::Reserved {
-                assert_eq!(class_to_code(&class), code);
-                assert_eq!(code_str, class_str);
-            }
-        }
-    }
 
     #[test]
     fn test_decode_packet_with_options() {
@@ -655,14 +370,15 @@ mod test {
         assert!(packet.is_ok());
         let packet = packet.unwrap();
         assert_eq!(packet.header.get_version(), 1);
-        assert_eq!(packet.header.get_type(), PacketType::Confirmable);
+        assert_eq!(packet.header.get_type(), header::MessageType::Confirmable);
         assert_eq!(packet.header.get_token_length(), 4);
-        assert_eq!(packet.header.code, PacketClass::Request(Requests::Get));
+        assert_eq!(packet.header.code,
+                   header::MessageClass::RequestType(header::Requests::Get));
         assert_eq!(packet.header.get_message_id(), 33950);
         assert_eq!(*packet.get_token(), vec![0x51, 0x55, 0x77, 0xE8]);
         assert_eq!(packet.options.len(), 2);
 
-        let uri_path = packet.get_option(OptionType::UriPath);
+        let uri_path = packet.get_option(CoAPOption::UriPath);
         assert!(uri_path.is_some());
         let uri_path = uri_path.unwrap();
         let mut expected_uri_path = LinkedList::new();
@@ -670,7 +386,7 @@ mod test {
         expected_uri_path.push_back("Test".as_bytes().to_vec());
         assert_eq!(uri_path, expected_uri_path);
 
-        let uri_query = packet.get_option(OptionType::UriQuery);
+        let uri_query = packet.get_option(CoAPOption::UriQuery);
         assert!(uri_query.is_some());
         let uri_query = uri_query.unwrap();
         let mut expected_uri_query = LinkedList::new();
@@ -686,10 +402,11 @@ mod test {
         assert!(packet.is_ok());
         let packet = packet.unwrap();
         assert_eq!(packet.header.get_version(), 1);
-        assert_eq!(packet.header.get_type(), PacketType::Acknowledgement);
+        assert_eq!(packet.header.get_type(),
+                   header::MessageType::Acknowledgement);
         assert_eq!(packet.header.get_token_length(), 4);
         assert_eq!(packet.header.code,
-                   PacketClass::Response(Responses::Content));
+                   header::MessageClass::ResponseType(header::Responses::Content));
         assert_eq!(packet.header.get_message_id(), 5117);
         assert_eq!(*packet.get_token(), vec![0xD0, 0xE2, 0x4D, 0xAC]);
         assert_eq!(packet.payload, "Hello".as_bytes().to_vec());
@@ -699,13 +416,13 @@ mod test {
     fn test_encode_packet_with_options() {
         let mut packet = Packet::new();
         packet.header.set_version(1);
-        packet.header.set_type(PacketType::Confirmable);
-        packet.header.code = PacketClass::Request(Requests::Get);
+        packet.header.set_type(header::MessageType::Confirmable);
+        packet.header.code = header::MessageClass::RequestType(header::Requests::Get);
         packet.header.set_message_id(33950);
         packet.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
-        packet.add_option(OptionType::UriPath, b"Hi".to_vec());
-        packet.add_option(OptionType::UriPath, b"Test".to_vec());
-        packet.add_option(OptionType::UriQuery, b"a=1".to_vec());
+        packet.add_option(CoAPOption::UriPath, b"Hi".to_vec());
+        packet.add_option(CoAPOption::UriPath, b"Test".to_vec());
+        packet.add_option(CoAPOption::UriQuery, b"a=1".to_vec());
         assert_eq!(packet.to_bytes().unwrap(),
                    vec![0x44, 0x01, 0x84, 0x9e, 0x51, 0x55, 0x77, 0xe8, 0xb2, 0x48, 0x69, 0x04,
                         0x54, 0x65, 0x73, 0x74, 0x43, 0x61, 0x3d, 0x31]);
@@ -715,8 +432,8 @@ mod test {
     fn test_encode_packet_with_payload() {
         let mut packet = Packet::new();
         packet.header.set_version(1);
-        packet.header.set_type(PacketType::Acknowledgement);
-        packet.header.code = PacketClass::Response(Responses::Content);
+        packet.header.set_type(header::MessageType::Acknowledgement);
+        packet.header.code = header::MessageClass::ResponseType(header::Responses::Content);
         packet.header.set_message_id(5117);
         packet.set_token(vec![0xD0, 0xE2, 0x4D, 0xAC]);
         packet.payload = "Hello".as_bytes().to_vec();
