@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! coap = "0.3"
+//! coap = "0.5"
 //! ```
 //!
 //! Then, add this to your crate root:
@@ -31,7 +31,9 @@
 
 //! fn request_handler(request: CoAPRequest) -> Option<CoAPResponse> {
 //! 	println!("Receive request: {:?}", request);
-//!     None
+//!     
+//!     // Return the auto-generated response
+//!     request.response
 //! }
 
 //! fn main() {
