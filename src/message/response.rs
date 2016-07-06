@@ -47,7 +47,6 @@ impl IsMessage for CoAPResponse {
 mod test {
     use super::*;
     use message::packet::Packet;
-    use message::IsMessage;
     use message::header::MessageType;
 
     #[test]

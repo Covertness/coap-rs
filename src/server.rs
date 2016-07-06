@@ -296,10 +296,10 @@ mod test {
 
     #[test]
     fn test_echo_server_no_token() {
-        let mut server = CoAPServer::new("127.0.0.1:5683").unwrap();
+        let mut server = CoAPServer::new("127.0.0.1:5685").unwrap();
         server.handle(request_handler).unwrap();
 
-        let client = CoAPClient::new("127.0.0.1:5683").unwrap();
+        let client = CoAPClient::new("127.0.0.1:5685").unwrap();
         let mut packet = CoAPRequest::new();
         packet.set_version(1);
         packet.set_type(header::MessageType::Confirmable);
