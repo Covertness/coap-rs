@@ -172,10 +172,11 @@ impl CoAPServer {
         let (tx, rx) = mpsc::channel();
         let (tx_send, tx_recv): (TxQueue, RxQueue) = mpsc::channel();
         let tx_only = self.socket.try_clone().unwrap();
+        let tx_send2 = tx_send.clone();
 
         // Setup and spawn single TX thread
         let tx_thread = thread::spawn(move || {
-            transmit_handler(tx_recv, tx_only);
+            transmit_handler(tx_send2, tx_recv, tx_only);
         });
 
         // Setup and spawn event loop thread, which will spawn
@@ -220,7 +221,7 @@ impl CoAPServer {
     }
 }
 
-fn transmit_handler(tx_recv: RxQueue, tx_only: UdpSocket) {
+fn transmit_handler(tx_send: TxQueue, tx_recv: RxQueue, tx_only: UdpSocket) {
     // Note! We should only transmit with this UDP Socket
     // TODO: Add better support for failure detection or logging
     loop {
@@ -228,7 +229,18 @@ fn transmit_handler(tx_recv: RxQueue, tx_only: UdpSocket) {
             Ok(q_res) => {
                 match q_res.response.message.to_bytes() {
                     Ok(bytes) => {
-                        let _ = tx_only.send_to(&bytes[..], &q_res.address);
+                        match tx_only.send_to(&bytes[..], &q_res.address) {
+                            Ok(None) => {
+                                // try to send again, look at https://github.com/Covertness/coap-rs/issues/8 in detail
+                                tx_send.send(q_res).unwrap()
+                            }
+                            Ok(_) => {
+                                continue;
+                            }
+                            Err(_) => {
+                                error!("Failed to send response");
+                            }
+                         }
                     }
                     Err(_) => {
                         error!("Failed to decode response");
