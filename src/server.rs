@@ -73,7 +73,7 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
         // handle the response
         if events.is_writable() {
             response_handler(&self.rx_recv, &self.socket);
-            event_loop.register(&self.socket, Token(0), EventSet::readable(), PollOpt::edge()).unwrap();
+            event_loop.reregister(&self.socket, Token(0), EventSet::readable(), PollOpt::edge()).unwrap();
             return;
         }
 
@@ -91,7 +91,7 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
                 debug!("Handling request from {}", src);
                 let response_q = self.tx_sender.clone();
 
-                event_loop.register(&self.socket, Token(1), EventSet::writable(), PollOpt::edge()).unwrap();
+                event_loop.reregister(&self.socket, Token(0), EventSet::writable(), PollOpt::edge()).unwrap();
 
                 self.thread_pool.execute(move || {
                     match Packet::from_bytes(&buf[..nread]) {
