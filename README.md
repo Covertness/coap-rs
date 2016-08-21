@@ -72,10 +72,7 @@ fn main() {
 ```
 
 ## Benchmark
-### Using one thread
-![image](benches/one_thread_summary.png)
-
-### Using eight thread
-![image](benches/eight_thread_summary.png)
-
-Tests were performed using [basho_bench](https://github.com/basho/basho_bench).
+```bash
+$ cargo run --example server
+$ cargo bench
+```

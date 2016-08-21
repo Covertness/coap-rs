@@ -8,9 +8,7 @@ use mio::udp::UdpSocket;
 use message::packet::Packet;
 use message::request::CoAPRequest;
 use message::response::CoAPResponse;
-use threadpool::ThreadPool;
 
-const DEFAULT_WORKER_NUM: usize = 4;
 type TxQueue = mpsc::Sender<QueuedResponse>;
 type RxQueue = mpsc::Receiver<QueuedResponse>;
 
@@ -42,22 +40,107 @@ impl<F> CoAPHandler for F
 
 struct UdpHandler<H: CoAPHandler + 'static> {
     socket: UdpSocket,
-    thread_pool: ThreadPool,
     tx_sender: TxQueue,
+    rx_recv: RxQueue,
     coap_handler: H,
 }
 
 impl<H: CoAPHandler + 'static> UdpHandler<H> {
     fn new(socket: UdpSocket,
-           thread_pool: ThreadPool,
            tx_sender: TxQueue,
+           rx_recv: RxQueue,
            coap_handler: H)
            -> UdpHandler<H> {
         UdpHandler {
             socket: socket,
-            thread_pool: thread_pool,
             tx_sender: tx_sender,
+            rx_recv: rx_recv,
             coap_handler: coap_handler,
+        }
+    }
+
+    fn request_handler(&self) -> Option<QueuedResponse> {
+        match self.requset_recv() {
+            Some(rqst) => {
+                let src = rqst.source.unwrap();
+                match self.coap_handler.handle(rqst) {
+                    Some(response) => {
+                        debug!("Response: {:?}", response);
+                        return Some(QueuedResponse {
+                            address: src,
+                            response: response,
+                        });
+                    }
+                    None => {
+                        debug!("No response");
+                        return None;
+                    }
+                }
+            }
+            None => {
+                return None;
+            }
+        }
+    }
+
+    fn response_handler(&self) {
+        loop {
+            match self.rx_recv.try_recv() {
+                Ok(q_res) => {
+                    self.response_send(q_res);
+                }
+                Err(mpsc::TryRecvError::Empty) => {
+                    break;
+                }
+                Err(mpsc::TryRecvError::Disconnected) => {
+                    error!("The RxQueue become disconnected");
+                    break;
+                }
+            }
+        }
+    }
+
+    fn requset_recv(&self) -> Option<CoAPRequest> {
+        let mut buf = [0; 1500];
+
+        match self.socket.recv_from(&mut buf) {
+            Ok(Some((nread, src))) => {
+                debug!("Handling request from {}", src);
+
+                match Packet::from_bytes(&buf[..nread]) {
+                    Ok(packet) => {
+                        return Some(CoAPRequest::from_packet(packet, &src));
+                    }
+                    Err(_) => {
+                        error!("Failed to parse request");
+                        return None;
+                    }
+                }
+            }
+            _ => {
+                error!("Failed to read from socket");
+                panic!("unexpected error");
+            }
+        }
+    }
+
+    fn response_send(&self, q_res: QueuedResponse) {
+        match q_res.response.message.to_bytes() {
+            Ok(bytes) => {
+                match self.socket.send_to(&bytes[..], &q_res.address) {
+                    Ok(None) => {
+                        // Look at https://github.com/carllerche/mio/issues/411 in detail
+                        error!("Failed to complete the response");
+                    }
+                    Ok(_) => {}
+                    Err(_) => {
+                        error!("Failed to send response");
+                    }
+                }
+            }
+            Err(_) => {
+                error!("Failed to decode response");
+            }
         }
     }
 }
@@ -66,53 +149,24 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
     type Timeout = usize;
     type Message = ();
 
-    fn ready(&mut self, _: &mut EventLoop<UdpHandler<H>>, _: Token, events: EventSet) {
-        if !events.is_readable() {
-            warn!("Unreadable Event");
+    fn ready(&mut self, event_loop: &mut EventLoop<UdpHandler<H>>, _: Token, events: EventSet) {
+        if events.is_writable() {
+            // handle the response
+            self.response_handler();
+            event_loop.reregister(&self.socket, Token(0), EventSet::readable(), PollOpt::edge()).unwrap();
             return;
-        }
-
-        let coap_handler = self.coap_handler;
-        let mut buf = [0; 1500];
-
-        match self.socket.recv_from(&mut buf) {
-            Ok(Some((nread, src))) => {
-                debug!("Handling request from {}", src);
-                let response_q = self.tx_sender.clone();
-
-                self.thread_pool.execute(move || {
-                    match Packet::from_bytes(&buf[..nread]) {
-                        Ok(packet) => {
-                            // Dispatch user handler, if there is a response packet
-                            //   send the reply via the TX thread
-                            let rqst = CoAPRequest::from_packet(packet, &src);
-                            match coap_handler.handle(rqst) {
-                                Some(response) => {
-                                    debug!("Response: {:?}", response);
-                                    response_q.send(QueuedResponse {
-                                            address: src,
-                                            response: response,
-                                        })
-                                        .unwrap();
-                                }
-                                None => {
-                                    debug!("No response");
-                                }
-                            };
-                        }
-                        Err(_) => {
-                            error!("Failed to parse request");
-                            return;
-                        }
-                    };
-                });
+        } else if events.is_readable() {
+            // handle the request
+            match self.request_handler() {
+                Some(response) => {
+                    self.tx_sender.send(response).unwrap();
+                    event_loop.reregister(&self.socket, Token(0), EventSet::writable(), PollOpt::edge()).unwrap();
+                }
+                None => {}
             }
-            _ => {
-                error!("Failed to read from socket");
-                panic!("unexpected error");
-            }
+        } else {
+            warn!("Unreadable Event, {:?}", events);
         }
-
     }
 
     fn notify(&mut self, event_loop: &mut EventLoop<UdpHandler<H>>, _: ()) {
@@ -125,8 +179,6 @@ pub struct CoAPServer {
     socket: UdpSocket,
     event_sender: Option<Sender<()>>,
     event_thread: Option<thread::JoinHandle<()>>,
-    tx_thread: Option<thread::JoinHandle<()>>,
-    worker_num: usize,
 }
 
 impl CoAPServer {
@@ -140,8 +192,6 @@ impl CoAPServer {
                             socket: s,
                             event_sender: None,
                             event_thread: None,
-                            tx_thread: None,
-                            worker_num: DEFAULT_WORKER_NUM,
                         })
                     })
                 }
@@ -168,26 +218,18 @@ impl CoAPServer {
         }
 
         // Create resources
-        let worker_num = self.worker_num;
         let (tx, rx) = mpsc::channel();
         let (tx_send, tx_recv): (TxQueue, RxQueue) = mpsc::channel();
-        let tx_only = self.socket.try_clone().unwrap();
-
-        // Setup and spawn single TX thread
-        let tx_thread = thread::spawn(move || {
-            transmit_handler(tx_recv, tx_only);
-        });
 
         // Setup and spawn event loop thread, which will spawn
         //   children threads which handle incomining requests
         let thread = thread::spawn(move || {
-            let thread_pool = ThreadPool::new(worker_num);
             let mut event_loop = EventLoop::new().unwrap();
             event_loop.register(&socket, Token(0), EventSet::readable(), PollOpt::edge()).unwrap();
 
             tx.send(event_loop.channel()).unwrap();
 
-            event_loop.run(&mut UdpHandler::new(socket, thread_pool, tx_send, handler)).unwrap();
+            event_loop.run(&mut UdpHandler::new(socket, tx_send, tx_recv, handler)).unwrap();
         });
 
         // Ensure threads started successfully
@@ -195,7 +237,6 @@ impl CoAPServer {
             Ok(event_sender) => {
                 self.event_sender = Some(event_sender);
                 self.event_thread = Some(thread);
-                self.tx_thread = Some(tx_thread);
                 Ok(())
             }
             Err(_) => Err(CoAPServerError::EventLoopError),
@@ -213,37 +254,8 @@ impl CoAPServer {
             _ => {}
         }
     }
-
-    /// Set the number of threads for handling requests
-    pub fn set_worker_num(&mut self, worker_num: usize) {
-        self.worker_num = worker_num;
-    }
 }
 
-fn transmit_handler(tx_recv: RxQueue, tx_only: UdpSocket) {
-    // Note! We should only transmit with this UDP Socket
-    // TODO: Add better support for failure detection or logging
-    loop {
-        match tx_recv.recv() {
-            Ok(q_res) => {
-                match q_res.response.message.to_bytes() {
-                    Ok(bytes) => {
-                        let _ = tx_only.send_to(&bytes[..], &q_res.address);
-                    }
-                    Err(_) => {
-                        error!("Failed to decode response");
-                    }
-                }
-            }
-            // recv error occurs when all transmitters are terminited
-            //   (when all UDP Handlers are closed)
-            Err(_) => {
-                info!("Shutting down Transmit Handler");
-                break;
-            }
-        }
-    }
-}
 
 impl Drop for CoAPServer {
     fn drop(&mut self) {
