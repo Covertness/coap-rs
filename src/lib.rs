@@ -73,6 +73,7 @@ extern crate mio;
 extern crate url;
 extern crate num;
 extern crate rand;
+extern crate threadpool;
 #[cfg(test)]
 extern crate quickcheck;
 
