@@ -74,6 +74,8 @@ extern crate url;
 extern crate num;
 extern crate rand;
 extern crate threadpool;
+#[macro_use] extern crate enum_primitive;
+
 #[cfg(test)]
 extern crate quickcheck;
 
