@@ -2,6 +2,8 @@ use bincode;
 use std::collections::BTreeMap;
 use std::collections::LinkedList;
 
+use num::FromPrimitive;
+
 use message::header;
 
 macro_rules! u8_to_unsigned_be {
@@ -30,6 +32,18 @@ pub enum CoAPOption {
     ProxyUri,
     ProxyScheme,
     Size1,
+}
+
+enum_from_primitive! {
+#[derive(PartialEq, Eq, Debug)]
+pub enum ContentFormat {
+    TextPlain = 0,
+    ApplicationLinkFormat = 40,
+    ApplicationXML = 41,
+    ApplicationOctetStream = 42,
+    ApplicationEXI = 47,
+    ApplicationJSON = 50,
+}
 }
 
 #[derive(Debug)]
@@ -78,6 +92,15 @@ impl Packet {
         self.options.insert(num, value);
     }
 
+    pub fn set_content_format(&mut self, cf: ContentFormat) {
+        let content_format = cf as u16;
+        let msb = (content_format >> 8) as u8;
+        let lsb = (content_format & 0xFF) as u8;
+
+        let content_format: Vec<u8> = vec![msb, lsb];
+        self.add_option(CoAPOption::ContentFormat, content_format);
+    }
+
     pub fn set_payload(&mut self, payload: Vec<u8>) {
         self.payload = payload;
     }
@@ -103,6 +126,20 @@ impl Packet {
             Some(options) => Some(options.clone()),
             None => None,
         }
+    }
+
+    pub fn get_content_format(&self) -> Option<ContentFormat> {
+        if let Some(list) = self.get_option(CoAPOption::ContentFormat) {
+            if let Some(vector) = list.front() {
+                let msb = vector[0] as u16;
+                let lsb = vector[1] as u16;
+                let number = (msb << 8) + lsb;
+
+                return ContentFormat::from_u16(number);
+            }
+        }
+
+        None
     }
 
     /// Decodes a byte slice and construct the equivalent Packet.
@@ -440,6 +477,19 @@ mod test {
         assert_eq!(packet.to_bytes().unwrap(),
                    vec![0x64, 0x45, 0x13, 0xFD, 0xD0, 0xE2, 0x4D, 0xAC, 0xFF, 0x48, 0x65, 0x6C,
                         0x6C, 0x6F]);
+    }
+
+    #[test]
+    fn test_encode_decode_content_format() {
+        let mut packet = Packet::new();
+        packet.set_content_format(ContentFormat::ApplicationJSON);
+        assert_eq!(ContentFormat::ApplicationJSON, packet.get_content_format().unwrap())
+    }
+
+    #[test]
+    fn test_decode_empty_content_format() {
+        let packet = Packet::new();
+        assert!(packet.get_content_format().is_none());
     }
 
     #[test]
