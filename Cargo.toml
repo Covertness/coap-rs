@@ -1,6 +1,6 @@
 [package]
 name = "coap"
-version = "0.5.1"
+version = "0.5.2"
 description = "A CoAP library"
 readme = "README.md"
 documentation = "http://covertness.github.io/coap-rs/coap/index.html"
