@@ -18,31 +18,35 @@ pub struct CoAPClient {
 }
 
 impl CoAPClient {
-    /// Create a CoAP client with the peer address.
-    pub fn new<A: ToSocketAddrs>(addr: A) -> Result<CoAPClient> {
-        addr.to_socket_addrs().and_then(|mut iter| {
+    /// Create a CoAP client with the specific source and peer address.
+    pub fn new_with_specific_source<A: ToSocketAddrs, B: ToSocketAddrs>(bind_addr: A, peer_addr: B) -> Result<CoAPClient> {
+        peer_addr.to_socket_addrs().and_then(|mut iter| {
             match iter.next() {
-                Some(SocketAddr::V4(a)) => {
-                    UdpSocket::bind("0.0.0.0:0").and_then(|s| {
+                Some(paddr) => {
+                    UdpSocket::bind(bind_addr).and_then(|s| {
                         s.set_read_timeout(Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)))
                             .and_then(|_| {
                                 Ok(CoAPClient {
                                     socket: s,
-                                    peer_addr: SocketAddr::V4(a),
+                                    peer_addr: paddr,
                                 })
                             })
                     })
                 }
-                Some(SocketAddr::V6(a)) => {
-                    UdpSocket::bind(":::0").and_then(|s| {
-                        s.set_read_timeout(Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)))
-                            .and_then(|_| {
-                                Ok(CoAPClient {
-                                    socket: s,
-                                    peer_addr: SocketAddr::V6(a),
-                                })
-                            })
-                    })
+                None => Err(Error::new(ErrorKind::Other, "no address")),
+            }
+        })
+    }
+
+    /// Create a CoAP client with the peer address.
+    pub fn new<A: ToSocketAddrs>(addr: A) -> Result<CoAPClient> {
+        addr.to_socket_addrs().and_then(|mut iter| {
+            match iter.next() {
+                Some(SocketAddr::V4(_)) => {
+                    Self::new_with_specific_source("0.0.0.0:0", addr)
+                }
+                Some(SocketAddr::V6(_)) => {
+                    Self::new_with_specific_source(":::0", addr)
                 }
                 None => Err(Error::new(ErrorKind::Other, "no address")),
             }
