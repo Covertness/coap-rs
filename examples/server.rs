@@ -4,6 +4,21 @@ use std::io;
 use coap::{CoAPServer, CoAPResponse, CoAPRequest, IsMessage};
 
 fn request_handler(request: CoAPRequest) -> Option<CoAPResponse> {
+	let request_code = request.get_code();
+
+	match request_code.as_ref() {
+		"0.01" => {
+			println!("request by get");
+		},
+		"0.02" => {
+			println!("request by post");
+			println!("request body: {}", String::from_utf8(request.message.payload).unwrap());
+		},
+		_ => {
+			println!("request by other method {}", request_code);
+		}
+	};
+
 	return match request.response {
 		Some(mut message) => {
 			message.set_payload(b"OK".to_vec());
