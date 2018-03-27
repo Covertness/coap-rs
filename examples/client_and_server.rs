@@ -1,14 +1,14 @@
 extern crate coap;
 
-use coap::{CoAPServer, CoAPClient, CoAPRequest, CoAPResponse, CoAPOption};
+use coap::{CoAPServer, CoAPClient, CoAPRequest, CoAPResponse};
 use coap::IsMessage;
 
 fn request_handler(request: CoAPRequest) -> Option<CoAPResponse> {
-    let uri_path = request.get_option(CoAPOption::UriPath).unwrap();
+    let uri_path = request.get_path().to_string();
 
     return match request.response {
         Some(mut response) => {
-            response.set_payload(uri_path.front().unwrap().clone());
+            response.set_payload(uri_path.as_bytes().to_vec());
             Some(response)
         }
         _ => None,

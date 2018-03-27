@@ -1,6 +1,6 @@
 use message::IsMessage;
 use message::packet::Packet;
-use message::header::{Header, MessageType, MessageClass, Responses};
+use message::header::{Header, MessageType, MessageClass, ResponseType};
 
 #[derive(Debug)]
 pub struct CoAPResponse {
@@ -18,7 +18,7 @@ impl CoAPResponse {
             _ => return None,
         };
         packet.header.set_type(response_type);
-        packet.header.code = MessageClass::ResponseType(Responses::Content);
+        packet.header.code = MessageClass::Response(ResponseType::Content);
         packet.header.set_message_id(request.header.get_message_id());
         packet.set_token(request.get_token().clone());
 

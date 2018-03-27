@@ -1,8 +1,10 @@
 use message::IsMessage;
 use message::response::CoAPResponse;
-use message::packet::Packet;
-use message::header::Header;
+use message::packet::{Packet, CoAPOption};
+use message::header::{Header, MessageClass};
+pub use message::header::RequestType as Method;
 use std::net::SocketAddr;
+use std::str;
 
 #[derive(Debug)]
 pub struct CoAPRequest {
@@ -25,6 +27,33 @@ impl CoAPRequest {
             response: CoAPResponse::new(&packet),
             message: packet,
             source: Some(source.clone()),
+        }
+    }
+
+    pub fn get_method(&self) -> &Method {
+        match self.message.header.code {
+            MessageClass::Request(Method::Get) => &Method::Get,
+            MessageClass::Request(Method::Post) => &Method::Post,
+            MessageClass::Request(Method::Put) => &Method::Put,
+            MessageClass::Request(Method::Delete) => &Method::Delete,
+            _ => &Method::UnKnown,
+        }
+    }
+
+    pub fn get_path(&self) -> &str {
+        match self.get_option(CoAPOption::UriPath) {
+            Some(options) => {
+                match options.front() {
+                    Some(uri) => {
+                        match str::from_utf8(uri) {
+                            Ok(path) => path.clone(),
+                            _ => "",
+                        }
+                    },
+                    _ => ""
+                }
+            },
+            _ => ""
         }
     }
 }

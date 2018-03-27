@@ -15,21 +15,22 @@ pub struct Header {
 #[derive(Debug, PartialEq)]
 pub enum MessageClass {
     Empty,
-    RequestType(Requests),
-    ResponseType(Responses),
+    Request(RequestType),
+    Response(ResponseType),
     Reserved,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Requests {
+pub enum RequestType {
     Get,
     Post,
     Put,
     Delete,
+    UnKnown,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum Responses {
+pub enum ResponseType {
     // 200 Codes
     Created,
     Deleted,
@@ -169,34 +170,34 @@ pub fn class_to_code(class: &MessageClass) -> u8 {
     return match *class {
         MessageClass::Empty => 0x00,
 
-        MessageClass::RequestType(Requests::Get) => 0x01,
-        MessageClass::RequestType(Requests::Post) => 0x02,
-        MessageClass::RequestType(Requests::Put) => 0x03,
-        MessageClass::RequestType(Requests::Delete) => 0x04,
+        MessageClass::Request(RequestType::Get) => 0x01,
+        MessageClass::Request(RequestType::Post) => 0x02,
+        MessageClass::Request(RequestType::Put) => 0x03,
+        MessageClass::Request(RequestType::Delete) => 0x04,
 
-        MessageClass::ResponseType(Responses::Created) => 0x41,
-        MessageClass::ResponseType(Responses::Deleted) => 0x42,
-        MessageClass::ResponseType(Responses::Valid) => 0x43,
-        MessageClass::ResponseType(Responses::Changed) => 0x44,
-        MessageClass::ResponseType(Responses::Content) => 0x45,
+        MessageClass::Response(ResponseType::Created) => 0x41,
+        MessageClass::Response(ResponseType::Deleted) => 0x42,
+        MessageClass::Response(ResponseType::Valid) => 0x43,
+        MessageClass::Response(ResponseType::Changed) => 0x44,
+        MessageClass::Response(ResponseType::Content) => 0x45,
 
-        MessageClass::ResponseType(Responses::BadRequest) => 0x80,
-        MessageClass::ResponseType(Responses::Unauthorized) => 0x81,
-        MessageClass::ResponseType(Responses::BadOption) => 0x82,
-        MessageClass::ResponseType(Responses::Forbidden) => 0x83,
-        MessageClass::ResponseType(Responses::NotFound) => 0x84,
-        MessageClass::ResponseType(Responses::MethodNotAllowed) => 0x85,
-        MessageClass::ResponseType(Responses::NotAcceptable) => 0x86,
-        MessageClass::ResponseType(Responses::PreconditionFailed) => 0x8C,
-        MessageClass::ResponseType(Responses::RequestEntityTooLarge) => 0x8D,
-        MessageClass::ResponseType(Responses::UnsupportedContentFormat) => 0x8F,
+        MessageClass::Response(ResponseType::BadRequest) => 0x80,
+        MessageClass::Response(ResponseType::Unauthorized) => 0x81,
+        MessageClass::Response(ResponseType::BadOption) => 0x82,
+        MessageClass::Response(ResponseType::Forbidden) => 0x83,
+        MessageClass::Response(ResponseType::NotFound) => 0x84,
+        MessageClass::Response(ResponseType::MethodNotAllowed) => 0x85,
+        MessageClass::Response(ResponseType::NotAcceptable) => 0x86,
+        MessageClass::Response(ResponseType::PreconditionFailed) => 0x8C,
+        MessageClass::Response(ResponseType::RequestEntityTooLarge) => 0x8D,
+        MessageClass::Response(ResponseType::UnsupportedContentFormat) => 0x8F,
 
-        MessageClass::ResponseType(Responses::InternalServerError) => 0x90,
-        MessageClass::ResponseType(Responses::NotImplemented) => 0x91,
-        MessageClass::ResponseType(Responses::BadGateway) => 0x92,
-        MessageClass::ResponseType(Responses::ServiceUnavailable) => 0x93,
-        MessageClass::ResponseType(Responses::GatewayTimeout) => 0x94,
-        MessageClass::ResponseType(Responses::ProxyingNotSupported) => 0x95,
+        MessageClass::Response(ResponseType::InternalServerError) => 0x90,
+        MessageClass::Response(ResponseType::NotImplemented) => 0x91,
+        MessageClass::Response(ResponseType::BadGateway) => 0x92,
+        MessageClass::Response(ResponseType::ServiceUnavailable) => 0x93,
+        MessageClass::Response(ResponseType::GatewayTimeout) => 0x94,
+        MessageClass::Response(ResponseType::ProxyingNotSupported) => 0x95,
 
         _ => 0xFF,
     } as u8;
@@ -206,34 +207,34 @@ pub fn code_to_class(code: &u8) -> MessageClass {
     match *code {
         0x00 => MessageClass::Empty,
 
-        0x01 => MessageClass::RequestType(Requests::Get),
-        0x02 => MessageClass::RequestType(Requests::Post),
-        0x03 => MessageClass::RequestType(Requests::Put),
-        0x04 => MessageClass::RequestType(Requests::Delete),
+        0x01 => MessageClass::Request(RequestType::Get),
+        0x02 => MessageClass::Request(RequestType::Post),
+        0x03 => MessageClass::Request(RequestType::Put),
+        0x04 => MessageClass::Request(RequestType::Delete),
 
-        0x41 => MessageClass::ResponseType(Responses::Created),
-        0x42 => MessageClass::ResponseType(Responses::Deleted),
-        0x43 => MessageClass::ResponseType(Responses::Valid),
-        0x44 => MessageClass::ResponseType(Responses::Changed),
-        0x45 => MessageClass::ResponseType(Responses::Content),
+        0x41 => MessageClass::Response(ResponseType::Created),
+        0x42 => MessageClass::Response(ResponseType::Deleted),
+        0x43 => MessageClass::Response(ResponseType::Valid),
+        0x44 => MessageClass::Response(ResponseType::Changed),
+        0x45 => MessageClass::Response(ResponseType::Content),
 
-        0x80 => MessageClass::ResponseType(Responses::BadRequest),
-        0x81 => MessageClass::ResponseType(Responses::Unauthorized),
-        0x82 => MessageClass::ResponseType(Responses::BadOption),
-        0x83 => MessageClass::ResponseType(Responses::Forbidden),
-        0x84 => MessageClass::ResponseType(Responses::NotFound),
-        0x85 => MessageClass::ResponseType(Responses::MethodNotAllowed),
-        0x86 => MessageClass::ResponseType(Responses::NotAcceptable),
-        0x8C => MessageClass::ResponseType(Responses::PreconditionFailed),
-        0x8D => MessageClass::ResponseType(Responses::RequestEntityTooLarge),
-        0x8F => MessageClass::ResponseType(Responses::UnsupportedContentFormat),
+        0x80 => MessageClass::Response(ResponseType::BadRequest),
+        0x81 => MessageClass::Response(ResponseType::Unauthorized),
+        0x82 => MessageClass::Response(ResponseType::BadOption),
+        0x83 => MessageClass::Response(ResponseType::Forbidden),
+        0x84 => MessageClass::Response(ResponseType::NotFound),
+        0x85 => MessageClass::Response(ResponseType::MethodNotAllowed),
+        0x86 => MessageClass::Response(ResponseType::NotAcceptable),
+        0x8C => MessageClass::Response(ResponseType::PreconditionFailed),
+        0x8D => MessageClass::Response(ResponseType::RequestEntityTooLarge),
+        0x8F => MessageClass::Response(ResponseType::UnsupportedContentFormat),
 
-        0x90 => MessageClass::ResponseType(Responses::InternalServerError),
-        0x91 => MessageClass::ResponseType(Responses::NotImplemented),
-        0x92 => MessageClass::ResponseType(Responses::BadGateway),
-        0x93 => MessageClass::ResponseType(Responses::ServiceUnavailable),
-        0x94 => MessageClass::ResponseType(Responses::GatewayTimeout),
-        0x95 => MessageClass::ResponseType(Responses::ProxyingNotSupported),
+        0x90 => MessageClass::Response(ResponseType::InternalServerError),
+        0x91 => MessageClass::Response(ResponseType::NotImplemented),
+        0x92 => MessageClass::Response(ResponseType::BadGateway),
+        0x93 => MessageClass::Response(ResponseType::ServiceUnavailable),
+        0x94 => MessageClass::Response(ResponseType::GatewayTimeout),
+        0x95 => MessageClass::Response(ResponseType::ProxyingNotSupported),
 
         _ => MessageClass::Reserved,
     }

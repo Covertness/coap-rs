@@ -1,21 +1,19 @@
 extern crate coap;
 
 use std::io;
-use coap::{CoAPServer, CoAPResponse, CoAPRequest, IsMessage};
+use coap::{CoAPServer, CoAPResponse, CoAPRequest, IsMessage, Method};
 
 fn request_handler(request: CoAPRequest) -> Option<CoAPResponse> {
-	let request_code = request.get_code();
-
-	match request_code.as_ref() {
-		"0.01" => {
-			println!("request by get");
+	match request.get_method() {
+		&Method::Get => {
+			println!("request by get {}", request.get_path());
 		},
-		"0.02" => {
-			println!("request by post");
+		&Method::Post => {
+			println!("request by post {}", request.get_path());
 			println!("request body: {}", String::from_utf8(request.message.payload).unwrap());
 		},
 		_ => {
-			println!("request by other method {}", request_code);
+			println!("request by other method");
 		}
 	};
 

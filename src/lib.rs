@@ -87,6 +87,7 @@ pub use message::header::MessageType;
 pub use message::IsMessage;
 pub use message::packet::CoAPOption;
 pub use message::request::CoAPRequest;
+pub use message::request::Method;
 pub use message::response::CoAPResponse;
 pub use server::CoAPServer;
 
