@@ -125,6 +125,13 @@ impl Packet {
         self.options.get(&num)
     }
 
+    pub fn clear_option(&mut self, tp: CoAPOption) {
+        let num = Self::get_option_number(tp);
+        if let Some(list) = self.options.get_mut(&num) {
+            list.clear()
+        }
+    }
+
     pub fn get_content_format(&self) -> Option<ContentFormat> {
         if let Some(list) = self.get_option(CoAPOption::ContentFormat) {
             if let Some(vector) = list.front() {

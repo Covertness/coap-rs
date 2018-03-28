@@ -4,10 +4,10 @@ use std::time::Duration;
 use url::{UrlParser, SchemeType};
 use num;
 use rand::{thread_rng, random, Rng};
-use message::packet::{Packet, CoAPOption};
+use message::packet::Packet;
 use message::header::MessageType;
 use message::response::CoAPResponse;
-use message::request::CoAPRequest;
+use message::request::{CoAPRequest, Method};
 use message::IsMessage;
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 5;  // 5s
@@ -63,7 +63,7 @@ impl CoAPClient {
                 let mut packet = CoAPRequest::new();
                 packet.set_version(1);
                 packet.set_type(MessageType::Confirmable);
-                packet.set_code("0.01");
+                packet.set_method(Method::Get);
 
                 let message_id = thread_rng().gen_range(0, num::pow(2u32, 16)) as u16;
                 packet.set_message_id(message_id);
@@ -80,10 +80,8 @@ impl CoAPClient {
                 };
                 let port = url_params.port_or_default().unwrap();
 
-                if let Some(path) = url_params.path() {
-                    for p in path.iter() {
-                        packet.add_option(CoAPOption::UriPath, p.clone().into_bytes().to_vec());
-                    }
+                if let Some(path) = url_params.serialize_path() {
+                    packet.set_path(path.as_str());
                 };
 
                 let client = try!(Self::new((domain, port)));

@@ -32,6 +32,9 @@ pub trait IsMessage {
     fn get_option(&self, tp: packet::CoAPOption) -> Option<&LinkedList<Vec<u8>>> {
         return self.get_message().get_option(tp);
     }
+    fn clear_option(&mut self, tp: packet::CoAPOption) {
+        self.get_mut_message().clear_option(tp);
+    }
 
     fn get_message_id(&self) -> u16 {
         return self.get_message().header.get_message_id();
