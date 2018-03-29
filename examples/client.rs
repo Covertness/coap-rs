@@ -1,7 +1,7 @@
 extern crate coap;
 
 use std::io::ErrorKind;
-use coap::{CoAPClient, CoAPRequest, IsMessage, MessageType, CoAPOption};
+use coap::{CoAPClient, CoAPRequest, IsMessage, Method};
 
 fn main() {
     println!("Request by GET:");
@@ -13,21 +13,10 @@ fn main() {
 
 
 fn example_get() {
-    let addr = "127.0.0.1:5683";
-    let endpoint = "test";
+    let url = "coap://127.0.0.1:5683/hello/get";
+    println!("Client request: {}", url);
 
-    let client = CoAPClient::new(addr).unwrap();
-    let mut request = CoAPRequest::new();
-    request.set_version(1);
-    request.set_type(MessageType::Confirmable);
-    request.set_code("0.01");
-    request.set_message_id(1);
-    request.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
-    request.add_option(CoAPOption::UriPath, endpoint.to_string().into_bytes());
-    client.send(&request).unwrap();
-    println!("Client request: coap://{}/{}", addr, endpoint);
-
-    match client.receive() {
+    match CoAPClient::get(url) {
         Ok(response) => {
             println!("Server reply: {}",
                      String::from_utf8(response.message.payload).unwrap());
@@ -44,20 +33,16 @@ fn example_get() {
 
 fn example_post() {
     let addr = "127.0.0.1:5683";
-    let endpoint = "test";
+    let path = "/hello/post";
 
-    let client = CoAPClient::new(addr).unwrap();
     let mut request = CoAPRequest::new();
-    request.set_version(1);
-    request.set_type(MessageType::Confirmable);
-    request.set_code("0.02");
-    request.set_message_id(1);
-    request.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
-    request.add_option(CoAPOption::UriPath, endpoint.to_string().into_bytes());
+    request.set_method(Method::Post);
+    request.set_path(path);
     request.set_payload(b"data".to_vec());
 
+    let client = CoAPClient::new(addr).unwrap();
     client.send(&request).unwrap();
-    println!("Client request: coap://{}/{}", addr, endpoint);
+    println!("Client request: coap://{}/{}", addr, path);
 
     match client.receive() {
         Ok(response) => {

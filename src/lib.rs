@@ -11,7 +11,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! coap = "0.5"
+//! coap = "0.6"
 //! ```
 //!
 //! Then, add this to your crate root:
@@ -27,13 +27,17 @@
 //! extern crate coap;
 
 //! use std::io;
-//! use coap::{CoAPServer, CoAPClient, CoAPRequest, CoAPResponse};
+//! use coap::{CoAPServer, CoAPClient, CoAPRequest, CoAPResponse, Method};
 
 //! fn request_handler(request: CoAPRequest) -> Option<CoAPResponse> {
-//! 	println!("Receive request: {:?}", request);
-//!     
+//!     match request.get_method() {
+//! 		&Method::Get => println!("request by get {}", request.get_path()),
+//! 		&Method::Post => println!("request by post {}", String::from_utf8(request.message.payload).unwrap()),
+//! 		_ => println!("request by other method"),
+//! 	};
+//! 
 //!     // Return the auto-generated response
-//!     request.response
+//!    request.response
 //! }
 
 //! fn main() {
@@ -55,14 +59,13 @@
 //! ```no_run
 //! extern crate coap;
 //!
-//! use coap::message::response::CoAPResponse;
-//! use coap::CoAPClient;
+//! use coap::{CoAPClient, CoAPResponse};
 //!
 //! fn main() {
 //! 	let url = "coap://127.0.0.1:5683/Rust";
 //! 	println!("Client request: {}", url);
 //!
-//! 	let response: CoAPResponse = CoAPClient::request(url).unwrap();
+//! 	let response = CoAPClient::get(url).unwrap();
 //! 	println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 //! }
 //! ```

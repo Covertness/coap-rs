@@ -1,8 +1,18 @@
-#[derive(Default, Debug, RustcEncodable, RustcDecodable)]
+#[derive(Debug, RustcEncodable, RustcDecodable)]
 pub struct HeaderRaw {
     ver_type_tkl: u8,
     code: u8,
     message_id: u16,
+}
+
+impl Default for HeaderRaw {
+    fn default() -> HeaderRaw {
+        HeaderRaw {
+            ver_type_tkl: 0x40, // version: 1, type: Confirmable, TKL: 0
+            code: 0x01,         // GET
+            message_id: 0,
+        }
+    }
 }
 
 #[derive(Debug)]
