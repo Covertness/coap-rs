@@ -4,10 +4,10 @@ use std::time::Duration;
 use url::{UrlParser, SchemeType};
 use num;
 use rand::{thread_rng, random, Rng};
-use message::packet::{Packet, CoAPOption};
+use message::packet::Packet;
 use message::header::MessageType;
 use message::response::CoAPResponse;
-use message::request::CoAPRequest;
+use message::request::{CoAPRequest, Method};
 use message::IsMessage;
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 5;  // 5s
@@ -53,7 +53,49 @@ impl CoAPClient {
         })
     }
 
+    /// Execute a get request
+    pub fn get(url: &str) -> Result<CoAPResponse> {
+        Self::get_with_timeout(url, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
+    }
+
+    /// Execute a get request with the coap url and a specific timeout.
+    pub fn get_with_timeout(url: &str, timeout: Duration) -> Result<CoAPResponse> {
+        let mut url_parser = UrlParser::new();
+        url_parser.scheme_type_mapper(Self::coap_scheme_type_mapper);
+
+        match url_parser.parse(url) {
+            Ok(url_params) => {
+                let mut packet = CoAPRequest::new();
+
+                let domain = match url_params.domain() {
+                    Some(d) => d,
+                    None => return Err(Error::new(ErrorKind::InvalidInput, "domain error")),
+                };
+                let port = match url_params.port_or_default() {
+                    Some(p) => p,
+                    None => return Err(Error::new(ErrorKind::InvalidInput, "port error")),
+                };
+
+                match url_params.serialize_path() {
+                    Some(path) => packet.set_path(path.as_str()),
+                    None => return Err(Error::new(ErrorKind::InvalidInput, "uri error")),
+                };
+
+                let client = try!(Self::new((domain, port)));
+                try!(client.send(&packet));
+
+                try!(client.set_receive_timeout(Some(timeout)));
+                match client.receive() {
+                    Ok(receive_packet) => Ok(receive_packet),
+                    Err(e) => Err(e),
+                }
+            }
+            Err(_) => Err(Error::new(ErrorKind::InvalidInput, "url error")),
+        }
+    }
+
     /// Execute a request with the coap url and a specific timeout. Default timeout is 5s.
+    #[deprecated(since="0.6.0", note="please use `get_with_timeout` instead")]
     pub fn request_with_timeout(url: &str, timeout: Option<Duration>) -> Result<CoAPResponse> {
         let mut url_parser = UrlParser::new();
         url_parser.scheme_type_mapper(Self::coap_scheme_type_mapper);
@@ -63,7 +105,7 @@ impl CoAPClient {
                 let mut packet = CoAPRequest::new();
                 packet.set_version(1);
                 packet.set_type(MessageType::Confirmable);
-                packet.set_code("0.01");
+                packet.set_method(Method::Get);
 
                 let message_id = thread_rng().gen_range(0, num::pow(2u32, 16)) as u16;
                 packet.set_message_id(message_id);
@@ -80,10 +122,8 @@ impl CoAPClient {
                 };
                 let port = url_params.port_or_default().unwrap();
 
-                if let Some(path) = url_params.path() {
-                    for p in path.iter() {
-                        packet.add_option(CoAPOption::UriPath, p.clone().into_bytes().to_vec());
-                    }
+                if let Some(path) = url_params.serialize_path() {
+                    packet.set_path(path.as_str());
                 };
 
                 let client = try!(Self::new((domain, port)));
@@ -107,8 +147,9 @@ impl CoAPClient {
     }
 
     /// Execute a request with the coap url.
+    #[deprecated(since="0.6.0", note="please use `get` instead")]
     pub fn request(url: &str) -> Result<CoAPResponse> {
-        Self::request_with_timeout(url, Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)))
+        Self::get_with_timeout(url, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
     }
 
     /// Execute a request.
@@ -161,10 +202,10 @@ mod test {
     use server::CoAPServer;
 
     #[test]
-    fn test_request_error_url() {
-        assert!(CoAPClient::request("http://127.0.0.1").is_err());
-        assert!(CoAPClient::request("coap://127.0.0.").is_err());
-        assert!(CoAPClient::request("127.0.0.1").is_err());
+    fn test_get_error_url() {
+        assert!(CoAPClient::get("http://127.0.0.1").is_err());
+        assert!(CoAPClient::get("coap://127.0.0.").is_err());
+        assert!(CoAPClient::get("127.0.0.1").is_err());
     }
 
     fn request_handler(_: CoAPRequest) -> Option<CoAPResponse> {
@@ -172,12 +213,11 @@ mod test {
     }
 
     #[test]
-    fn test_request_timeout() {
+    fn test_get_timeout() {
         let mut server = CoAPServer::new("127.0.0.1:5684").unwrap();
         server.handle(request_handler).unwrap();
 
-        let error = CoAPClient::request_with_timeout("coap://127.0.0.1:5684/Rust",
-                                                     Some(Duration::new(1, 0)))
+        let error = CoAPClient::get_with_timeout("coap://127.0.0.1:5684/Rust", Duration::new(1, 0))
             .unwrap_err();
         if cfg!(windows) {
             assert_eq!(error.kind(), ErrorKind::TimedOut);

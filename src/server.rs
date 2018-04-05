@@ -324,7 +324,7 @@ mod test {
     use super::*;
 
     fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
-        let uri_path_list = req.get_option(CoAPOption::UriPath).unwrap();
+        let uri_path_list = req.get_option(CoAPOption::UriPath).unwrap().clone();
         assert!(uri_path_list.len() == 1);
 
         match req.response {

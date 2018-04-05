@@ -120,11 +120,15 @@ impl Packet {
         self.options.insert(num, list);
     }
 
-    pub fn get_option(&self, tp: CoAPOption) -> Option<LinkedList<Vec<u8>>> {
+    pub fn get_option(&self, tp: CoAPOption) -> Option<&LinkedList<Vec<u8>>> {
         let num = Self::get_option_number(tp);
-        match self.options.get(&num) {
-            Some(options) => Some(options.clone()),
-            None => None,
+        self.options.get(&num)
+    }
+
+    pub fn clear_option(&mut self, tp: CoAPOption) {
+        let num = Self::get_option_number(tp);
+        if let Some(list) = self.options.get_mut(&num) {
+            list.clear()
         }
     }
 
@@ -410,7 +414,7 @@ mod test {
         assert_eq!(packet.header.get_type(), header::MessageType::Confirmable);
         assert_eq!(packet.header.get_token_length(), 4);
         assert_eq!(packet.header.code,
-                   header::MessageClass::RequestType(header::Requests::Get));
+                   header::MessageClass::Request(header::RequestType::Get));
         assert_eq!(packet.header.get_message_id(), 33950);
         assert_eq!(*packet.get_token(), vec![0x51, 0x55, 0x77, 0xE8]);
         assert_eq!(packet.options.len(), 2);
@@ -421,14 +425,14 @@ mod test {
         let mut expected_uri_path = LinkedList::new();
         expected_uri_path.push_back("Hi".as_bytes().to_vec());
         expected_uri_path.push_back("Test".as_bytes().to_vec());
-        assert_eq!(uri_path, expected_uri_path);
+        assert_eq!(*uri_path, expected_uri_path);
 
         let uri_query = packet.get_option(CoAPOption::UriQuery);
         assert!(uri_query.is_some());
         let uri_query = uri_query.unwrap();
         let mut expected_uri_query = LinkedList::new();
         expected_uri_query.push_back("a=1".as_bytes().to_vec());
-        assert_eq!(uri_query, expected_uri_query);
+        assert_eq!(*uri_query, expected_uri_query);
     }
 
     #[test]
@@ -443,7 +447,7 @@ mod test {
                    header::MessageType::Acknowledgement);
         assert_eq!(packet.header.get_token_length(), 4);
         assert_eq!(packet.header.code,
-                   header::MessageClass::ResponseType(header::Responses::Content));
+                   header::MessageClass::Response(header::ResponseType::Content));
         assert_eq!(packet.header.get_message_id(), 5117);
         assert_eq!(*packet.get_token(), vec![0xD0, 0xE2, 0x4D, 0xAC]);
         assert_eq!(packet.payload, "Hello".as_bytes().to_vec());
@@ -454,7 +458,7 @@ mod test {
         let mut packet = Packet::new();
         packet.header.set_version(1);
         packet.header.set_type(header::MessageType::Confirmable);
-        packet.header.code = header::MessageClass::RequestType(header::Requests::Get);
+        packet.header.code = header::MessageClass::Request(header::RequestType::Get);
         packet.header.set_message_id(33950);
         packet.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
         packet.add_option(CoAPOption::UriPath, b"Hi".to_vec());
@@ -470,7 +474,7 @@ mod test {
         let mut packet = Packet::new();
         packet.header.set_version(1);
         packet.header.set_type(header::MessageType::Acknowledgement);
-        packet.header.code = header::MessageClass::ResponseType(header::Responses::Content);
+        packet.header.code = header::MessageClass::Response(header::ResponseType::Content);
         packet.header.set_message_id(5117);
         packet.set_token(vec![0xD0, 0xE2, 0x4D, 0xAC]);
         packet.payload = "Hello".as_bytes().to_vec();
