@@ -92,6 +92,7 @@ pub use message::packet::CoAPOption;
 pub use message::request::CoAPRequest;
 pub use message::request::Method;
 pub use message::response::CoAPResponse;
+pub use message::response::Status;
 pub use server::CoAPServer;
 
 pub mod message;

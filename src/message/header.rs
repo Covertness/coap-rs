@@ -67,6 +67,8 @@ pub enum ResponseType {
     ServiceUnavailable,
     GatewayTimeout,
     ProxyingNotSupported,
+
+    UnKnown,
 }
 
 #[derive(PartialEq, Eq, Debug)]
