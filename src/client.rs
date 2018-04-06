@@ -83,11 +83,14 @@ impl CoAPClient {
 
     /// Observe a resource with the handler
     pub fn observe<H: Fn(Packet) + Send + 'static>(&mut self, resource_path: &str, handler: H) -> Result<()> {
-        let mut packet = CoAPRequest::new();
-        packet.add_option(CoAPOption::Observe, vec![0]);
-        packet.set_path(resource_path);
+        // TODO: support observe multi resources at the same time
+        let mut message_id: u16 = 0;
+        let mut register_packet = CoAPRequest::new();
+        register_packet.add_option(CoAPOption::Observe, vec![0]);
+        register_packet.set_message_id(Self::gen_message_id(&mut message_id));
+        register_packet.set_path(resource_path);
 
-        self.send(&packet)?;
+        self.send(&register_packet)?;
 
         self.set_receive_timeout(Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)))?;
         let response = self.receive()?;
@@ -104,6 +107,7 @@ impl CoAPClient {
         }
         let peer_addr = self.peer_addr.clone();
         let (observe_sender, observe_receiver) = mpsc::channel();
+        let observe_path = String::from(resource_path);
 
         let observe_thread = thread::spawn(move || loop {
             match Self::receive_from_socket(&socket) {
@@ -135,7 +139,16 @@ impl CoAPClient {
             };
 
             match observe_receiver.try_recv() {
-                Ok(ObserveMessage::Terminate) => break,
+                Ok(ObserveMessage::Terminate) => {
+                    let mut deregister_packet = CoAPRequest::new();
+                    deregister_packet.set_message_id(Self::gen_message_id(&mut message_id));
+                    deregister_packet.add_option(CoAPOption::Observe, vec![1]);
+                    deregister_packet.set_path(observe_path.as_str());
+                    
+                    Self::send_with_socket(&socket, &peer_addr, &deregister_packet.message).unwrap();
+                    Self::receive_from_socket(&socket).unwrap();
+                    break;
+                },
                 _ => continue,
             }
         });
@@ -272,6 +285,11 @@ impl CoAPClient {
             "coap" => SchemeType::Relative(5683),
             _ => SchemeType::NonRelative,
         }
+    }
+
+    fn gen_message_id(message_id: &mut u16) -> u16 {
+        (*message_id) += 1;
+        return *message_id;
     }
 }
 
