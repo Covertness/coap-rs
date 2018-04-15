@@ -10,11 +10,10 @@
     <title>refbox.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
-          id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
     <script src="../../storage.js"></script>
     
 
@@ -507,7 +506,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">take</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">inner</span> {
             <span class="ident">RefBoxInner</span>::<span class="ident">Box</span>(<span class="ident">b</span>) <span class="op">=&gt;</span> <span class="ident">b</span>,
-            <span class="kw">_</span> <span class="op">=&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>()
+            _ <span class="op">=&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>()
         }
     }
 
@@ -652,7 +651,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">take</span>(<span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">inner</span> {
             <span class="ident">RefBoxInner</span>::<span class="ident">Box</span>(<span class="ident">b</span>) <span class="op">=&gt;</span> <span class="ident">b</span>,
-            <span class="kw">_</span> <span class="op">=&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>()
+            _ <span class="op">=&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>()
         }
     }
 

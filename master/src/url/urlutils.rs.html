@@ -10,11 +10,10 @@
     <title>urlutils.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
-          id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
     <script src="../../storage.js"></script>
     
 
@@ -265,7 +264,7 @@
     <span class="doccomment">/// `URLUtils.protocol` setter</span>
     <span class="kw">fn</span> <span class="ident">set_scheme</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">ParseResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> ::<span class="ident">parser</span>::<span class="ident">parse_scheme</span>(<span class="ident">input</span>, <span class="ident">Context</span>::<span class="ident">Setter</span>) {
-            <span class="prelude-val">Some</span>((<span class="ident">scheme</span>, <span class="kw">_</span>)) <span class="op">=&gt;</span> {
+            <span class="prelude-val">Some</span>((<span class="ident">scheme</span>, _)) <span class="op">=&gt;</span> {
                 <span class="kw">if</span> <span class="self">self</span>.<span class="ident">parser</span>.<span class="ident">get_scheme_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">url</span>.<span class="ident">scheme</span>).<span class="ident">same_as</span>(<span class="self">self</span>.<span class="ident">parser</span>.<span class="ident">get_scheme_type</span>(<span class="kw-2">&amp;</span><span class="ident">scheme</span>)) {
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">InvalidScheme</span>);
                 }
@@ -284,7 +283,7 @@
                 <span class="ident">utf8_percent_encode_to</span>(<span class="ident">input</span>, <span class="ident">USERNAME_ENCODE_SET</span>, <span class="ident">username</span>);
                 <span class="prelude-val">Ok</span>(())
             },
-            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetUsernameWithNonRelativeScheme</span>)
+            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetUsernameWithNonRelativeScheme</span>)
         }
     }
 
@@ -301,7 +300,7 @@
                 <span class="kw-2">*</span><span class="ident">password</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">new_password</span>);
                 <span class="prelude-val">Ok</span>(())
             },
-            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetPasswordWithNonRelativeScheme</span>)
+            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetPasswordWithNonRelativeScheme</span>)
         }
     }
 
@@ -312,14 +311,14 @@
                 <span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">host</span>, <span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">port</span>, <span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">default_port</span>, ..
             }) <span class="op">=&gt;</span> {
                 <span class="kw">let</span> <span class="ident">scheme_type</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">parser</span>.<span class="ident">get_scheme_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">url</span>.<span class="ident">scheme</span>);
-                <span class="kw">let</span> (<span class="ident">new_host</span>, <span class="ident">new_port</span>, <span class="ident">new_default_port</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_host</span>(
+                <span class="kw">let</span> (<span class="ident">new_host</span>, <span class="ident">new_port</span>, <span class="ident">new_default_port</span>, _) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_host</span>(
                     <span class="ident">input</span>, <span class="ident">scheme_type</span>, <span class="self">self</span>.<span class="ident">parser</span>));
                 <span class="kw-2">*</span><span class="ident">host</span> <span class="op">=</span> <span class="ident">new_host</span>;
                 <span class="kw-2">*</span><span class="ident">port</span> <span class="op">=</span> <span class="ident">new_port</span>;
                 <span class="kw-2">*</span><span class="ident">default_port</span> <span class="op">=</span> <span class="ident">new_default_port</span>;
                 <span class="prelude-val">Ok</span>(())
             },
-            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetHostPortWithNonRelativeScheme</span>)
+            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetHostPortWithNonRelativeScheme</span>)
         }
     }
 
@@ -327,11 +326,11 @@
     <span class="kw">fn</span> <span class="ident">set_host</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">input</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">ParseResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">url</span>.<span class="ident">scheme_data</span> {
             <span class="ident">SchemeData</span>::<span class="ident">Relative</span>(<span class="ident">RelativeSchemeData</span> { <span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">host</span>, .. }) <span class="op">=&gt;</span> {
-                <span class="kw">let</span> (<span class="ident">new_host</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_hostname</span>(<span class="ident">input</span>, <span class="self">self</span>.<span class="ident">parser</span>));
+                <span class="kw">let</span> (<span class="ident">new_host</span>, _) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_hostname</span>(<span class="ident">input</span>, <span class="self">self</span>.<span class="ident">parser</span>));
                 <span class="kw-2">*</span><span class="ident">host</span> <span class="op">=</span> <span class="ident">new_host</span>;
                 <span class="prelude-val">Ok</span>(())
             },
-            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetHostWithNonRelativeScheme</span>)
+            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetHostWithNonRelativeScheme</span>)
         }
     }
 
@@ -343,13 +342,13 @@
                 <span class="kw">if</span> <span class="ident">scheme_type</span> <span class="op">==</span> <span class="ident">SchemeType</span>::<span class="ident">FileLike</span> {
                     <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetPortWithFileLikeScheme</span>);
                 }
-                <span class="kw">let</span> (<span class="ident">new_port</span>, <span class="ident">new_default_port</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_port</span>(
+                <span class="kw">let</span> (<span class="ident">new_port</span>, <span class="ident">new_default_port</span>, _) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_port</span>(
                     <span class="ident">input</span>, <span class="ident">scheme_type</span>, <span class="self">self</span>.<span class="ident">parser</span>));
                 <span class="kw-2">*</span><span class="ident">port</span> <span class="op">=</span> <span class="ident">new_port</span>;
                 <span class="kw-2">*</span><span class="ident">default_port</span> <span class="op">=</span> <span class="ident">new_default_port</span>;
                 <span class="prelude-val">Ok</span>(())
             },
-            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetPortWithNonRelativeScheme</span>)
+            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetPortWithNonRelativeScheme</span>)
         }
     }
 
@@ -358,12 +357,12 @@
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">url</span>.<span class="ident">scheme_data</span> {
             <span class="ident">SchemeData</span>::<span class="ident">Relative</span>(<span class="ident">RelativeSchemeData</span> { <span class="kw-2">ref</span> <span class="kw-2">mut</span> <span class="ident">path</span>, .. }) <span class="op">=&gt;</span> {
                 <span class="kw">let</span> <span class="ident">scheme_type</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">parser</span>.<span class="ident">get_scheme_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">url</span>.<span class="ident">scheme</span>);
-                <span class="kw">let</span> (<span class="ident">new_path</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_path_start</span>(
+                <span class="kw">let</span> (<span class="ident">new_path</span>, _) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_path_start</span>(
                     <span class="ident">input</span>, <span class="ident">Context</span>::<span class="ident">Setter</span>, <span class="ident">scheme_type</span>, <span class="self">self</span>.<span class="ident">parser</span>));
                 <span class="kw-2">*</span><span class="ident">path</span> <span class="op">=</span> <span class="ident">new_path</span>;
                 <span class="prelude-val">Ok</span>(())
             },
-            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetPathWithNonRelativeScheme</span>)
+            <span class="ident">SchemeData</span>::<span class="ident">NonRelative</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">CannotSetPathWithNonRelativeScheme</span>)
         }
     }
 
@@ -373,7 +372,7 @@
             <span class="prelude-val">None</span>
         } <span class="kw">else</span> {
             <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">input</span>.<span class="ident">starts_with</span>(<span class="string">&quot;?&quot;</span>) { <span class="kw-2">&amp;</span><span class="ident">input</span>[<span class="number">1</span>..] } <span class="kw">else</span> { <span class="ident">input</span> };
-            <span class="kw">let</span> (<span class="ident">new_query</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_query</span>(
+            <span class="kw">let</span> (<span class="ident">new_query</span>, _) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">parser</span>::<span class="ident">parse_query</span>(
                 <span class="ident">input</span>, <span class="ident">Context</span>::<span class="ident">Setter</span>, <span class="self">self</span>.<span class="ident">parser</span>));
             <span class="prelude-val">Some</span>(<span class="ident">new_query</span>)
         };

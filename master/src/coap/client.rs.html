@@ -10,11 +10,10 @@
     <title>client.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
-          id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
     <script src="../../storage.js"></script>
     
 
@@ -429,7 +428,7 @@
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw-2">mut</span> <span class="ident">iter</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">iter</span>.<span class="ident">next</span>() {
                 <span class="prelude-val">Some</span>(<span class="ident">paddr</span>) <span class="op">=&gt;</span> <span class="ident">UdpSocket</span>::<span class="ident">bind</span>(<span class="ident">bind_addr</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> {
                     <span class="ident">s</span>.<span class="ident">set_read_timeout</span>(<span class="prelude-val">Some</span>(<span class="ident">Duration</span>::<span class="ident">new</span>(<span class="ident">DEFAULT_RECEIVE_TIMEOUT</span>, <span class="number">0</span>)))
-                        .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                        .<span class="ident">and_then</span>(<span class="op">|</span>_<span class="op">|</span> {
                             <span class="prelude-val">Ok</span>(<span class="ident">CoAPClient</span> {
                                 <span class="ident">socket</span>: <span class="ident">s</span>,
                                 <span class="ident">peer_addr</span>: <span class="ident">paddr</span>,
@@ -446,8 +445,8 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span><span class="op">&lt;</span><span class="ident">A</span>: <span class="ident">ToSocketAddrs</span><span class="op">&gt;</span>(<span class="ident">addr</span>: <span class="ident">A</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CoAPClient</span><span class="op">&gt;</span> {
         <span class="ident">addr</span>.<span class="ident">to_socket_addrs</span>()
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw-2">mut</span> <span class="ident">iter</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">iter</span>.<span class="ident">next</span>() {
-                <span class="prelude-val">Some</span>(<span class="ident">SocketAddr</span>::<span class="ident">V4</span>(<span class="kw">_</span>)) <span class="op">=&gt;</span> <span class="self">Self</span>::<span class="ident">new_with_specific_source</span>(<span class="string">&quot;0.0.0.0:0&quot;</span>, <span class="ident">addr</span>),
-                <span class="prelude-val">Some</span>(<span class="ident">SocketAddr</span>::<span class="ident">V6</span>(<span class="kw">_</span>)) <span class="op">=&gt;</span> <span class="self">Self</span>::<span class="ident">new_with_specific_source</span>(<span class="string">&quot;:::0&quot;</span>, <span class="ident">addr</span>),
+                <span class="prelude-val">Some</span>(<span class="ident">SocketAddr</span>::<span class="ident">V4</span>(_)) <span class="op">=&gt;</span> <span class="self">Self</span>::<span class="ident">new_with_specific_source</span>(<span class="string">&quot;0.0.0.0:0&quot;</span>, <span class="ident">addr</span>),
+                <span class="prelude-val">Some</span>(<span class="ident">SocketAddr</span>::<span class="ident">V6</span>(_)) <span class="op">=&gt;</span> <span class="self">Self</span>::<span class="ident">new_with_specific_source</span>(<span class="string">&quot;:::0&quot;</span>, <span class="ident">addr</span>),
                 <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;no address&quot;</span>)),
             })
     }
@@ -496,7 +495,7 @@
         <span class="kw">let</span> <span class="ident">socket</span>;
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">socket</span>.<span class="ident">try_clone</span>() {
             <span class="prelude-val">Ok</span>(<span class="ident">good_socket</span>) <span class="op">=&gt;</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">good_socket</span>,
-            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;network error&quot;</span>)),
+            <span class="prelude-val">Err</span>(_) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;network error&quot;</span>)),
         }
         <span class="kw">let</span> <span class="ident">peer_addr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_addr</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> (<span class="ident">observe_sender</span>, <span class="ident">observe_receiver</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>();
@@ -516,7 +515,7 @@
                         <span class="ident">packet</span>.<span class="ident">set_token</span>(<span class="ident">response</span>.<span class="ident">message</span>.<span class="ident">get_token</span>().<span class="ident">clone</span>());
 
                         <span class="kw">match</span> <span class="self">Self</span>::<span class="ident">send_with_socket</span>(<span class="kw-2">&amp;</span><span class="ident">socket</span>, <span class="kw-2">&amp;</span><span class="ident">peer_addr</span>, <span class="kw-2">&amp;</span><span class="ident">packet</span>) {
-                            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> (),
+                            <span class="prelude-val">Ok</span>(_) <span class="op">=&gt;</span> (),
                             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> {
                                 <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;reply ack failed {}&quot;</span>, <span class="ident">e</span>)
                             }
@@ -526,7 +525,7 @@
                 <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> {
                     <span class="kw">match</span> <span class="ident">e</span>.<span class="ident">kind</span>() {
                         <span class="ident">ErrorKind</span>::<span class="ident">WouldBlock</span> <span class="op">=&gt;</span> (),                          <span class="comment">// timeout</span>
-                        <span class="kw">_</span> <span class="op">=&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;observe failed {:?}&quot;</span>, <span class="ident">e</span>),
+                        _ <span class="op">=&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;observe failed {:?}&quot;</span>, <span class="ident">e</span>),
                     }
                 },
             };
@@ -542,7 +541,7 @@
                     <span class="self">Self</span>::<span class="ident">receive_from_socket</span>(<span class="kw-2">&amp;</span><span class="ident">socket</span>).<span class="ident">unwrap</span>();
                     <span class="kw">break</span>;
                 },
-                <span class="kw">_</span> <span class="op">=&gt;</span> <span class="kw">continue</span>,
+                _ <span class="op">=&gt;</span> <span class="kw">continue</span>,
             }
         });
         <span class="self">self</span>.<span class="ident">observe_sender</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">observe_sender</span>);
@@ -559,7 +558,7 @@
 
                 <span class="self">self</span>.<span class="ident">observe_thread</span>.<span class="ident">take</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">g</span><span class="op">|</span> <span class="ident">g</span>.<span class="ident">join</span>().<span class="ident">unwrap</span>());
             }
-            <span class="kw">_</span> <span class="op">=&gt;</span> {}
+            _ <span class="op">=&gt;</span> {}
         }
     }
 
@@ -633,7 +632,7 @@
                     <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;send length error&quot;</span>))
                 }
             }
-            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;packet error&quot;</span>)),
+            <span class="prelude-val">Err</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;packet error&quot;</span>)),
         }
     }
 
@@ -643,7 +642,7 @@
         <span class="kw">let</span> (<span class="ident">nread</span>, <span class="ident">_src</span>) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">socket</span>.<span class="ident">recv_from</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>));
         <span class="kw">match</span> <span class="ident">Packet</span>::<span class="ident">from_bytes</span>(<span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">nread</span>]) {
             <span class="prelude-val">Ok</span>(<span class="ident">packet</span>) <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">packet</span>),
-            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;packet error&quot;</span>)),
+            <span class="prelude-val">Err</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;packet error&quot;</span>)),
         }
     }
 
@@ -653,7 +652,7 @@
 
         <span class="kw">let</span> <span class="ident">url_params</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">url_parser</span>.<span class="ident">parse</span>(<span class="ident">url</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">url_params</span>) <span class="op">=&gt;</span> <span class="ident">url_params</span>,
-            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;url error&quot;</span>)),
+            <span class="prelude-val">Err</span>(_) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;url error&quot;</span>)),
         };
 
         <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">url_params</span>.<span class="ident">domain</span>() {
@@ -676,7 +675,7 @@
     <span class="kw">fn</span> <span class="ident">coap_scheme_type_mapper</span>(<span class="ident">scheme</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">SchemeType</span> {
         <span class="kw">match</span> <span class="ident">scheme</span> {
             <span class="string">&quot;coap&quot;</span> <span class="op">=&gt;</span> <span class="ident">SchemeType</span>::<span class="ident">Relative</span>(<span class="number">5683</span>),
-            <span class="kw">_</span> <span class="op">=&gt;</span> <span class="ident">SchemeType</span>::<span class="ident">NonRelative</span>,
+            _ <span class="op">=&gt;</span> <span class="ident">SchemeType</span>::<span class="ident">NonRelative</span>,
         }
     }
 
@@ -708,7 +707,7 @@
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">get</span>(<span class="string">&quot;127.0.0.1&quot;</span>).<span class="ident">is_err</span>());
     }
 
-    <span class="kw">fn</span> <span class="ident">request_handler</span>(<span class="kw">_</span>: <span class="ident">CoAPRequest</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">CoAPResponse</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">request_handler</span>(_: <span class="ident">CoAPRequest</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">CoAPResponse</span><span class="op">&gt;</span> {
         <span class="prelude-val">None</span>
     }
 

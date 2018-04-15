@@ -11,7 +11,7 @@ themePicker.onclick = function() {
         themePicker.style.borderBottomLeftRadius = "0";
     }
 };
-["dark","light"].forEach(function(item) {
+["dark","main"].forEach(function(item) {
     var but = document.createElement('button');
     but.innerHTML = item;
     but.onclick = function(el) {
