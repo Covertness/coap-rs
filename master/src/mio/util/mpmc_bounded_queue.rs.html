@@ -10,10 +10,11 @@
     <title>mpmc_bounded_queue.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle">
     <script src="../../../storage.js"></script>
     
 
@@ -358,7 +359,7 @@
         };
         <span class="kw">let</span> <span class="ident">buffer</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">capacity</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
             <span class="ident">UnsafeCell</span>::<span class="ident">new</span>(<span class="ident">Node</span> { <span class="ident">sequence</span>:<span class="ident">AtomicUsize</span>::<span class="ident">new</span>(<span class="ident">i</span>), <span class="ident">value</span>: <span class="prelude-val">None</span> })
-        }).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span>_<span class="op">&gt;&gt;</span>();
+        }).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;&gt;</span>();
         <span class="ident">State</span>{
             <span class="ident">pad0</span>: [<span class="number">0</span>; <span class="number">64</span>],
             <span class="ident">buffer</span>: <span class="ident">buffer</span>,
@@ -462,7 +463,7 @@
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="prelude-val">None</span>, <span class="ident">q</span>.<span class="ident">pop</span>());
         <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">channel</span>();
 
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">nthreads</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">nthreads</span> {
             <span class="kw">let</span> <span class="ident">q</span> <span class="op">=</span> <span class="ident">q</span>.<span class="ident">clone</span>();
             <span class="kw">let</span> <span class="ident">tx</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">clone</span>();
             <span class="ident">thread</span>::<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">||</span> {
@@ -475,7 +476,7 @@
         }
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">completion_rxs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">nthreads</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">nthreads</span> {
             <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">channel</span>();
             <span class="ident">completion_rxs</span>.<span class="ident">push</span>(<span class="ident">rx</span>);
             <span class="kw">let</span> <span class="ident">q</span> <span class="op">=</span> <span class="ident">q</span>.<span class="ident">clone</span>();
@@ -485,7 +486,7 @@
                 <span class="kw">loop</span> {
                     <span class="kw">match</span> <span class="ident">q</span>.<span class="ident">pop</span>() {
                         <span class="prelude-val">None</span> <span class="op">=&gt;</span> {},
-                        <span class="prelude-val">Some</span>(_) <span class="op">=&gt;</span> {
+                        <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> {
                             <span class="ident">i</span> <span class="op">+=</span> <span class="number">1</span>;
                             <span class="kw">if</span> <span class="ident">i</span> <span class="op">==</span> <span class="ident">nmsgs</span> { <span class="kw">break</span> }
                         }
@@ -498,7 +499,7 @@
         <span class="kw">for</span> <span class="ident">rx</span> <span class="kw">in</span> <span class="ident">completion_rxs</span>.<span class="ident">iter_mut</span>() {
             <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">nmsgs</span>, <span class="ident">rx</span>.<span class="ident">recv</span>().<span class="ident">unwrap</span>());
         }
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">nthreads</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">nthreads</span> {
             <span class="ident">rx</span>.<span class="ident">recv</span>().<span class="ident">unwrap</span>();
         }
     }
