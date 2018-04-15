@@ -10,11 +10,10 @@
     <title>percent_encoding.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
-          id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
     <script src="../../storage.js"></script>
     
 
@@ -351,7 +350,7 @@
         <span class="string">b&#39;0&#39;</span> ... <span class="string">b&#39;9&#39;</span> <span class="op">=&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">byte</span> <span class="op">-</span> <span class="string">b&#39;0&#39;</span>),  <span class="comment">// 0..9</span>
         <span class="string">b&#39;A&#39;</span> ... <span class="string">b&#39;F&#39;</span> <span class="op">=&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">byte</span> <span class="op">+</span> <span class="number">10</span> <span class="op">-</span> <span class="string">b&#39;A&#39;</span>),  <span class="comment">// A..F</span>
         <span class="string">b&#39;a&#39;</span> ... <span class="string">b&#39;f&#39;</span> <span class="op">=&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">byte</span> <span class="op">+</span> <span class="number">10</span> <span class="op">-</span> <span class="string">b&#39;a&#39;</span>),  <span class="comment">// a..f</span>
-        <span class="kw">_</span> <span class="op">=&gt;</span> <span class="prelude-val">None</span>
+        _ <span class="op">=&gt;</span> <span class="prelude-val">None</span>
     }
 }
 </pre>
