@@ -10,10 +10,11 @@
     <title>slab::Index - Rust</title>
 
     <link rel="stylesheet" type="text/css" href="../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../dark.css">
-    <link rel="stylesheet" type="text/css" href="../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle">
     <script src="../storage.js"></script>
     
 
@@ -54,16 +55,14 @@
         </form>
     </nav>
 
-    <section id='main' class="content">
-<h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>slab</a>::<wbr><a class="trait" href=''>Index</a></span><span class='out-of-band'><span id='render-detail'>
+    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>slab</a>::<wbr><a class="trait" href=''>Index</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/slab/lib.rs.html#42-46' title='goto source code'>[src]</a></span></h1>
-<pre class='rust trait'>pub trait Index {
+               </span><a class='srclink' href='../src/slab/lib.rs.html#42-46' title='goto source code'>[src]</a></span></h1><div class="docblock type-decl"><pre class='rust trait'>pub trait Index {
     fn <a href='#tymethod.from_usize' class='fnname'>from_usize</a>(i: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; Self;
 <div class='item-spacer'></div>    fn <a href='#tymethod.as_usize' class='fnname'>as_usize</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>;
-}</pre><div class='docblock'><p>Slab can be indexed by any type implementing <code>Index</code> trait.</p>
+}</pre></div><div class='docblock'><p>Slab can be indexed by any type implementing <code>Index</code> trait.</p>
 </div>
             <h2 id='required-methods' class='small-section-header'>
               Required Methods<a href='#required-methods' class='anchor'></a>
@@ -73,15 +72,12 @@
                 <h2 id='foreign-impls' class='small-section-header'>
                   Implementations on Foreign Types<a href='#foreign-impls' class='anchor'></a>
                 </h2>
-            <h3 id='impl-Index' class='impl'><span class='in-band'><code>impl <a class="trait" href="../slab/trait.Index.html" title="trait slab::Index">Index</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code><a href='#impl-Index' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/slab/lib.rs.html#48-56' title='goto source code'>[src]</a></span></h3>
-<span class='docblock autohide'><div class='impl-items'><h4 id='method.from_usize' class="method"><span id='from_usize.v-1' class='invisible'><code>fn <a href='#method.from_usize' class='fnname'>from_usize</a>(i: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/slab/lib.rs.html#49-51' title='goto source code'>[src]</a></span></h4>
-<h4 id='method.as_usize' class="method"><span id='as_usize.v-1' class='invisible'><code>fn <a href='#method.as_usize' class='fnname'>as_usize</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/slab/lib.rs.html#53-55' title='goto source code'>[src]</a></span></h4>
-</div></span>
+            <h3 id='impl-Index' class='impl'><span class='in-band'><table class='table-display'><tbody><tr><td><code>impl <a class="trait" href="../slab/trait.Index.html" title="trait slab::Index">Index</a> for <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code><a href='#impl-Index' class='anchor'></a></span></td><td><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/slab/lib.rs.html#48-56' title='goto source code'>[src]</a></span></td></tr></tbody></table></h3><span class='docblock autohide'><div class='impl-items'><h4 id='method.from_usize' class="method"><span id='from_usize.v-1' class='invisible'><table class='table-display'><tbody><tr><td><code>fn <a href='#method.from_usize' class='fnname'>from_usize</a>(i: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></td><td><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/slab/lib.rs.html#49-51' title='goto source code'>[src]</a></td></tr></tbody></table></span></h4><h4 id='method.as_usize' class="method"><span id='as_usize.v-1' class='invisible'><table class='table-display'><tbody><tr><td><code>fn <a href='#method.as_usize' class='fnname'>as_usize</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a></code></span></td><td><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/slab/lib.rs.html#53-55' title='goto source code'>[src]</a></td></tr></tbody></table></span></h4></div></span>
         <h2 id='implementors' class='small-section-header'>
           Implementors<a href='#implementors' class='anchor'></a>
         </h2>
         <ul class='item-list' id='implementors-list'>
-    </ul><script type="text/javascript" async
+    </ul><script type="text/javascript">window.inlined_types=new Set([]);</script><script type="text/javascript" async
                          src="../implementors/slab/trait.Index.js">
                  </script></section>
     <section id='search' class="content hidden"></section>
