@@ -56,14 +56,6 @@
         };
     }
 
-    function getPageId() {
-        var id = document.location.href.split('#')[1];
-        if (id) {
-            return id.split('?')[0].split('&')[0];
-        }
-        return null;
-    }
-
     function hasClass(elem, className) {
         if (elem && className && elem.className) {
             var elemClass = elem.className;
@@ -1651,7 +1643,7 @@
         }
     }
 
-    function toggleAllDocs(pageId) {
+    function toggleAllDocs() {
         var toggle = document.getElementById("toggle-all-docs");
         if (hasClass(toggle, "will-expand")) {
             updateLocalStorage("rustdoc-collapse", "false");
@@ -1672,12 +1664,12 @@
             toggle.title = "expand all docs";
 
             onEach(document.getElementsByClassName("collapse-toggle"), function(e) {
-                collapseDocs(e, "hide", pageId);
+                collapseDocs(e, "hide");
             });
         }
     }
 
-    function collapseDocs(toggle, mode, pageId) {
+    function collapseDocs(toggle, mode) {
         if (!toggle || !toggle.parentNode) {
             return;
         }
@@ -1753,18 +1745,14 @@
                 }
             }
 
-            var parentElem = toggle.parentNode;
-            var relatedDoc = parentElem;
+            var relatedDoc = toggle.parentNode;
             var docblock = relatedDoc.nextElementSibling;
 
             while (!hasClass(relatedDoc, "impl-items")) {
                 relatedDoc = relatedDoc.nextElementSibling;
             }
 
-            if ((!relatedDoc && !hasClass(docblock, "docblock")) ||
-                (pageId && onEach(relatedDoc.childNodes, function(e) {
-                    return e.id === pageId;
-                }) === true)) {
+            if (!relatedDoc && !hasClass(docblock, "docblock")) {
                 return;
             }
 
@@ -1794,7 +1782,7 @@
         }
     }
 
-    function autoCollapseAllImpls(pageId) {
+    function autoCollapseAllImpls() {
         // Automatically minimize all non-inherent impls
         onEach(document.getElementsByClassName('impl'), function(n) {
             // inherent impl ids are like 'impl' or impl-<number>'
@@ -1802,7 +1790,7 @@
             if (!inherent) {
                 onEach(n.childNodes, function(m) {
                     if (hasClass(m, "collapse-toggle")) {
-                        collapseDocs(m, "hide", pageId);
+                        collapseDocs(m, "hide");
                     }
                 });
             }
@@ -1912,7 +1900,7 @@
         }
     })
 
-    autoCollapseAllImpls(getPageId());
+    autoCollapseAllImpls();
 
     function createToggleWrapper() {
         var span = document.createElement('span');
@@ -2042,7 +2030,7 @@
     };
 
     if (getCurrentValue("rustdoc-collapse") === "true") {
-        toggleAllDocs(getPageId());
+        toggleAllDocs();
     }
 }());
 

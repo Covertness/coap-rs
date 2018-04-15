@@ -55,7 +55,11 @@
         </form>
     </nav>
 
-    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Trait <a href='../index.html'>bytes</a>::<wbr><a href='index.html'>buf</a>::<wbr><a class="trait" href=''>MutBuf</a></span><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../../src/bytes/buf/mod.rs.html#92-165' title='goto source code'>[src]</a></span></h1><div class="docblock type-decl"><pre class='rust trait'>pub trait MutBuf: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a> {
+    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Trait <a href='../index.html'>bytes</a>::<wbr><a href='index.html'>buf</a>::<wbr><a class="trait" href=''>MutBuf</a></span><span class='out-of-band'><span id='render-detail'>
+                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                       [<span class='inner'>&#x2212;</span>]
+                   </a>
+               </span><a class='srclink' href='../../src/bytes/buf/mod.rs.html#92-165' title='goto source code'>[src]</a></span></h1><div class="docblock type-decl"><pre class='rust trait'>pub trait MutBuf: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a> {
     fn <a href='#tymethod.remaining' class='fnname'>remaining</a>(&amp;self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>;
 <div class='item-spacer'></div>    unsafe fn <a href='#tymethod.advance' class='fnname'>advance</a>(&amp;mut self, cnt: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>);
 <div class='item-spacer'></div>    unsafe fn <a href='#tymethod.mut_bytes' class='fnname'>mut_bytes</a>&lt;'a&gt;(&amp;'a mut self) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">&amp;'a mut [</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.u8.html">u8</a><a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.slice.html">]</a>;
