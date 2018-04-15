@@ -10,10 +10,11 @@
     <title>lib.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
     <script src="../../storage.js"></script>
     
 
@@ -1675,7 +1676,7 @@
         });
 
         <span class="comment">// Threadpool threads</span>
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_threads</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_threads</span> {
             <span class="ident">spawn_in_pool</span>(<span class="ident">shared_data</span>.<span class="ident">clone</span>());
         }
 
@@ -1952,7 +1953,7 @@
         );
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">num_spawn</span>) <span class="op">=</span> <span class="ident">num_threads</span>.<span class="ident">checked_sub</span>(<span class="ident">prev_num_threads</span>) {
             <span class="comment">// Spawn new threads</span>
-            <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_spawn</span> {
+            <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_spawn</span> {
                 <span class="ident">spawn_in_pool</span>(<span class="self">self</span>.<span class="ident">shared_data</span>.<span class="ident">clone</span>());
             }
         }
@@ -2168,7 +2169,7 @@
     <span class="kw">fn</span> <span class="ident">test_set_num_threads_increasing</span>() {
         <span class="kw">let</span> <span class="ident">new_thread_amount</span> <span class="op">=</span> <span class="ident">TEST_TASKS</span> <span class="op">+</span> <span class="number">8</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">ThreadPool</span>::<span class="ident">new</span>(<span class="ident">TEST_TASKS</span>);
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">23</span>)));
         }
         <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>));
@@ -2176,7 +2177,7 @@
 
         <span class="ident">pool</span>.<span class="ident">set_num_threads</span>(<span class="ident">new_thread_amount</span>);
 
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">new_thread_amount</span> <span class="op">-</span> <span class="ident">TEST_TASKS</span>) {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..(<span class="ident">new_thread_amount</span> <span class="op">-</span> <span class="ident">TEST_TASKS</span>) {
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">23</span>)));
         }
         <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>));
@@ -2189,11 +2190,11 @@
     <span class="kw">fn</span> <span class="ident">test_set_num_threads_decreasing</span>() {
         <span class="kw">let</span> <span class="ident">new_thread_amount</span> <span class="op">=</span> <span class="number">2</span>;
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">ThreadPool</span>::<span class="ident">new</span>(<span class="ident">TEST_TASKS</span>);
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> { <span class="number">1</span> <span class="op">+</span> <span class="number">1</span>; });
         }
         <span class="ident">pool</span>.<span class="ident">set_num_threads</span>(<span class="ident">new_thread_amount</span>);
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">new_thread_amount</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">new_thread_amount</span> {
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">23</span>)));
         }
         <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>));
@@ -2205,7 +2206,7 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_active_count</span>() {
         <span class="kw">let</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">ThreadPool</span>::<span class="ident">new</span>(<span class="ident">TEST_TASKS</span>);
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="number">2</span> <span class="op">*</span> <span class="ident">TEST_TASKS</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">2</span> <span class="op">*</span> <span class="ident">TEST_TASKS</span> {
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> <span class="kw">loop</span> {
                 <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">10</span>))
             });
@@ -2222,7 +2223,7 @@
         <span class="kw">let</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">ThreadPool</span>::<span class="ident">new</span>(<span class="ident">TEST_TASKS</span>);
 
         <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">channel</span>();
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
             <span class="kw">let</span> <span class="ident">tx</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">clone</span>();
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> { <span class="ident">tx</span>.<span class="ident">send</span>(<span class="number">1</span>).<span class="ident">unwrap</span>(); });
         }
@@ -2241,7 +2242,7 @@
         <span class="kw">let</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">ThreadPool</span>::<span class="ident">new</span>(<span class="ident">TEST_TASKS</span>);
 
         <span class="comment">// Panic all the existing threads.</span>
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Ignore this panic, it must!&quot;</span>));
         }
         <span class="ident">pool</span>.<span class="ident">join</span>();
@@ -2250,7 +2251,7 @@
 
         <span class="comment">// Ensure new threads were spawned to compensate.</span>
         <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">channel</span>();
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
             <span class="kw">let</span> <span class="ident">tx</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">clone</span>();
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> { <span class="ident">tx</span>.<span class="ident">send</span>(<span class="number">1</span>).<span class="ident">unwrap</span>(); });
         }
@@ -2265,7 +2266,7 @@
         <span class="kw">let</span> <span class="ident">waiter</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Barrier</span>::<span class="ident">new</span>(<span class="ident">TEST_TASKS</span> <span class="op">+</span> <span class="number">1</span>));
 
         <span class="comment">// Panic all the existing threads in a bit.</span>
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
             <span class="kw">let</span> <span class="ident">waiter</span> <span class="op">=</span> <span class="ident">waiter</span>.<span class="ident">clone</span>();
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> {
                 <span class="ident">waiter</span>.<span class="ident">wait</span>();
@@ -2329,7 +2330,7 @@
         <span class="kw">let</span> <span class="ident">b0</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Barrier</span>::<span class="ident">new</span>(<span class="ident">test_tasks_begin</span> <span class="op">+</span> <span class="number">1</span>));
         <span class="kw">let</span> <span class="ident">b1</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Barrier</span>::<span class="ident">new</span>(<span class="ident">test_tasks_begin</span> <span class="op">+</span> <span class="number">1</span>));
 
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">test_tasks_begin</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">test_tasks_begin</span> {
             <span class="kw">let</span> (<span class="ident">b0</span>, <span class="ident">b1</span>) <span class="op">=</span> (<span class="ident">b0</span>.<span class="ident">clone</span>(), <span class="ident">b1</span>.<span class="ident">clone</span>());
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> {
                 <span class="ident">b0</span>.<span class="ident">wait</span>();
@@ -2340,7 +2341,7 @@
         <span class="kw">let</span> <span class="ident">b2</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Barrier</span>::<span class="ident">new</span>(<span class="ident">TEST_TASKS</span> <span class="op">+</span> <span class="number">1</span>));
         <span class="kw">let</span> <span class="ident">b3</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Barrier</span>::<span class="ident">new</span>(<span class="ident">TEST_TASKS</span> <span class="op">+</span> <span class="number">1</span>));
 
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">TEST_TASKS</span> {
             <span class="kw">let</span> (<span class="ident">b2</span>, <span class="ident">b3</span>) <span class="op">=</span> (<span class="ident">b2</span>.<span class="ident">clone</span>(), <span class="ident">b3</span>.<span class="ident">clone</span>());
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> {
                 <span class="ident">b2</span>.<span class="ident">wait</span>();
@@ -2367,7 +2368,7 @@
         <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">sync_channel</span>(<span class="number">0</span>);
 
         <span class="comment">// initial thread should share the name &quot;test&quot;</span>
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="number">2</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">2</span> {
             <span class="kw">let</span> <span class="ident">tx</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">clone</span>();
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> {
                 <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">current</span>().<span class="ident">name</span>().<span class="ident">unwrap</span>().<span class="ident">to_owned</span>();
@@ -2426,7 +2427,7 @@
         <span class="kw">let</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">ThreadPool</span>::<span class="ident">with_name</span>(<span class="string">&quot;repeate join test&quot;</span>.<span class="ident">into</span>(), <span class="number">8</span>);
         <span class="kw">let</span> <span class="ident">test_count</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicUsize</span>::<span class="ident">new</span>(<span class="number">0</span>));
 
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="number">42</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">42</span> {
             <span class="kw">let</span> <span class="ident">test_count</span> <span class="op">=</span> <span class="ident">test_count</span>.<span class="ident">clone</span>();
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> {
                 <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">2</span>));
@@ -2438,7 +2439,7 @@
         <span class="ident">pool</span>.<span class="ident">join</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="number">42</span>, <span class="ident">test_count</span>.<span class="ident">load</span>(<span class="ident">Ordering</span>::<span class="ident">Acquire</span>));
 
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="number">42</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">42</span> {
             <span class="kw">let</span> <span class="ident">test_count</span> <span class="op">=</span> <span class="ident">test_count</span>.<span class="ident">clone</span>();
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> {
                 <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">2</span>));
@@ -2517,7 +2518,7 @@
 
         <span class="kw">let</span> <span class="ident">p_t</span> <span class="op">=</span> <span class="ident">pool</span>.<span class="ident">clone</span>();
         <span class="ident">thread</span>::<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">||</span> {
-            (<span class="number">0</span>..<span class="number">23</span>).<span class="ident">map</span>(<span class="op">|</span>_<span class="op">|</span> <span class="ident">p_t</span>.<span class="ident">execute</span>(<span class="ident">sleepy_function</span>)).<span class="ident">count</span>();
+            (<span class="number">0</span>..<span class="number">23</span>).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">p_t</span>.<span class="ident">execute</span>(<span class="ident">sleepy_function</span>)).<span class="ident">count</span>();
         });
 
         <span class="ident">pool</span>.<span class="ident">join</span>();
@@ -2528,7 +2529,7 @@
         <span class="kw">let</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">ThreadPool</span>::<span class="ident">with_name</span>(<span class="string">&quot;clone example&quot;</span>.<span class="ident">into</span>(), <span class="number">2</span>);
 
         <span class="comment">// This batch of jobs will occupy the pool for some time</span>
-        <span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="number">6</span> {
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">6</span> {
             <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span> <span class="op">||</span> { <span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">2</span>)); });
         }
 
@@ -2683,7 +2684,7 @@
             <span class="ident">data</span>.<span class="ident">push</span>((<span class="ident">now</span>, <span class="ident">after</span>, <span class="ident">i</span>));
         }
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">n</span>) <span class="kw">in</span> <span class="ident">hist</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;\t{}: {} {}&quot;</span>, <span class="ident">i</span>, <span class="ident">n</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span>(<span class="number">0</span>..<span class="kw-2">*</span><span class="ident">n</span>).<span class="ident">fold</span>(<span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>(), <span class="op">|</span><span class="ident">s</span>, _<span class="op">|</span> <span class="ident">s</span> <span class="op">+</span> <span class="string">&quot;*&quot;</span>));
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;\t{}: {} {}&quot;</span>, <span class="ident">i</span>, <span class="ident">n</span>, <span class="kw-2">&amp;</span><span class="kw-2">*</span>(<span class="number">0</span>..<span class="kw-2">*</span><span class="ident">n</span>).<span class="ident">fold</span>(<span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>(), <span class="op">|</span><span class="ident">s</span>, <span class="kw">_</span><span class="op">|</span> <span class="ident">s</span> <span class="op">+</span> <span class="string">&quot;*&quot;</span>));
         }
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">data</span>.<span class="ident">iter</span>()
                     .<span class="ident">all</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="ident">cycle</span>, <span class="ident">stop</span>, <span class="ident">i</span>)<span class="op">|</span> {

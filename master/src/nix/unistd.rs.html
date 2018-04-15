@@ -10,10 +10,11 @@
     <title>unistd.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
     <script src="../../storage.js"></script>
     
 
@@ -569,14 +570,14 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_child</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
         <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
             <span class="ident">Fork</span>::<span class="ident">Child</span> <span class="op">=&gt;</span> <span class="bool-val">true</span>,
-            _ <span class="op">=&gt;</span> <span class="bool-val">false</span>
+            <span class="kw">_</span> <span class="op">=&gt;</span> <span class="bool-val">false</span>
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_parent</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
         <span class="kw">match</span> <span class="kw-2">*</span><span class="self">self</span> {
-            <span class="ident">Fork</span>::<span class="ident">Parent</span>(_) <span class="op">=&gt;</span> <span class="bool-val">true</span>,
-            _ <span class="op">=&gt;</span> <span class="bool-val">false</span>
+            <span class="ident">Fork</span>::<span class="ident">Parent</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="bool-val">true</span>,
+            <span class="kw">_</span> <span class="op">=&gt;</span> <span class="bool-val">false</span>
         }
     }
 }
@@ -632,7 +633,7 @@
 
     <span class="kw">if</span> <span class="ident">flags</span>.<span class="ident">contains</span>(<span class="ident">O_CLOEXEC</span>) {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">fcntl</span>(<span class="ident">fd</span>, <span class="ident">F_SETFD</span>(<span class="ident">FD_CLOEXEC</span>)) {
-            <span class="kw">let</span> _ <span class="op">=</span> <span class="ident">close</span>(<span class="ident">fd</span>);
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">close</span>(<span class="ident">fd</span>);
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>);
         }
     }
@@ -771,21 +772,21 @@
 
     <span class="kw">if</span> <span class="ident">flags</span>.<span class="ident">contains</span>(<span class="ident">O_CLOEXEC</span>) {
         <span class="ident">res</span> <span class="op">=</span> <span class="ident">res</span>
-            .<span class="ident">and_then</span>(<span class="op">|</span>_<span class="op">|</span> <span class="ident">fcntl</span>(<span class="ident">fd1</span>, <span class="ident">F_SETFD</span>(<span class="ident">FD_CLOEXEC</span>)))
-            .<span class="ident">and_then</span>(<span class="op">|</span>_<span class="op">|</span> <span class="ident">fcntl</span>(<span class="ident">fd2</span>, <span class="ident">F_SETFD</span>(<span class="ident">FD_CLOEXEC</span>)));
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">fcntl</span>(<span class="ident">fd1</span>, <span class="ident">F_SETFD</span>(<span class="ident">FD_CLOEXEC</span>)))
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">fcntl</span>(<span class="ident">fd2</span>, <span class="ident">F_SETFD</span>(<span class="ident">FD_CLOEXEC</span>)));
     }
 
     <span class="kw">if</span> <span class="ident">flags</span>.<span class="ident">contains</span>(<span class="ident">O_NONBLOCK</span>) {
         <span class="ident">res</span> <span class="op">=</span> <span class="ident">res</span>
-            .<span class="ident">and_then</span>(<span class="op">|</span>_<span class="op">|</span> <span class="ident">fcntl</span>(<span class="ident">fd1</span>, <span class="ident">F_SETFL</span>(<span class="ident">O_NONBLOCK</span>)))
-            .<span class="ident">and_then</span>(<span class="op">|</span>_<span class="op">|</span> <span class="ident">fcntl</span>(<span class="ident">fd2</span>, <span class="ident">F_SETFL</span>(<span class="ident">O_NONBLOCK</span>)));
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">fcntl</span>(<span class="ident">fd1</span>, <span class="ident">F_SETFL</span>(<span class="ident">O_NONBLOCK</span>)))
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">fcntl</span>(<span class="ident">fd2</span>, <span class="ident">F_SETFL</span>(<span class="ident">O_NONBLOCK</span>)));
     }
 
     <span class="kw">match</span> <span class="ident">res</span> {
-        <span class="prelude-val">Ok</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(()),
+        <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Ok</span>(()),
         <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=&gt;</span> {
-            <span class="kw">let</span> _ <span class="op">=</span> <span class="ident">close</span>(<span class="ident">fd1</span>);
-            <span class="kw">let</span> _ <span class="op">=</span> <span class="ident">close</span>(<span class="ident">fd2</span>);
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">close</span>(<span class="ident">fd1</span>);
+            <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">close</span>(<span class="ident">fd2</span>);
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>);
         }
     }

@@ -10,10 +10,11 @@
     <title>bounds.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
     <script src="../../storage.js"></script>
     
 
@@ -249,7 +250,7 @@
 
 <span class="attribute">#[<span class="ident">test</span>]</span>
 <span class="kw">fn</span> <span class="ident">wrapping_is_bounded</span>() {
-    <span class="kw">fn</span> <span class="ident">require_bounded</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Bounded</span><span class="op">&gt;</span>(_: <span class="kw-2">&amp;</span><span class="ident">T</span>) {}
+    <span class="kw">fn</span> <span class="ident">require_bounded</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Bounded</span><span class="op">&gt;</span>(<span class="kw">_</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) {}
     <span class="ident">require_bounded</span>(<span class="kw-2">&amp;</span><span class="ident">Wrapping</span>(<span class="number">42_u32</span>));
     <span class="ident">require_bounded</span>(<span class="kw-2">&amp;</span><span class="ident">Wrapping</span>(<span class="op">-</span><span class="number">42</span>));
 }
