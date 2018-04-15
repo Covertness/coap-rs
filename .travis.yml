@@ -1,11 +1,16 @@
 language: rust
-sudo: false
+sudo: required
+cache: cargo
 addons:
   apt:
     packages:
       - libcurl4-openssl-dev
       - libelf-dev
       - libdw-dev
+      - binutils-dev
+      - cmake # also required for cargo-update
+    sources:
+      - kalakris-cmake
 
 # run builds for both all the trains
 rust:
@@ -15,16 +20,20 @@ rust:
 
 # load travis-cargo
 before_script:
+  - export PATH=$HOME/.cargo/bin:$PATH
+  - cargo install cargo-update || echo "cargo-update already installed"
+  - cargo install cargo-travis || echo "cargo-travis already installed"
+  - cargo install-update -a # update outdated cached binaries
+script:
   - |
-      pip install 'travis-cargo<0.2' --user &&
-      export PATH=$HOME/.local/bin:$PATH
+      cargo build &&
+      cargo test &&
+      cargo doc
 after_success:
-  # upload the documentation from the build with beta (automatically only actually
-  # runs on the master branch)
-  - travis-cargo --only stable doc
-  - travis-cargo --only stable doc-upload
-  # measure code coverage and upload to coveralls.io
-  - travis-cargo coveralls --no-sudo
+# measure code coverage and upload to coveralls.io
+  - cargo coveralls
+# upload documentation to github.io (gh-pages branch)
+  - cargo doc-upload
 
 env:
   global:
