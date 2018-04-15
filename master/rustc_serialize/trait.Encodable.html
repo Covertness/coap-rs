@@ -55,11 +55,7 @@
         </form>
     </nav>
 
-    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>rustc_serialize</a>::<wbr><a class="trait" href=''>Encodable</a></span><span class='out-of-band'><span id='render-detail'>
-                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
-                       [<span class='inner'>&#x2212;</span>]
-                   </a>
-               </span><a class='srclink' href='../src/rustc_serialize/serialize.rs.html#851-854' title='goto source code'>[src]</a></span></h1><div class="docblock type-decl"><pre class='rust trait'>pub trait Encodable {
+    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>rustc_serialize</a>::<wbr><a class="trait" href=''>Encodable</a></span><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/rustc_serialize/serialize.rs.html#851-854' title='goto source code'>[src]</a></span></h1><div class="docblock type-decl"><pre class='rust trait'>pub trait Encodable {
     fn <a href='#tymethod.encode' class='fnname'>encode</a>&lt;S:&nbsp;<a class="trait" href="../rustc_serialize/trait.Encoder.html" title="trait rustc_serialize::Encoder">Encoder</a>&gt;(&amp;self, s: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>S) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, S::<a class="type" href="../rustc_serialize/trait.Encoder.html#associatedtype.Error" title="type rustc_serialize::Encoder::Error">Error</a>&gt;;
 }</pre></div><div class='docblock'><p>Trait for serializing a type.</p>
 <p>This can be implemented for custom data types to allow them to be encoded
