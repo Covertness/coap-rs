@@ -46,6 +46,14 @@ pub enum ContentFormat {
 }
 }
 
+enum_from_primitive! {
+#[derive(PartialEq, Eq, Debug)]
+pub enum ObserveOption {
+    Register = 0,
+    Deregister = 1,
+}
+}
+
 #[derive(Debug)]
 pub enum PackageError {
     InvalidHeader,
@@ -60,7 +68,7 @@ pub enum ParseError {
     InvalidOptionLength,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Packet {
     pub header: header::Header,
     token: Vec<u8>,
@@ -140,6 +148,21 @@ impl Packet {
                 let number = (msb << 8) + lsb;
 
                 return ContentFormat::from_u16(number);
+            }
+        }
+
+        None
+    }
+
+    pub fn set_observe(&mut self, value: Vec<u8>) {
+        self.clear_option(CoAPOption::Observe);
+        self.add_option(CoAPOption::Observe, value);
+    }
+
+    pub fn get_observe(&self) -> Option<&Vec<u8>> {
+        if let Some(list) = self.get_option(CoAPOption::Observe) {
+            if let Some(flag) = list.front() {
+                return Some(flag);
             }
         }
 

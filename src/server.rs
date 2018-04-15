@@ -9,11 +9,12 @@ use message::packet::Packet;
 use message::request::CoAPRequest;
 use message::response::CoAPResponse;
 use threadpool::ThreadPool;
+use observer::Observer;
 
 const DEFAULT_WORKER_NUM: usize = 4;
 
-type TxQueue = mpsc::Sender<QueuedResponse>;
-type RxQueue = mpsc::Receiver<QueuedResponse>;
+pub type TxQueue = mpsc::Sender<QueuedMessage>;
+type RxQueue = mpsc::Receiver<QueuedMessage>;
 
 #[derive(Debug)]
 pub enum CoAPServerError {
@@ -23,15 +24,20 @@ pub enum CoAPServerError {
 }
 
 #[derive(Debug)]
-struct QueuedResponse {
+pub struct QueuedMessage {
     pub address: SocketAddr,
-    pub response: CoAPResponse,
+    pub message: Packet,
 }
 
 #[derive(Debug)]
 enum EventLoopNotify {
     NewResponse,
     Shutdown,
+}
+
+#[derive(Debug)]
+enum EventLoopTimer {
+    ObserveTimer,
 }
 
 #[derive(Debug)]
@@ -54,33 +60,43 @@ impl<F> CoAPHandler for F
     }
 }
 
-struct UdpHandler<H: CoAPHandler + 'static> {
+struct UdpHandler<H: CoAPHandler + 'static, N: Fn() + Send + 'static> {
     socket: UdpSocket,
     tx_sender: TxQueue,
     rx_recv: RxQueue,
     worker_pool: ThreadPool,
     coap_handler: H,
+    observer: Observer<N>,
 }
 
-impl<H: CoAPHandler + 'static> UdpHandler<H> {
+impl<H: CoAPHandler + 'static, N: Fn() + Send + 'static> UdpHandler<H, N> {
     fn new(socket: UdpSocket,
            tx_sender: TxQueue,
            rx_recv: RxQueue,
            worker_num: usize,
-           coap_handler: H)
-           -> UdpHandler<H> {
+           coap_handler: H,
+           response_notify: N)
+           -> UdpHandler<H, N> {
+        let response_q = tx_sender.clone();
+
         UdpHandler {
             socket: socket,
             tx_sender: tx_sender,
             rx_recv: rx_recv,
             worker_pool: ThreadPool::new(worker_num),
             coap_handler: coap_handler,
+            observer: Observer::new(response_q, response_notify),
         }
     }
 
-    fn request_handler(&self, event_loop: &mut EventLoop<UdpHandler<H>>) {
+    fn request_handler(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>) {
         match self.requset_recv() {
             Some(rqst) => {
+                let filtered = !self.observer.request_handler(&rqst);
+                if filtered {
+                    return;
+                }
+
                 let src = rqst.source.unwrap();
                 let coap_handler = self.coap_handler;
                 let response_q = self.tx_sender.clone();
@@ -91,9 +107,9 @@ impl<H: CoAPHandler + 'static> UdpHandler<H> {
                         Some(response) => {
                             debug!("Response: {:?}", response);
 
-                            response_q.send(QueuedResponse {
+                            response_q.send(QueuedMessage {
                                 address: src,
-                                response: response,
+                                message: response.message,
                             }).unwrap();
                             match event_sender.send(EventLoopNotify::NewResponse) {
                                 Ok(()) => {}
@@ -159,8 +175,8 @@ impl<H: CoAPHandler + 'static> UdpHandler<H> {
         }
     }
 
-    fn response_send(&self, q_res: & QueuedResponse) -> Result<(), ResponseError> {
-        match q_res.response.message.to_bytes() {
+    fn response_send(&self, q_res: & QueuedMessage) -> Result<(), ResponseError> {
+        match q_res.message.to_bytes() {
             Ok(bytes) => {
                 match self.socket.send_to(&bytes[..], &q_res.address) {
                     // Look at https://github.com/carllerche/mio/issues/411 in detail
@@ -180,11 +196,11 @@ impl<H: CoAPHandler + 'static> UdpHandler<H> {
     }
 }
 
-impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
-    type Timeout = usize;
+impl<H: CoAPHandler + 'static, N: Fn() + Send + 'static> Handler for UdpHandler<H, N> {
+    type Timeout = EventLoopTimer;
     type Message = EventLoopNotify;
 
-    fn ready(&mut self, event_loop: &mut EventLoop<UdpHandler<H>>, _: Token, events: EventSet) {
+    fn ready(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>, _: Token, events: EventSet) {
         if events.is_writable() {
             // handle the response
             match self.response_handler() {
@@ -203,7 +219,7 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
         }
     }
 
-    fn notify(&mut self, event_loop: &mut EventLoop<UdpHandler<H>>, msg: EventLoopNotify) {
+    fn notify(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>, msg: EventLoopNotify) {
         match msg {
             EventLoopNotify::NewResponse => {
                 event_loop.reregister(&self.socket, Token(0), EventSet::writable(), PollOpt::edge()).unwrap();
@@ -211,6 +227,15 @@ impl<H: CoAPHandler + 'static> Handler for UdpHandler<H> {
             EventLoopNotify::Shutdown => {
                 info!("Shutting down request handler");
                 event_loop.shutdown();
+            }
+        }
+    }
+
+    fn timeout(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>, token: EventLoopTimer) {
+        match token {
+            EventLoopTimer::ObserveTimer => {
+                self.observer.timer_handler();
+                event_loop.timeout_ms(EventLoopTimer::ObserveTimer, 1000).unwrap();
             }
         }
     }
@@ -273,7 +298,18 @@ impl CoAPServer {
 
             tx.send(event_loop.channel()).unwrap();
 
-            event_loop.run(&mut UdpHandler::new(socket, tx_send, tx_recv, worker_num, handler)).unwrap();
+            // setup observe timer
+            event_loop.timeout_ms(EventLoopTimer::ObserveTimer, 1000).unwrap();
+
+            let event_sender = event_loop.channel();
+            event_loop.run(&mut UdpHandler::new(socket, tx_send, tx_recv, worker_num, handler, move || {
+                match event_sender.send(EventLoopNotify::NewResponse) {
+                    Ok(()) => {}
+                    Err(error) => {
+                        warn!("Notify NewResponse failed, {:?}", error);
+                    }
+                }
+            })).unwrap();
         });
 
         // Ensure threads started successfully
@@ -293,7 +329,7 @@ impl CoAPServer {
         match event_sender {
             Some(ref sender) => {
                 sender.send(EventLoopNotify::Shutdown).unwrap();
-                self.event_thread.take().map(|g| g.join());
+                self.event_thread.take().map(|g| g.join().unwrap());
             }
             _ => {}
         }

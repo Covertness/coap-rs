@@ -9,6 +9,10 @@
 
 A fast and stable [Constrained Application Protocol(CoAP)](https://tools.ietf.org/html/rfc7252) library implemented in Rust.
 
+Features:
+- CoAP core protocol [RFC 7252](https://tools.ietf.org/rfc/rfc7252.txt)
+- CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
+
 [Documentation](http://covertness.github.io/coap-rs/coap/index.html)
 
 ## Installation
@@ -17,7 +21,7 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.6"
+coap = "0.7"
 ```
 
 Then, add this to your crate root:

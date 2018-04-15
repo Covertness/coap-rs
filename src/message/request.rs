@@ -7,7 +7,7 @@ use std::str;
 
 pub use message::header::RequestType as Method;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CoAPRequest {
     pub message: Packet,
     pub response: Option<CoAPResponse>,

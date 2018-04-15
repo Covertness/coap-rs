@@ -6,13 +6,13 @@ use std::sync::mpsc;
 use url::{SchemeType, UrlParser};
 use num;
 use rand::{random, thread_rng, Rng};
-use message::packet::{CoAPOption, Packet};
+use message::packet::{Packet, ObserveOption};
 use message::header::MessageType;
 use message::response::{CoAPResponse, Status};
 use message::request::{CoAPRequest, Method};
 use message::IsMessage;
 
-const DEFAULT_RECEIVE_TIMEOUT: u64 = 5; // 5s
+const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
 
 enum ObserveMessage {
     Terminate,
@@ -86,7 +86,7 @@ impl CoAPClient {
         // TODO: support observe multi resources at the same time
         let mut message_id: u16 = 0;
         let mut register_packet = CoAPRequest::new();
-        register_packet.add_option(CoAPOption::Observe, vec![0]);
+        register_packet.set_observe(vec![ObserveOption::Register as u8]);
         register_packet.set_message_id(Self::gen_message_id(&mut message_id));
         register_packet.set_path(resource_path);
 
@@ -142,7 +142,7 @@ impl CoAPClient {
                 Ok(ObserveMessage::Terminate) => {
                     let mut deregister_packet = CoAPRequest::new();
                     deregister_packet.set_message_id(Self::gen_message_id(&mut message_id));
-                    deregister_packet.add_option(CoAPOption::Observe, vec![1]);
+                    deregister_packet.set_observe(vec![ObserveOption::Deregister as u8]);
                     deregister_packet.set_path(observe_path.as_str());
                     
                     Self::send_with_socket(&socket, &peer_addr, &deregister_packet.message).unwrap();
@@ -159,12 +159,12 @@ impl CoAPClient {
     }
 
     /// Stop observing
-    pub fn observe_stop(&mut self) {
+    pub fn unobserve(&mut self) {
         match self.observe_sender.take() {
             Some(ref sender) => {
                 sender.send(ObserveMessage::Terminate).unwrap();
 
-                self.observe_thread.take().map(|g| g.join());
+                self.observe_thread.take().map(|g| g.join().unwrap());
             }
             _ => {}
         }
@@ -295,7 +295,7 @@ impl CoAPClient {
 
 impl Drop for CoAPClient {
     fn drop(&mut self) {
-        self.observe_stop();
+        self.unobserve();
     }
 }
 

@@ -7,6 +7,7 @@ fn request_handler(request: CoAPRequest) -> Option<CoAPResponse> {
 	match request.get_method() {
 		&Method::Get => println!("request by get {}", request.get_path()),
 		&Method::Post => println!("request by post {}", String::from_utf8(request.message.payload).unwrap()),
+		&Method::Put => println!("request by put {}", String::from_utf8(request.message.payload).unwrap()),
 		_ => println!("request by other method"),
 	};
 

@@ -15,14 +15,14 @@ impl Default for HeaderRaw {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Header {
     ver_type_tkl: u8,
     pub code: MessageClass,
     message_id: u16,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum MessageClass {
     Empty,
     Request(RequestType),
@@ -30,7 +30,7 @@ pub enum MessageClass {
     Reserved,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum RequestType {
     Get,
     Post,
@@ -39,7 +39,7 @@ pub enum RequestType {
     UnKnown,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ResponseType {
     // 200 Codes
     Created,

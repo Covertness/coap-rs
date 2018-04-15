@@ -3,7 +3,9 @@
 //! This library provides both a client interface (`CoAPClient`)
 //!   and a server interface (`CoAPServer`).
 //!
-//! [spec]: https://tools.ietf.org/html/rfc7252
+//! Features:
+//! - CoAP core protocol [RFC 7252](https://tools.ietf.org/rfc/rfc7252.txt)
+//! - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
 //!
 //! # Installation
 //!
@@ -11,7 +13,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! coap = "0.6"
+//! coap = "0.7"
 //! ```
 //!
 //! Then, add this to your crate root:
@@ -98,3 +100,4 @@ pub use server::CoAPServer;
 pub mod message;
 pub mod client;
 pub mod server;
+mod observer;
