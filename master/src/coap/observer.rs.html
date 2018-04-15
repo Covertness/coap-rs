@@ -539,6 +539,7 @@
 <span id="482">482</span>
 <span id="483">483</span>
 <span id="484">484</span>
+<span id="485">485</span>
 </pre><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">hash_map</span>::<span class="ident">Entry</span>;
@@ -963,6 +964,7 @@
         <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;/test&quot;</span>;
         <span class="kw">let</span> <span class="ident">payload1</span> <span class="op">=</span> <span class="string">b&quot;data1&quot;</span>.<span class="ident">to_vec</span>();
         <span class="kw">let</span> <span class="ident">payload2</span> <span class="op">=</span> <span class="string">b&quot;data2&quot;</span>.<span class="ident">to_vec</span>();
+        <span class="kw">let</span> <span class="ident">payload3</span> <span class="op">=</span> <span class="string">b&quot;data3&quot;</span>.<span class="ident">to_vec</span>();
         <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">step</span> <span class="op">=</span> <span class="number">1</span>;
 
@@ -981,13 +983,13 @@
 
         <span class="kw">let</span> <span class="ident">payload1_clone</span> <span class="op">=</span> <span class="ident">payload1</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">payload2_clone</span> <span class="op">=</span> <span class="ident">payload2</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">payload3_clone</span> <span class="op">=</span> <span class="ident">payload3</span>.<span class="ident">clone</span>();
         <span class="ident">client</span>.<span class="ident">observe</span>(<span class="ident">path</span>, <span class="kw">move</span> <span class="op">|</span><span class="ident">msg</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="ident">rx</span>.<span class="ident">recv</span>().<span class="ident">unwrap</span>();
-            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;observe {} {:?}&quot;</span>, <span class="ident">step</span>, <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">msg</span>.<span class="ident">payload</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>());
             <span class="kw">match</span> <span class="ident">step</span> {
                 <span class="number">1</span> <span class="op">=&gt;</span> <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">msg</span>.<span class="ident">payload</span>, <span class="ident">payload1_clone</span>),
                 <span class="number">2</span> <span class="op">=&gt;</span> <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">msg</span>.<span class="ident">payload</span>, <span class="ident">payload2_clone</span>),
-                <span class="number">3</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;shouldn&#39;t get message after unobserve&quot;</span>),
+                <span class="number">3</span> <span class="op">=&gt;</span> <span class="macro">assert_ne</span><span class="macro">!</span>(<span class="ident">msg</span>.<span class="ident">payload</span>, <span class="ident">payload3_clone</span>),
                 <span class="kw">_</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected step&quot;</span>),
             }
         }).<span class="ident">unwrap</span>();
@@ -995,8 +997,6 @@
         <span class="ident">step</span> <span class="op">=</span> <span class="number">2</span>;
         <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">step</span>).<span class="ident">unwrap</span>();
 
-        <span class="ident">request</span>.<span class="ident">set_method</span>(<span class="ident">Method</span>::<span class="ident">Put</span>);
-        <span class="ident">request</span>.<span class="ident">set_path</span>(<span class="ident">path</span>);
         <span class="ident">request</span>.<span class="ident">set_payload</span>(<span class="ident">payload2</span>.<span class="ident">clone</span>());
 
         <span class="kw">let</span> <span class="ident">client2</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5687&quot;</span>).<span class="ident">unwrap</span>();
@@ -1007,6 +1007,8 @@
         <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">step</span>).<span class="ident">unwrap</span>();
         
         <span class="ident">client</span>.<span class="ident">unobserve</span>();
+
+        <span class="ident">request</span>.<span class="ident">set_payload</span>(<span class="ident">payload3</span>.<span class="ident">clone</span>());
 
         <span class="kw">let</span> <span class="ident">client3</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5687&quot;</span>).<span class="ident">unwrap</span>();
         <span class="ident">client3</span>.<span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>).<span class="ident">unwrap</span>();

@@ -55,11 +55,7 @@
         </form>
     </nav>
 
-    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>rustc_serialize</a>::<wbr><a class="trait" href=''>Encoder</a></span><span class='out-of-band'><span id='render-detail'>
-                   <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
-                       [<span class='inner'>&#x2212;</span>]
-                   </a>
-               </span><a class='srclink' href='../src/rustc_serialize/serialize.rs.html#47-489' title='goto source code'>[src]</a></span></h1><div class="docblock type-decl"><pre class='rust trait'>pub trait Encoder {
+    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>rustc_serialize</a>::<wbr><a class="trait" href=''>Encoder</a></span><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/rustc_serialize/serialize.rs.html#47-489' title='goto source code'>[src]</a></span></h1><div class="docblock type-decl"><pre class='rust trait'>pub trait Encoder {
     type <a href='#associatedtype.Error' class="type">Error</a>;
     fn <a href='#tymethod.emit_nil' class='fnname'>emit_nil</a>(&amp;mut self) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, Self::<a class="type" href="../rustc_serialize/trait.Encoder.html#associatedtype.Error" title="type rustc_serialize::Encoder::Error">Error</a>&gt;;
 <div class='item-spacer'></div>    fn <a href='#tymethod.emit_usize' class='fnname'>emit_usize</a>(&amp;mut self, v: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, Self::<a class="type" href="../rustc_serialize/trait.Encoder.html#associatedtype.Error" title="type rustc_serialize::Encoder::Error">Error</a>&gt;;
