@@ -10,11 +10,10 @@
     <title>header.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css"
-          id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../../main.css" id="themeStyle">
     <script src="../../../storage.js"></script>
     
 
@@ -462,7 +461,7 @@
             <span class="ident">MessageType</span>::<span class="ident">NonConfirmable</span> <span class="op">=&gt;</span> <span class="number">1</span>,
             <span class="ident">MessageType</span>::<span class="ident">Acknowledgement</span> <span class="op">=&gt;</span> <span class="number">2</span>,
             <span class="ident">MessageType</span>::<span class="ident">Reset</span> <span class="op">=&gt;</span> <span class="number">3</span>,
-            <span class="kw">_</span> <span class="op">=&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
+            _ <span class="op">=&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
         };
 
         <span class="kw">let</span> <span class="ident">ver_tkl</span> <span class="op">=</span> <span class="number">0xCF</span> <span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">ver_type_tkl</span>;
@@ -477,7 +476,7 @@
             <span class="number">1</span> <span class="op">=&gt;</span> <span class="ident">MessageType</span>::<span class="ident">NonConfirmable</span>,
             <span class="number">2</span> <span class="op">=&gt;</span> <span class="ident">MessageType</span>::<span class="ident">Acknowledgement</span>,
             <span class="number">3</span> <span class="op">=&gt;</span> <span class="ident">MessageType</span>::<span class="ident">Reset</span>,
-            <span class="kw">_</span> <span class="op">=&gt;</span> <span class="ident">MessageType</span>::<span class="ident">Invalid</span>,
+            _ <span class="op">=&gt;</span> <span class="ident">MessageType</span>::<span class="ident">Invalid</span>,
         }
     }
 
@@ -554,7 +553,7 @@
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">GatewayTimeout</span>) <span class="op">=&gt;</span> <span class="number">0x94</span>,
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">ProxyingNotSupported</span>) <span class="op">=&gt;</span> <span class="number">0x95</span>,
 
-        <span class="kw">_</span> <span class="op">=&gt;</span> <span class="number">0xFF</span>,
+        _ <span class="op">=&gt;</span> <span class="number">0xFF</span>,
     } <span class="kw">as</span> <span class="ident">u8</span>;
 }
 
@@ -591,7 +590,7 @@
         <span class="number">0x94</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">GatewayTimeout</span>),
         <span class="number">0x95</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">ProxyingNotSupported</span>),
 
-        <span class="kw">_</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Reserved</span>,
+        _ <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Reserved</span>,
     }
 }
 

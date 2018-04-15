@@ -10,11 +10,10 @@
     <title>bincode::encode_into - Rust</title>
 
     <link rel="stylesheet" type="text/css" href="../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../rustdoc.css"
-          id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../dark.css">
-    <link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../main.css" id="themeStyle">
     <script src="../storage.js"></script>
     
 
@@ -34,7 +33,7 @@
     <nav class="sidebar">
         <div class="sidebar-menu">&#9776;</div>
         <a href='../bincode/index.html'><img src='./icon.png' alt='logo' width='100'></a>
-        <div class="sidebar-elems"><p class='location'><a href='index.html'>bincode</a></p><script>window.sidebarCurrent = {name: 'encode_into', ty: 'fn', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+        <p class='location'><a href='index.html'>bincode</a></p><script>window.sidebarCurrent = {name: 'encode_into', ty: 'fn', relpath: ''};</script><script defer src="sidebar-items.js"></script>
     </nav>
 
     <div class="theme-picker">
@@ -55,11 +54,13 @@
         </form>
     </nav>
 
-    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Function <a href='index.html'>bincode</a>::<wbr><a class="fn" href=''>encode_into</a></span><span class='out-of-band'><span id='render-detail'>
+    <section id='main' class="content">
+<h1 class='fqn'><span class='in-band'>Function <a href='index.html'>bincode</a>::<wbr><a class="fn" href=''>encode_into</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/bincode/lib.rs.html#113-126' title='goto source code'>[src]</a></span></h1><pre class='rust fn'>pub fn encode_into&lt;T:&nbsp;<a class="trait" href="../rustc_serialize/serialize/trait.Encodable.html" title="trait rustc_serialize::serialize::Encodable">Encodable</a>, W:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a>&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;t: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>T, <br>&nbsp;&nbsp;&nbsp;&nbsp;w: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>W, <br>&nbsp;&nbsp;&nbsp;&nbsp;size_limit: <a class="enum" href="../bincode/enum.SizeLimit.html" title="enum bincode::SizeLimit">SizeLimit</a><br>) -&gt; <a class="type" href="../bincode/type.EncodingResult.html" title="type bincode::EncodingResult">EncodingResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</pre><div class='docblock'><p>Encodes an object directly into a <code>Writer</code>.</p>
+               </span><a class='srclink' href='../src/bincode/lib.rs.html#113-126' title='goto source code'>[src]</a></span></h1>
+<pre class='rust fn'>pub fn encode_into&lt;T:&nbsp;<a class="trait" href="../rustc_serialize/serialize/trait.Encodable.html" title="trait rustc_serialize::serialize::Encodable">Encodable</a>, W:&nbsp;<a class="trait" href="https://doc.rust-lang.org/nightly/std/io/trait.Write.html" title="trait std::io::Write">Write</a>&gt;(<br>&nbsp;&nbsp;&nbsp;&nbsp;t: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;</a>T, <br>&nbsp;&nbsp;&nbsp;&nbsp;w: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.reference.html">&amp;mut </a>W, <br>&nbsp;&nbsp;&nbsp;&nbsp;size_limit: <a class="enum" href="../bincode/enum.SizeLimit.html" title="enum bincode::SizeLimit">SizeLimit</a><br>) -&gt; <a class="type" href="../bincode/type.EncodingResult.html" title="type bincode::EncodingResult">EncodingResult</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>&gt;</pre><div class='docblock'><p>Encodes an object directly into a <code>Writer</code>.</p>
 <p>If the encoding would take more bytes than allowed by <code>size_limit</code>, an error
 is returned and <em>no bytes</em> will be written into the <code>Writer</code>.</p>
 <p>If this returns an <code>EncodingError</code> (other than SizeLimit), assume that the
