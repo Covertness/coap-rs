@@ -10,10 +10,11 @@
     <title>threadpool - Rust</title>
 
     <link rel="stylesheet" type="text/css" href="../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../dark.css">
-    <link rel="stylesheet" type="text/css" href="../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle">
     <script src="../storage.js"></script>
     
 
@@ -54,13 +55,11 @@
         </form>
     </nav>
 
-    <section id='main' class="content">
-<h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>threadpool</a></span><span class='out-of-band'><span id='render-detail'>
+    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Crate <a class="mod" href=''>threadpool</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/threadpool/lib.rs.html#11-1321' title='goto source code'>[src]</a></span></h1>
-<div class='docblock'><p>A thread pool used to execute functions in parallel.</p>
+               </span><a class='srclink' href='../src/threadpool/lib.rs.html#11-1321' title='goto source code'>[src]</a></span></h1><div class='docblock'><p>A thread pool used to execute functions in parallel.</p>
 <p>Spawns a specified number of worker threads and replenishes the pool if any worker threads
 panic.</p>
 <h1 id="examples" class="section-header"><a href="#examples">Examples</a></h1><h2 id="synchronized-with-a-channel" class="section-header"><a href="#synchronized-with-a-channel">Synchronized with a channel</a></h2>
@@ -75,7 +74,7 @@ panic.</p>
 <span class="kw">let</span> <span class="ident">pool</span> <span class="op">=</span> <span class="ident">ThreadPool</span>::<span class="ident">new</span>(<span class="ident">n_workers</span>);
 
 <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">channel</span>();
-<span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n_jobs</span> {
+<span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n_jobs</span> {
     <span class="kw">let</span> <span class="ident">tx</span> <span class="op">=</span> <span class="ident">tx</span>.<span class="ident">clone</span>();
     <span class="ident">pool</span>.<span class="ident">execute</span>(<span class="kw">move</span><span class="op">||</span> {
         <span class="ident">tx</span>.<span class="ident">send</span>(<span class="number">1</span>).<span class="ident">expect</span>(<span class="string">&quot;channel will be there waiting for the pool&quot;</span>);
@@ -104,7 +103,7 @@ at the barrier which is [not considered unsafe]
 
 <span class="comment">// create a barrier that waits for all jobs plus the starter thread</span>
 <span class="kw">let</span> <span class="ident">barrier</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Barrier</span>::<span class="ident">new</span>(<span class="ident">n_jobs</span> <span class="op">+</span> <span class="number">1</span>));
-<span class="kw">for</span> _ <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n_jobs</span> {
+<span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n_jobs</span> {
     <span class="kw">let</span> <span class="ident">barrier</span> <span class="op">=</span> <span class="ident">barrier</span>.<span class="ident">clone</span>();
     <span class="kw">let</span> <span class="ident">an_atomic</span> <span class="op">=</span> <span class="ident">an_atomic</span>.<span class="ident">clone</span>();
 
