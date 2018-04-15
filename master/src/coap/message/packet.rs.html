@@ -10,10 +10,11 @@
     <title>packet.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../../light.css" id="themeStyle">
     <script src="../../../storage.js"></script>
     
 
@@ -822,7 +823,7 @@
                         <span class="number">15</span> <span class="op">=&gt;</span> {
                             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">InvalidOptionDelta</span>);
                         }
-                        _ <span class="op">=&gt;</span> {}
+                        <span class="kw">_</span> <span class="op">=&gt;</span> {}
                     };
 
                     <span class="comment">// Check for special length characters</span>
@@ -847,7 +848,7 @@
                         <span class="number">15</span> <span class="op">=&gt;</span> {
                             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">InvalidOptionLength</span>);
                         }
-                        _ <span class="op">=&gt;</span> {}
+                        <span class="kw">_</span> <span class="op">=&gt;</span> {}
                     };
 
                     <span class="ident">options_number</span> <span class="op">+=</span> <span class="ident">delta</span>;
@@ -883,7 +884,7 @@
                     <span class="ident">payload</span>: <span class="ident">payload</span>,
                 })
             }
-            <span class="prelude-val">Err</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">InvalidHeader</span>),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ParseError</span>::<span class="ident">InvalidHeader</span>),
         }
     }
 
@@ -962,7 +963,7 @@
                                  <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>,
                                  <span class="ident">bincode</span>::<span class="ident">SizeLimit</span>::<span class="ident">Infinite</span>);
         <span class="kw">match</span> <span class="ident">header_result</span> {
-            <span class="prelude-val">Ok</span>(_) <span class="op">=&gt;</span> {
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> {
                 <span class="ident">buf</span>.<span class="ident">reserve</span>(<span class="self">self</span>.<span class="ident">token</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="ident">options_bytes</span>.<span class="ident">len</span>());
                 <span class="kw">unsafe</span> {
                     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">ptr</span>;
@@ -990,7 +991,7 @@
                 }
                 <span class="prelude-val">Ok</span>(<span class="ident">buf</span>)
             }
-            <span class="prelude-val">Err</span>(_) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">PackageError</span>::<span class="ident">InvalidHeader</span>),
+            <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">PackageError</span>::<span class="ident">InvalidHeader</span>),
         }
     }
 
@@ -1128,7 +1129,7 @@
                     <span class="ident">TestResult</span>::<span class="ident">from_bool</span>(<span class="ident">packet</span>.<span class="ident">get_token</span>().<span class="ident">len</span>() <span class="op">==</span>
                                           <span class="ident">packet</span>.<span class="ident">header</span>.<span class="ident">get_token_length</span>() <span class="kw">as</span> <span class="ident">usize</span>)
                 }
-                <span class="prelude-val">Err</span>(_) <span class="op">=&gt;</span> <span class="ident">TestResult</span>::<span class="ident">passed</span>(),
+                <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="ident">TestResult</span>::<span class="ident">passed</span>(),
             }
         }
         <span class="ident">QuickCheck</span>::<span class="ident">new</span>()

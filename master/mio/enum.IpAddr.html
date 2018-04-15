@@ -10,10 +10,11 @@
     <title>mio::IpAddr - Rust</title>
 
     <link rel="stylesheet" type="text/css" href="../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../dark.css">
-    <link rel="stylesheet" type="text/css" href="../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle">
     <script src="../storage.js"></script>
     
 
@@ -33,7 +34,7 @@
     <nav class="sidebar">
         <div class="sidebar-menu">&#9776;</div>
         
-        <p class='location'>Enum IpAddr</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#variants">Variants</a><div class="sidebar-links"><a href="#variant.V4">V4</a><a href="#variant.V6">V6</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-FromStr">FromStr</a></div></div><p class='location'><a href='index.html'>mio</a></p><script>window.sidebarCurrent = {name: 'IpAddr', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
+        <p class='location'>Enum IpAddr</p><div class="sidebar-elems"><div class="block items"><a class="sidebar-title" href="#variants">Variants</a><div class="sidebar-links"><a href="#variant.V4">V4</a><a href="#variant.V6">V6</a></div><a class="sidebar-title" href="#implementations">Trait Implementations</a><div class="sidebar-links"><a href="#impl-FromStr">FromStr</a></div><a class="sidebar-title" href="#synthetic-implementations">Auto Trait Implementations</a><div class="sidebar-links"><a href="#impl-Send">Send</a><a href="#impl-Sync">Sync</a></div></div><p class='location'><a href='index.html'>mio</a></p><script>window.sidebarCurrent = {name: 'IpAddr', ty: 'enum', relpath: ''};</script><script defer src="sidebar-items.js"></script></div>
     </nav>
 
     <div class="theme-picker">
@@ -54,16 +55,14 @@
         </form>
     </nav>
 
-    <section id='main' class="content">
-<h1 class='fqn'><span class='in-band'>Enum <a href='index.html'>mio</a>::<wbr><a class="enum" href=''>IpAddr</a></span><span class='out-of-band'><span id='render-detail'>
+    <section id='main' class="content"><h1 class='fqn'><span class='in-band'>Enum <a href='index.html'>mio</a>::<wbr><a class="enum" href=''>IpAddr</a></span><span class='out-of-band'><span id='render-detail'>
                    <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
                        [<span class='inner'>&#x2212;</span>]
                    </a>
-               </span><a class='srclink' href='../src/mio/net/mod.rs.html#15-18' title='goto source code'>[src]</a></span></h1>
-<pre class='rust enum'>pub enum IpAddr {
+               </span><a class='srclink' href='../src/mio/net/mod.rs.html#15-18' title='goto source code'>[src]</a></span></h1><div class="docblock type-decl"><pre class='rust enum'>pub enum IpAddr {
     V4(<a class="struct" href="../mio/struct.Ipv4Addr.html" title="struct mio::Ipv4Addr">Ipv4Addr</a>),
     V6(<a class="struct" href="../mio/struct.Ipv6Addr.html" title="struct mio::Ipv6Addr">Ipv6Addr</a>),
-}</pre><div class='docblock'><p>An IP address, either a IPv4 or IPv6 address.</p>
+}</pre></div><div class='docblock'><p>An IP address, either a IPv4 or IPv6 address.</p>
 <p>Once <code>std::net::IpAddr</code> is stable, this will go away.</p>
 </div><h2 id='variants' class='variants small-section-header'>
                    Variants<a href='#variants' class='anchor'></a></h2>
@@ -71,12 +70,16 @@
             <h2 id='implementations' class='small-section-header'>
               Trait Implementations<a href='#implementations' class='anchor'></a>
             </h2>
-        <h3 id='impl-FromStr' class='impl'><span class='in-band'><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/str/trait.FromStr.html" title="trait core::str::FromStr">FromStr</a> for <a class="enum" href="../mio/enum.IpAddr.html" title="enum mio::IpAddr">IpAddr</a></code><a href='#impl-FromStr' class='anchor'></a></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mio/net/mod.rs.html#23-33' title='goto source code'>[src]</a></span></h3>
-<div class='impl-items'><h4 id='associatedtype.Err' class="type"><span id='Err.t' class='invisible'><code>type <a href='https://doc.rust-lang.org/nightly/core/str/trait.FromStr.html#associatedtype.Err' class="type">Err</a> = <a class="struct" href="https://doc.rust-lang.org/nightly/std/net/parser/struct.AddrParseError.html" title="struct std::net::parser::AddrParseError">AddrParseError</a></code></span></h4>
+            <div id='implementations-list'>
+        <h3 id='impl-FromStr' class='impl'><span class='in-band'><table class='table-display'><tbody><tr><td><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/str/trait.FromStr.html" title="trait core::str::FromStr">FromStr</a> for <a class="enum" href="../mio/enum.IpAddr.html" title="enum mio::IpAddr">IpAddr</a></code><a href='#impl-FromStr' class='anchor'></a></span></td><td><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mio/net/mod.rs.html#23-33' title='goto source code'>[src]</a></span></td></tr></tbody></table></h3><div class='impl-items'><h4 id='associatedtype.Err' class="type"><span id='Err.t' class='invisible'><code>type <a href='https://doc.rust-lang.org/nightly/core/str/trait.FromStr.html#associatedtype.Err' class="type">Err</a> = <a class="struct" href="https://doc.rust-lang.org/nightly/std/net/parser/struct.AddrParseError.html" title="struct std::net::parser::AddrParseError">AddrParseError</a></code></span></h4>
 <div class='docblock'><p>The associated error which can be returned from parsing.</p>
-</div><h4 id='method.from_str' class="method"><span id='from_str.v' class='invisible'><code>fn <a href='https://doc.rust-lang.org/nightly/core/str/trait.FromStr.html#tymethod.from_str' class='fnname'>from_str</a>(s: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../mio/enum.IpAddr.html" title="enum mio::IpAddr">IpAddr</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/std/net/parser/struct.AddrParseError.html" title="struct std::net::parser::AddrParseError">AddrParseError</a>&gt;</code></span><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mio/net/mod.rs.html#26-32' title='goto source code'>[src]</a></span></h4>
-<div class='docblock'><p>Parses a string <code>s</code> to return a value of this type. <a href="https://doc.rust-lang.org/nightly/core/str/trait.FromStr.html#tymethod.from_str">Read more</a></p>
-</div></div></section>
+</div><h4 id='method.from_str' class="method"><span id='from_str.v' class='invisible'><table class='table-display'><tbody><tr><td><code>fn <a href='https://doc.rust-lang.org/nightly/core/str/trait.FromStr.html#tymethod.from_str' class='fnname'>from_str</a>(s: &amp;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.str.html">str</a>) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="enum" href="../mio/enum.IpAddr.html" title="enum mio::IpAddr">IpAddr</a>, <a class="struct" href="https://doc.rust-lang.org/nightly/std/net/parser/struct.AddrParseError.html" title="struct std::net::parser::AddrParseError">AddrParseError</a>&gt;</code></span></td><td><span class='out-of-band'><div class='ghost'></div><a class='srclink' href='../src/mio/net/mod.rs.html#26-32' title='goto source code'>[src]</a></td></tr></tbody></table></span></h4><div class='docblock'><p>Parses a string <code>s</code> to return a value of this type. <a href="https://doc.rust-lang.org/nightly/core/str/trait.FromStr.html#tymethod.from_str">Read more</a></p>
+</div></div></div>
+                <h2 id='synthetic-implementations' class='small-section-header'>
+                  Auto Trait Implementations<a href='#synthetic-implementations' class='anchor'></a>
+                </h2>
+                <div id='synthetic-implementations-list'>
+            <h3 id='impl-Send' class='impl'><span class='in-band'><table class='table-display'><tbody><tr><td><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> for <a class="enum" href="../mio/enum.IpAddr.html" title="enum mio::IpAddr">IpAddr</a></code><a href='#impl-Send' class='anchor'></a></span></td><td><span class='out-of-band'></span></td></tr></tbody></table></h3><div class='impl-items'></div><h3 id='impl-Sync' class='impl'><span class='in-band'><table class='table-display'><tbody><tr><td><code>impl <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> for <a class="enum" href="../mio/enum.IpAddr.html" title="enum mio::IpAddr">IpAddr</a></code><a href='#impl-Sync' class='anchor'></a></span></td><td><span class='out-of-band'></span></td></tr></tbody></table></h3><div class='impl-items'></div></div></section>
     <section id='search' class="content hidden"></section>
 
     <section class="footer"></section>
