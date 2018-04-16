@@ -538,6 +538,38 @@
 <span id="481">481</span>
 <span id="482">482</span>
 <span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
+<span id="508">508</span>
+<span id="509">509</span>
+<span id="510">510</span>
+<span id="511">511</span>
+<span id="512">512</span>
+<span id="513">513</span>
+<span id="514">514</span>
+<span id="515">515</span>
 </pre><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">hash_map</span>::<span class="ident">Entry</span>;
@@ -931,6 +963,7 @@
 <span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::<span class="ident">ErrorKind</span>;
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">mpsc</span>;
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
     <span class="kw">use</span> <span class="ident">server</span>::<span class="ident">CoAPServer</span>;
     <span class="kw">use</span> <span class="ident">client</span>::<span class="ident">CoAPClient</span>;
     <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">IsMessage</span>;
@@ -963,6 +996,7 @@
         <span class="kw">let</span> <span class="ident">payload1</span> <span class="op">=</span> <span class="string">b&quot;data1&quot;</span>.<span class="ident">to_vec</span>();
         <span class="kw">let</span> <span class="ident">payload2</span> <span class="op">=</span> <span class="string">b&quot;data2&quot;</span>.<span class="ident">to_vec</span>();
         <span class="kw">let</span> (<span class="ident">tx</span>, <span class="ident">rx</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>();
+        <span class="kw">let</span> (<span class="ident">tx2</span>, <span class="ident">rx2</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">step</span> <span class="op">=</span> <span class="number">1</span>;
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">CoAPServer</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5687&quot;</span>).<span class="ident">unwrap</span>();
@@ -980,12 +1014,20 @@
 
         <span class="kw">let</span> <span class="ident">payload1_clone</span> <span class="op">=</span> <span class="ident">payload1</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">payload2_clone</span> <span class="op">=</span> <span class="ident">payload2</span>.<span class="ident">clone</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">receive_step</span> <span class="op">=</span> <span class="number">1</span>;
         <span class="ident">client</span>.<span class="ident">observe</span>(<span class="ident">path</span>, <span class="kw">move</span> <span class="op">|</span><span class="ident">msg</span><span class="op">|</span> {
-            <span class="kw">let</span> <span class="ident">step</span> <span class="op">=</span> <span class="ident">rx</span>.<span class="ident">recv</span>().<span class="ident">unwrap</span>();
-            <span class="kw">match</span> <span class="ident">step</span> {
+            <span class="kw">match</span> <span class="ident">rx</span>.<span class="ident">try_recv</span>() {
+                <span class="prelude-val">Ok</span>(<span class="ident">n</span>) <span class="op">=&gt;</span> <span class="ident">receive_step</span> <span class="op">=</span> <span class="ident">n</span>,
+                <span class="kw">_</span> <span class="op">=&gt;</span> (),
+            }
+
+            <span class="kw">match</span> <span class="ident">receive_step</span> {
                 <span class="number">1</span> <span class="op">=&gt;</span> <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">msg</span>.<span class="ident">payload</span>, <span class="ident">payload1_clone</span>),
-                <span class="number">2</span> <span class="op">=&gt;</span> <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">msg</span>.<span class="ident">payload</span>, <span class="ident">payload2_clone</span>),
-                <span class="number">3</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;shouldn&#39;t get message after unobserve&quot;</span>),
+                <span class="number">2</span> <span class="op">=&gt;</span> {
+                    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">msg</span>.<span class="ident">payload</span>, <span class="ident">payload2_clone</span>);
+                    <span class="ident">tx2</span>.<span class="ident">send</span>(()).<span class="ident">unwrap</span>();
+                }
                 <span class="kw">_</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;unexpected step&quot;</span>),
             }
         }).<span class="ident">unwrap</span>();
@@ -993,20 +1035,42 @@
         <span class="ident">step</span> <span class="op">=</span> <span class="number">2</span>;
         <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">step</span>).<span class="ident">unwrap</span>();
 
-        <span class="ident">request</span>.<span class="ident">set_method</span>(<span class="ident">Method</span>::<span class="ident">Put</span>);
-        <span class="ident">request</span>.<span class="ident">set_path</span>(<span class="ident">path</span>);
         <span class="ident">request</span>.<span class="ident">set_payload</span>(<span class="ident">payload2</span>.<span class="ident">clone</span>());
 
         <span class="kw">let</span> <span class="ident">client2</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5687&quot;</span>).<span class="ident">unwrap</span>();
         <span class="ident">client2</span>.<span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>).<span class="ident">unwrap</span>();
         <span class="ident">client2</span>.<span class="ident">receive</span>().<span class="ident">unwrap</span>();
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">rx2</span>.<span class="ident">recv_timeout</span>(<span class="ident">Duration</span>::<span class="ident">new</span>(<span class="number">5</span>, <span class="number">0</span>)).<span class="ident">unwrap</span>(), ());
+    }
 
-        <span class="ident">step</span> <span class="op">=</span> <span class="number">3</span>;
-        <span class="ident">tx</span>.<span class="ident">send</span>(<span class="ident">step</span>).<span class="ident">unwrap</span>();
-        
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_unobserve</span>() {
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;/test&quot;</span>;
+        <span class="kw">let</span> <span class="ident">payload1</span> <span class="op">=</span> <span class="string">b&quot;data1&quot;</span>.<span class="ident">to_vec</span>();
+        <span class="kw">let</span> <span class="ident">payload2</span> <span class="op">=</span> <span class="string">b&quot;data2&quot;</span>.<span class="ident">to_vec</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">CoAPServer</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5689&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="ident">server</span>.<span class="ident">handle</span>(<span class="ident">request_handler</span>).<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5689&quot;</span>).<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">request</span> <span class="op">=</span> <span class="ident">CoAPRequest</span>::<span class="ident">new</span>();
+        <span class="ident">request</span>.<span class="ident">set_method</span>(<span class="ident">Method</span>::<span class="ident">Put</span>);
+        <span class="ident">request</span>.<span class="ident">set_path</span>(<span class="ident">path</span>);
+        <span class="ident">request</span>.<span class="ident">set_payload</span>(<span class="ident">payload1</span>.<span class="ident">clone</span>());
+        <span class="ident">client</span>.<span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>).<span class="ident">unwrap</span>();
+        <span class="ident">client</span>.<span class="ident">receive</span>().<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="ident">payload1_clone</span> <span class="op">=</span> <span class="ident">payload1</span>.<span class="ident">clone</span>();
+        <span class="ident">client</span>.<span class="ident">observe</span>(<span class="ident">path</span>, <span class="kw">move</span> <span class="op">|</span><span class="ident">msg</span><span class="op">|</span> {
+            <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">msg</span>.<span class="ident">payload</span>, <span class="ident">payload1_clone</span>);
+        }).<span class="ident">unwrap</span>();
+
         <span class="ident">client</span>.<span class="ident">unobserve</span>();
 
-        <span class="kw">let</span> <span class="ident">client3</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5687&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="ident">request</span>.<span class="ident">set_payload</span>(<span class="ident">payload2</span>.<span class="ident">clone</span>());
+
+        <span class="kw">let</span> <span class="ident">client3</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5689&quot;</span>).<span class="ident">unwrap</span>();
         <span class="ident">client3</span>.<span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="ident">request</span>).<span class="ident">unwrap</span>();
         <span class="ident">client3</span>.<span class="ident">receive</span>().<span class="ident">unwrap</span>();
     }
@@ -1014,10 +1078,10 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_observe_without_resource</span>() {
         <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="string">&quot;/test&quot;</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">CoAPServer</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5689&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">CoAPServer</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5691&quot;</span>).<span class="ident">unwrap</span>();
         <span class="ident">server</span>.<span class="ident">handle</span>(<span class="ident">request_handler</span>).<span class="ident">unwrap</span>();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5689&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5691&quot;</span>).<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">observe</span>(<span class="ident">path</span>, <span class="op">|</span><span class="ident">_msg</span><span class="op">|</span> {}).<span class="ident">unwrap_err</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">error</span>.<span class="ident">kind</span>(), <span class="ident">ErrorKind</span>::<span class="ident">NotFound</span>);
     }

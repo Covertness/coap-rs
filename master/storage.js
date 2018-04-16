@@ -20,11 +20,10 @@ function onEach(arr, func) {
     if (arr && arr.length > 0 && func) {
         for (var i = 0; i < arr.length; i++) {
             if (func(arr[i]) === true) {
-                return true;
+                break;
             }
         }
     }
-    return false;
 }
 
 function updateLocalStorage(name, value) {
