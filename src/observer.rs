@@ -390,6 +390,7 @@ impl<N: Fn() + Send + 'static> Observer<N> {
 mod test {
     use std::io::ErrorKind;
     use std::sync::mpsc;
+    use std::time::Duration;
     use server::CoAPServer;
     use client::CoAPClient;
     use message::IsMessage;
@@ -440,9 +441,15 @@ mod test {
 
         let payload1_clone = payload1.clone();
         let payload2_clone = payload2.clone();
+
+        let mut receive_step = 1;
         client.observe(path, move |msg| {
-            let step = rx.recv().unwrap();
-            match step {
+            match rx.try_recv() {
+                Ok(n) => receive_step = n,
+                _ => (),
+            }
+
+            match receive_step {
                 1 => assert_eq!(msg.payload, payload1_clone),
                 2 => {
                     assert_eq!(msg.payload, payload2_clone);
@@ -460,7 +467,7 @@ mod test {
         let client2 = CoAPClient::new("127.0.0.1:5687").unwrap();
         client2.send(&request).unwrap();
         client2.receive().unwrap();
-        assert_eq!(rx2.recv().unwrap(), ());
+        assert_eq!(rx2.recv_timeout(Duration::new(5, 0)).unwrap(), ());
     }
 
     #[test]

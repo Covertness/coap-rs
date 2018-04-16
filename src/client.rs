@@ -82,7 +82,7 @@ impl CoAPClient {
     }
 
     /// Observe a resource with the handler
-    pub fn observe<H: Fn(Packet) + Send + 'static>(&mut self, resource_path: &str, handler: H) -> Result<()> {
+    pub fn observe<H: FnMut(Packet) + Send + 'static>(&mut self, resource_path: &str, mut handler: H) -> Result<()> {
         // TODO: support observe multi resources at the same time
         let mut message_id: u16 = 0;
         let mut register_packet = CoAPRequest::new();
