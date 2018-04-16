@@ -10,10 +10,11 @@
     <title>ext.rs.html -- source</title>
 
     <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle">
+    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
+          id="mainThemeStyle">
     
     <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../main.css" id="themeStyle">
+    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
     <script src="../../storage.js"></script>
     
 
@@ -1519,7 +1520,7 @@
                        <span class="ident">payload</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">unsafe</span> {
         <span class="kw">let</span> <span class="ident">payload</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">payload</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">T</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="ident">c_void</span>;
-        <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">cvt</span>(<span class="ident">setsockopt</span>(<span class="ident">sock</span>, <span class="ident">opt</span>, <span class="ident">val</span>, <span class="ident">payload</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> _,
+        <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">cvt</span>(<span class="ident">setsockopt</span>(<span class="ident">sock</span>, <span class="ident">opt</span>, <span class="ident">val</span>, <span class="ident">payload</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="kw">_</span>,
                               <span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="kw">as</span> <span class="ident">socklen_t</span>)));
         <span class="prelude-val">Ok</span>(())
     }
@@ -1530,7 +1531,7 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">slot</span>: <span class="ident">T</span> <span class="op">=</span> <span class="ident">mem</span>::<span class="ident">zeroed</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">len</span> <span class="op">=</span> <span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>() <span class="kw">as</span> <span class="ident">socklen_t</span>;
         <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">cvt</span>(<span class="ident">getsockopt</span>(<span class="ident">sock</span>, <span class="ident">opt</span>, <span class="ident">val</span>,
-                              <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">slot</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _ <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
+                              <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">slot</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
                               <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">len</span>)));
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">usize</span>, <span class="ident">mem</span>::<span class="ident">size_of</span>::<span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>());
         <span class="prelude-val">Ok</span>(<span class="ident">slot</span>)
@@ -2184,13 +2185,13 @@
         <span class="kw">unsafe</span> {
             ::<span class="ident">cvt_win</span>(<span class="ident">WSAIoctl</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(),
                                <span class="ident">SIO_KEEPALIVE_VALS</span>,
-                               <span class="kw-2">&amp;</span><span class="ident">ka</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> _ <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
+                               <span class="kw-2">&amp;</span><span class="ident">ka</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="kw">_</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
                                <span class="ident">mem</span>::<span class="ident">size_of_val</span>(<span class="kw-2">&amp;</span><span class="ident">ka</span>) <span class="kw">as</span> <span class="ident">DWORD</span>,
-                               <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
+                               <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
                                <span class="number">0</span>,
-                               <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
-                               <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
-                               <span class="prelude-val">None</span>)).<span class="ident">map</span>(<span class="op">|</span>_<span class="op">|</span> ())
+                               <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
+                               <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
+                               <span class="prelude-val">None</span>)).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
         }
     }
 
@@ -2204,12 +2205,12 @@
         <span class="kw">unsafe</span> {
             <span class="macro">try</span><span class="macro">!</span>(::<span class="ident">cvt_win</span>(<span class="ident">WSAIoctl</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(),
                                     <span class="ident">SIO_KEEPALIVE_VALS</span>,
-                                    <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
+                                    <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
                                     <span class="number">0</span>,
-                                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ka</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _ <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
+                                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ka</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
                                     <span class="ident">mem</span>::<span class="ident">size_of_val</span>(<span class="kw-2">&amp;</span><span class="ident">ka</span>) <span class="kw">as</span> <span class="ident">DWORD</span>,
-                                    <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
-                                    <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _,
+                                    <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
+                                    <span class="number">0</span> <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>,
                                     <span class="prelude-val">None</span>)));
         }
         <span class="prelude-val">Ok</span>({
@@ -2581,7 +2582,7 @@
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">unix</span>)]</span>
     <span class="kw">fn</span> <span class="ident">send</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
-            ::<span class="ident">cvt</span>(<span class="ident">send</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(), <span class="ident">buf</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> _, <span class="ident">buf</span>.<span class="ident">len</span>(), <span class="number">0</span>)).<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>)
+            ::<span class="ident">cvt</span>(<span class="ident">send</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(), <span class="ident">buf</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="kw">_</span>, <span class="ident">buf</span>.<span class="ident">len</span>(), <span class="number">0</span>)).<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>)
         }
     }
 
@@ -2590,7 +2591,7 @@
         <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> ::<span class="ident">std</span>::<span class="ident">cmp</span>::<span class="ident">min</span>(<span class="ident">buf</span>.<span class="ident">len</span>(), <span class="ident">c_int</span>::<span class="ident">max_value</span>() <span class="kw">as</span> <span class="ident">usize</span>);
         <span class="kw">let</span> <span class="ident">buf</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">buf</span>[..<span class="ident">len</span>];
         <span class="kw">unsafe</span> {
-            ::<span class="ident">cvt</span>(<span class="ident">send</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(), <span class="ident">buf</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> _, <span class="ident">len</span> <span class="kw">as</span> <span class="ident">c_int</span>, <span class="number">0</span>))
+            ::<span class="ident">cvt</span>(<span class="ident">send</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(), <span class="ident">buf</span>.<span class="ident">as_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw">const</span> <span class="kw">_</span>, <span class="ident">len</span> <span class="kw">as</span> <span class="ident">c_int</span>, <span class="number">0</span>))
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>)
         }
     }
@@ -2598,7 +2599,7 @@
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">unix</span>)]</span>
     <span class="kw">fn</span> <span class="ident">recv</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">buf</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> [<span class="ident">u8</span>]) <span class="op">-&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
         <span class="kw">unsafe</span> {
-            ::<span class="ident">cvt</span>(<span class="ident">recv</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(), <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _, <span class="ident">buf</span>.<span class="ident">len</span>(), <span class="number">0</span>))
+            ::<span class="ident">cvt</span>(<span class="ident">recv</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(), <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>, <span class="ident">buf</span>.<span class="ident">len</span>(), <span class="number">0</span>))
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>)
         }
     }
@@ -2608,7 +2609,7 @@
         <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> ::<span class="ident">std</span>::<span class="ident">cmp</span>::<span class="ident">min</span>(<span class="ident">buf</span>.<span class="ident">len</span>(), <span class="ident">c_int</span>::<span class="ident">max_value</span>() <span class="kw">as</span> <span class="ident">usize</span>);
         <span class="kw">let</span> <span class="ident">buf</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>[..<span class="ident">len</span>];
         <span class="kw">unsafe</span> {
-            ::<span class="ident">cvt</span>(<span class="ident">recv</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(), <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> _, <span class="ident">buf</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">c_int</span>, <span class="number">0</span>))
+            ::<span class="ident">cvt</span>(<span class="ident">recv</span>(<span class="self">self</span>.<span class="ident">as_sock</span>(), <span class="ident">buf</span>.<span class="ident">as_mut_ptr</span>() <span class="kw">as</span> <span class="kw-2">*</span><span class="kw-2">mut</span> <span class="kw">_</span>, <span class="ident">buf</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">c_int</span>, <span class="number">0</span>))
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">n</span> <span class="kw">as</span> <span class="ident">usize</span>)
         }
     }
@@ -2625,7 +2626,7 @@
     <span class="kw">let</span> <span class="ident">sys</span> <span class="op">=</span> <span class="ident">sys</span>::<span class="ident">Socket</span>::<span class="ident">from_inner</span>(<span class="ident">sock</span>);
     <span class="kw">let</span> <span class="ident">sock</span> <span class="op">=</span> <span class="ident">socket</span>::<span class="ident">Socket</span>::<span class="ident">from_inner</span>(<span class="ident">sys</span>);
     <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">addrs</span>.<span class="ident">fold</span>(<span class="prelude-val">Err</span>(<span class="ident">err</span>), <span class="op">|</span><span class="ident">prev</span>, <span class="ident">addr</span><span class="op">|</span> {
-        <span class="ident">prev</span>.<span class="ident">or_else</span>(<span class="op">|</span>_<span class="op">|</span> <span class="ident">sock</span>.<span class="ident">connect</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>))
+        <span class="ident">prev</span>.<span class="ident">or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">sock</span>.<span class="ident">connect</span>(<span class="kw-2">&amp;</span><span class="ident">addr</span>))
     });
     <span class="ident">mem</span>::<span class="ident">forget</span>(<span class="ident">sock</span>);
     <span class="kw">return</span> <span class="ident">ret</span>
@@ -2636,7 +2637,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonblocking</span> <span class="op">=</span> <span class="ident">nonblocking</span> <span class="kw">as</span> <span class="ident">c_ulong</span>;
     ::<span class="ident">cvt</span>(<span class="kw">unsafe</span> {
         <span class="ident">ioctl</span>(<span class="ident">sock</span>, <span class="ident">FIONBIO</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">nonblocking</span>)
-    }).<span class="ident">map</span>(<span class="op">|</span>_<span class="op">|</span> ())
+    }).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">windows</span>)]</span>
@@ -2644,7 +2645,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonblocking</span> <span class="op">=</span> <span class="ident">nonblocking</span> <span class="kw">as</span> <span class="ident">c_ulong</span>;
     ::<span class="ident">cvt</span>(<span class="kw">unsafe</span> {
         <span class="ident">ioctlsocket</span>(<span class="ident">sock</span>, <span class="ident">FIONBIO</span> <span class="kw">as</span> <span class="ident">c_int</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">nonblocking</span>)
-    }).<span class="ident">map</span>(<span class="op">|</span>_<span class="op">|</span> ())
+    }).<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> ())
 }
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">unix</span>)]</span>
