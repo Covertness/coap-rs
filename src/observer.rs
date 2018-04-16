@@ -422,6 +422,7 @@ mod test {
         let payload1 = b"data1".to_vec();
         let payload2 = b"data2".to_vec();
         let (tx, rx) = mpsc::channel();
+        let (tx2, rx2) = mpsc::channel();
         let mut step = 1;
 
         let mut server = CoAPServer::new("127.0.0.1:5687").unwrap();
@@ -443,8 +444,10 @@ mod test {
             let step = rx.recv().unwrap();
             match step {
                 1 => assert_eq!(msg.payload, payload1_clone),
-                2 => assert_eq!(msg.payload, payload2_clone),
-                3 => panic!("shouldn't get message after unobserve"),
+                2 => {
+                    assert_eq!(msg.payload, payload2_clone);
+                    tx2.send(()).unwrap();
+                }
                 _ => panic!("unexpected step"),
             }
         }).unwrap();
@@ -452,20 +455,42 @@ mod test {
         step = 2;
         tx.send(step).unwrap();
 
-        request.set_method(Method::Put);
-        request.set_path(path);
         request.set_payload(payload2.clone());
 
         let client2 = CoAPClient::new("127.0.0.1:5687").unwrap();
         client2.send(&request).unwrap();
         client2.receive().unwrap();
+        assert_eq!(rx2.recv().unwrap(), ());
+    }
 
-        step = 3;
-        tx.send(step).unwrap();
-        
+    #[test]
+    fn test_unobserve() {
+        let path = "/test";
+        let payload1 = b"data1".to_vec();
+        let payload2 = b"data2".to_vec();
+
+        let mut server = CoAPServer::new("127.0.0.1:5689").unwrap();
+        server.handle(request_handler).unwrap();
+
+        let mut client = CoAPClient::new("127.0.0.1:5689").unwrap();
+
+        let mut request = CoAPRequest::new();
+        request.set_method(Method::Put);
+        request.set_path(path);
+        request.set_payload(payload1.clone());
+        client.send(&request).unwrap();
+        client.receive().unwrap();
+
+        let payload1_clone = payload1.clone();
+        client.observe(path, move |msg| {
+            assert_eq!(msg.payload, payload1_clone);
+        }).unwrap();
+
         client.unobserve();
 
-        let client3 = CoAPClient::new("127.0.0.1:5687").unwrap();
+        request.set_payload(payload2.clone());
+
+        let client3 = CoAPClient::new("127.0.0.1:5689").unwrap();
         client3.send(&request).unwrap();
         client3.receive().unwrap();
     }
@@ -473,10 +498,10 @@ mod test {
     #[test]
     fn test_observe_without_resource() {
         let path = "/test";
-        let mut server = CoAPServer::new("127.0.0.1:5689").unwrap();
+        let mut server = CoAPServer::new("127.0.0.1:5691").unwrap();
         server.handle(request_handler).unwrap();
 
-        let mut client = CoAPClient::new("127.0.0.1:5689").unwrap();
+        let mut client = CoAPClient::new("127.0.0.1:5691").unwrap();
         let error = client.observe(path, |_msg| {}).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotFound);
     }
