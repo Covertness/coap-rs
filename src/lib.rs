@@ -37,7 +37,7 @@
 //! 		&Method::Post => println!("request by post {}", String::from_utf8(request.message.payload).unwrap()),
 //! 		_ => println!("request by other method"),
 //! 	};
-//! 
+//!
 //!     // Return the auto-generated response
 //!    request.response
 //! }
@@ -79,6 +79,7 @@ extern crate url;
 extern crate num;
 extern crate rand;
 extern crate threadpool;
+extern crate regex;
 #[macro_use] extern crate enum_primitive;
 
 #[cfg(test)]
