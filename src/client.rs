@@ -313,10 +313,22 @@ mod test {
     use server::CoAPServer;
 
     #[test]
-    fn test_get_error_url() {
-        assert!(CoAPClient::get("http://127.0.0.1").is_err());
-        assert!(CoAPClient::get("coap://127.0.0.").is_err());
-        assert!(CoAPClient::get("127.0.0.1").is_err());
+    fn test_parse_coap_url_good_url() {
+        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1:5683").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://[::1]").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://[::1]:5683").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]:5683").is_ok());
+    }
+
+    #[test]
+    fn test_parse_coap_url_bad_url() {
+        assert!(CoAPClient::parse_coap_url("http://127.0.0.1").is_err());
+        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1:65536").is_err());
+        assert!(CoAPClient::parse_coap_url("coap://").is_err());
+        assert!(CoAPClient::parse_coap_url("coap://:5683").is_err());
+        assert!(CoAPClient::parse_coap_url("127.0.0.1").is_err());
     }
 
     fn request_handler(_: CoAPRequest) -> Option<CoAPResponse> {
