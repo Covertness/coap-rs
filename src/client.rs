@@ -3,7 +3,7 @@ use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 use std::time::Duration;
 use std::thread;
 use std::sync::mpsc;
-use url::{SchemeType, UrlParser};
+use url::Url;
 use num;
 use rand::{random, thread_rng, Rng};
 use message::packet::{Packet, ObserveOption};
@@ -256,39 +256,26 @@ impl CoAPClient {
     }
 
     fn parse_coap_url(url: &str) -> Result<(String, u16, String)> {
-        let mut url_parser = UrlParser::new();
-        url_parser.scheme_type_mapper(Self::coap_scheme_type_mapper);
-
-        let url_params = match url_parser.parse(url) {
+        let url_params = match Url::parse(url) {
             Ok(url_params) => url_params,
             Err(_) => return Err(Error::new(ErrorKind::InvalidInput, "url error")),
         };
 
-        let host = match url_params.host() {
+        let host = match url_params.host_str() {
+            Some("") => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
             Some(h) => h,
             None => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
         };
-        let host = host.to_string();
         let host = Regex::new(r"^\[(.*?)]$").unwrap().replace(&host, "$1").to_string();
 
-        let port = match url_params.port_or_default() {
+        let port = match url_params.port() {
             Some(p) => p,
-            None => return Err(Error::new(ErrorKind::InvalidInput, "port error")),
+            None => 5683,
         };
 
-        let path = match url_params.serialize_path() {
-            Some(path) => path,
-            None => return Err(Error::new(ErrorKind::InvalidInput, "uri error")),
-        };
+        let path = url_params.path().to_string();
 
         return Ok((host.to_string(), port, path));
-    }
-
-    fn coap_scheme_type_mapper(scheme: &str) -> SchemeType {
-        match scheme {
-            "coap" => SchemeType::Relative(5683),
-            _ => SchemeType::NonRelative,
-        }
     }
 
     fn gen_message_id(message_id: &mut u16) -> u16 {
@@ -324,7 +311,6 @@ mod test {
 
     #[test]
     fn test_parse_coap_url_bad_url() {
-        assert!(CoAPClient::parse_coap_url("http://127.0.0.1").is_err());
         assert!(CoAPClient::parse_coap_url("coap://127.0.0.1:65536").is_err());
         assert!(CoAPClient::parse_coap_url("coap://").is_err());
         assert!(CoAPClient::parse_coap_url("coap://:5683").is_err());

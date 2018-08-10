@@ -1,6 +1,6 @@
 [package]
 name = "coap"
-version = "0.7.0"
+version = "0.7.1"
 description = "A CoAP library"
 readme = "README.md"
 documentation = "http://covertness.github.io/coap-rs/coap/index.html"
@@ -13,7 +13,7 @@ keywords = ["CoAP"]
 bincode = "0.3.0"
 rustc-serialize = "0.3"
 mio = "0.5"
-url = "0.2.36"
+url = "1.7.1"
 num = "0.1"
 rand = "0.3"
 log = "0.3"
