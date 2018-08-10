@@ -336,8 +336,22 @@ mod test {
     }
 
     #[test]
+    fn test_get() {
+        let mut server = CoAPServer::new("127.0.0.1:5686").unwrap();  // may fail if port happens to be in use!
+        server.handle(request_handler).unwrap();
+
+        let error = CoAPClient::get("coap://127.0.0.1:5686/Rust")
+            .unwrap_err();
+        if cfg!(windows) {
+            assert_eq!(error.kind(), ErrorKind::TimedOut);
+        } else {
+            assert_eq!(error.kind(), ErrorKind::WouldBlock);
+        }
+    }
+
+    #[test]
     fn test_get_timeout() {
-        let mut server = CoAPServer::new("127.0.0.1:5684").unwrap();
+        let mut server = CoAPServer::new("127.0.0.1:5684").unwrap();  // may fail if port happens to be in use!
         server.handle(request_handler).unwrap();
 
         let error = CoAPClient::get_with_timeout("coap://127.0.0.1:5684/Rust", Duration::new(1, 0))
