@@ -11,6 +11,7 @@ use message::header::MessageType;
 use message::response::{CoAPResponse, Status};
 use message::request::{CoAPRequest, Method};
 use message::IsMessage;
+use regex::Regex;
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
 
@@ -115,7 +116,7 @@ impl CoAPClient {
                     let receive_packet = CoAPRequest::from_packet(packet, &peer_addr);
 
                     handler(receive_packet.message);
-                    
+
                     if let Some(response) = receive_packet.response {
                         let mut packet = Packet::new();
                         packet.header.set_type(response.message.header.get_type());
@@ -144,7 +145,7 @@ impl CoAPClient {
                     deregister_packet.set_message_id(Self::gen_message_id(&mut message_id));
                     deregister_packet.set_observe(vec![ObserveOption::Deregister as u8]);
                     deregister_packet.set_path(observe_path.as_str());
-                    
+
                     Self::send_with_socket(&socket, &peer_addr, &deregister_packet.message).unwrap();
                     Self::receive_from_socket(&socket).unwrap();
                     break;
@@ -263,10 +264,13 @@ impl CoAPClient {
             Err(_) => return Err(Error::new(ErrorKind::InvalidInput, "url error")),
         };
 
-        let domain = match url_params.domain() {
-            Some(d) => d,
-            None => return Err(Error::new(ErrorKind::InvalidInput, "domain error")),
+        let host = match url_params.host() {
+            Some(h) => h,
+            None => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
         };
+        let host = host.to_string();
+        let host = Regex::new(r"^\[(.*?)]$").unwrap().replace(&host, "$1").to_string();
+
         let port = match url_params.port_or_default() {
             Some(p) => p,
             None => return Err(Error::new(ErrorKind::InvalidInput, "port error")),
@@ -277,7 +281,7 @@ impl CoAPClient {
             None => return Err(Error::new(ErrorKind::InvalidInput, "uri error")),
         };
 
-        return Ok((domain.to_string(), port, path));
+        return Ok((host.to_string(), port, path));
     }
 
     fn coap_scheme_type_mapper(scheme: &str) -> SchemeType {
@@ -309,10 +313,22 @@ mod test {
     use server::CoAPServer;
 
     #[test]
-    fn test_get_error_url() {
-        assert!(CoAPClient::get("http://127.0.0.1").is_err());
-        assert!(CoAPClient::get("coap://127.0.0.").is_err());
-        assert!(CoAPClient::get("127.0.0.1").is_err());
+    fn test_parse_coap_url_good_url() {
+        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1:5683").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://[::1]").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://[::1]:5683").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]:5683").is_ok());
+    }
+
+    #[test]
+    fn test_parse_coap_url_bad_url() {
+        assert!(CoAPClient::parse_coap_url("http://127.0.0.1").is_err());
+        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1:65536").is_err());
+        assert!(CoAPClient::parse_coap_url("coap://").is_err());
+        assert!(CoAPClient::parse_coap_url("coap://:5683").is_err());
+        assert!(CoAPClient::parse_coap_url("127.0.0.1").is_err());
     }
 
     fn request_handler(_: CoAPRequest) -> Option<CoAPResponse> {
@@ -320,8 +336,22 @@ mod test {
     }
 
     #[test]
+    fn test_get() {
+        let mut server = CoAPServer::new("127.0.0.1:5686").unwrap();  // may fail if port happens to be in use!
+        server.handle(request_handler).unwrap();
+
+        let error = CoAPClient::get("coap://127.0.0.1:5686/Rust")
+            .unwrap_err();
+        if cfg!(windows) {
+            assert_eq!(error.kind(), ErrorKind::TimedOut);
+        } else {
+            assert_eq!(error.kind(), ErrorKind::WouldBlock);
+        }
+    }
+
+    #[test]
     fn test_get_timeout() {
-        let mut server = CoAPServer::new("127.0.0.1:5684").unwrap();
+        let mut server = CoAPServer::new("127.0.0.1:5684").unwrap();  // may fail if port happens to be in use!
         server.handle(request_handler).unwrap();
 
         let error = CoAPClient::get_with_timeout("coap://127.0.0.1:5684/Rust", Duration::new(1, 0))
