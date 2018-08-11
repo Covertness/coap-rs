@@ -1,61 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="rustdoc">
-    <meta name="description" content="Source to the Rust file `src/client.rs`.">
-    <meta name="keywords" content="rust, rustlang, rust-lang">
-
-    <title>client.rs.html -- source</title>
-
-    <link rel="stylesheet" type="text/css" href="../../normalize.css">
-    <link rel="stylesheet" type="text/css" href="../../rustdoc.css"
-          id="mainThemeStyle">
-    
-    <link rel="stylesheet" type="text/css" href="../../dark.css">
-    <link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle">
-    <script src="../../storage.js"></script>
-    
-
-    
-    
-</head>
-<body class="rustdoc source">
-    <!--[if lte IE 8]>
-    <div class="warning">
-        This old browser is unsupported and will most likely display funky
-        things.
-    </div>
-    <![endif]-->
-
-    
-
-    <nav class="sidebar">
-        <div class="sidebar-menu">&#9776;</div>
-        
-        
-    </nav>
-
-    <div class="theme-picker">
-        <button id="theme-picker" aria-label="Pick another theme!">
-            <img src="../../brush.svg" width="18" alt="Pick another theme!">
-        </button>
-        <div id="theme-choices"></div>
-    </div>
-    <script src="../../theme.js"></script>
-    <nav class="sub">
-        <form class="search-form js-only">
-            <div class="search-container">
-                <input class="search-input" name="search"
-                       autocomplete="off"
-                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
-                       type="search">
-            </div>
-        </form>
-    </nav>
-
-    <section id='main' class="content"><pre class="line-numbers"><span id="1">  1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `src/client.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>client.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">  1</span>
 <span id="2">  2</span>
 <span id="3">  3</span>
 <span id="4">  4</span>
@@ -390,13 +333,29 @@
 <span id="333">333</span>
 <span id="334">334</span>
 <span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
+<span id="343">343</span>
+<span id="344">344</span>
+<span id="345">345</span>
+<span id="346">346</span>
+<span id="347">347</span>
+<span id="348">348</span>
+<span id="349">349</span>
+<span id="350">350</span>
+<span id="351">351</span>
 </pre><pre class="rust ">
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>::{<span class="ident">Error</span>, <span class="ident">ErrorKind</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::{<span class="ident">SocketAddr</span>, <span class="ident">ToSocketAddrs</span>, <span class="ident">UdpSocket</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">thread</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">mpsc</span>;
-<span class="kw">use</span> <span class="ident">url</span>::{<span class="ident">SchemeType</span>, <span class="ident">UrlParser</span>};
+<span class="kw">use</span> <span class="ident">url</span>::<span class="ident">Url</span>;
 <span class="kw">use</span> <span class="ident">num</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">random</span>, <span class="ident">thread_rng</span>, <span class="ident">Rng</span>};
 <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">packet</span>::{<span class="ident">Packet</span>, <span class="ident">ObserveOption</span>};
@@ -404,6 +363,7 @@
 <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">response</span>::{<span class="ident">CoAPResponse</span>, <span class="ident">Status</span>};
 <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">request</span>::{<span class="ident">CoAPRequest</span>, <span class="ident">Method</span>};
 <span class="kw">use</span> <span class="ident">message</span>::<span class="ident">IsMessage</span>;
+<span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
 
 <span class="kw">const</span> <span class="ident">DEFAULT_RECEIVE_TIMEOUT</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span>; <span class="comment">// 1s</span>
 
@@ -508,7 +468,7 @@
                     <span class="kw">let</span> <span class="ident">receive_packet</span> <span class="op">=</span> <span class="ident">CoAPRequest</span>::<span class="ident">from_packet</span>(<span class="ident">packet</span>, <span class="kw-2">&amp;</span><span class="ident">peer_addr</span>);
 
                     <span class="ident">handler</span>(<span class="ident">receive_packet</span>.<span class="ident">message</span>);
-                    
+
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">response</span>) <span class="op">=</span> <span class="ident">receive_packet</span>.<span class="ident">response</span> {
                         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">packet</span> <span class="op">=</span> <span class="ident">Packet</span>::<span class="ident">new</span>();
                         <span class="ident">packet</span>.<span class="ident">header</span>.<span class="ident">set_type</span>(<span class="ident">response</span>.<span class="ident">message</span>.<span class="ident">header</span>.<span class="ident">get_type</span>());
@@ -537,7 +497,7 @@
                     <span class="ident">deregister_packet</span>.<span class="ident">set_message_id</span>(<span class="self">Self</span>::<span class="ident">gen_message_id</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">message_id</span>));
                     <span class="ident">deregister_packet</span>.<span class="ident">set_observe</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ObserveOption</span>::<span class="ident">Deregister</span> <span class="kw">as</span> <span class="ident">u8</span>]);
                     <span class="ident">deregister_packet</span>.<span class="ident">set_path</span>(<span class="ident">observe_path</span>.<span class="ident">as_str</span>());
-                    
+
                     <span class="self">Self</span>::<span class="ident">send_with_socket</span>(<span class="kw-2">&amp;</span><span class="ident">socket</span>, <span class="kw-2">&amp;</span><span class="ident">peer_addr</span>, <span class="kw-2">&amp;</span><span class="ident">deregister_packet</span>.<span class="ident">message</span>).<span class="ident">unwrap</span>();
                     <span class="self">Self</span>::<span class="ident">receive_from_socket</span>(<span class="kw-2">&amp;</span><span class="ident">socket</span>).<span class="ident">unwrap</span>();
                     <span class="kw">break</span>;
@@ -648,36 +608,26 @@
     }
 
     <span class="kw">fn</span> <span class="ident">parse_coap_url</span>(<span class="ident">url</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">u16</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">url_parser</span> <span class="op">=</span> <span class="ident">UrlParser</span>::<span class="ident">new</span>();
-        <span class="ident">url_parser</span>.<span class="ident">scheme_type_mapper</span>(<span class="self">Self</span>::<span class="ident">coap_scheme_type_mapper</span>);
-
-        <span class="kw">let</span> <span class="ident">url_params</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">url_parser</span>.<span class="ident">parse</span>(<span class="ident">url</span>) {
+        <span class="kw">let</span> <span class="ident">url_params</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">Url</span>::<span class="ident">parse</span>(<span class="ident">url</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">url_params</span>) <span class="op">=&gt;</span> <span class="ident">url_params</span>,
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;url error&quot;</span>)),
         };
 
-        <span class="kw">let</span> <span class="ident">domain</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">url_params</span>.<span class="ident">domain</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">d</span>) <span class="op">=&gt;</span> <span class="ident">d</span>,
-            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;domain error&quot;</span>)),
+        <span class="kw">let</span> <span class="ident">host</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">url_params</span>.<span class="ident">host_str</span>() {
+            <span class="prelude-val">Some</span>(<span class="string">&quot;&quot;</span>) <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;host error&quot;</span>)),
+            <span class="prelude-val">Some</span>(<span class="ident">h</span>) <span class="op">=&gt;</span> <span class="ident">h</span>,
+            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;host error&quot;</span>)),
         };
-        <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">url_params</span>.<span class="ident">port_or_default</span>() {
+        <span class="kw">let</span> <span class="ident">host</span> <span class="op">=</span> <span class="ident">Regex</span>::<span class="ident">new</span>(<span class="string">r&quot;^\[(.*?)]$&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="ident">host</span>, <span class="string">&quot;$1&quot;</span>).<span class="ident">to_string</span>();
+
+        <span class="kw">let</span> <span class="ident">port</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">url_params</span>.<span class="ident">port</span>() {
             <span class="prelude-val">Some</span>(<span class="ident">p</span>) <span class="op">=&gt;</span> <span class="ident">p</span>,
-            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;port error&quot;</span>)),
+            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="number">5683</span>,
         };
 
-        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">url_params</span>.<span class="ident">serialize_path</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=&gt;</span> <span class="ident">path</span>,
-            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">ErrorKind</span>::<span class="ident">InvalidInput</span>, <span class="string">&quot;uri error&quot;</span>)),
-        };
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">url_params</span>.<span class="ident">path</span>().<span class="ident">to_string</span>();
 
-        <span class="kw">return</span> <span class="prelude-val">Ok</span>((<span class="ident">domain</span>.<span class="ident">to_string</span>(), <span class="ident">port</span>, <span class="ident">path</span>));
-    }
-
-    <span class="kw">fn</span> <span class="ident">coap_scheme_type_mapper</span>(<span class="ident">scheme</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="ident">SchemeType</span> {
-        <span class="kw">match</span> <span class="ident">scheme</span> {
-            <span class="string">&quot;coap&quot;</span> <span class="op">=&gt;</span> <span class="ident">SchemeType</span>::<span class="ident">Relative</span>(<span class="number">5683</span>),
-            <span class="kw">_</span> <span class="op">=&gt;</span> <span class="ident">SchemeType</span>::<span class="ident">NonRelative</span>,
-        }
+        <span class="kw">return</span> <span class="prelude-val">Ok</span>((<span class="ident">host</span>.<span class="ident">to_string</span>(), <span class="ident">port</span>, <span class="ident">path</span>));
     }
 
     <span class="kw">fn</span> <span class="ident">gen_message_id</span>(<span class="ident">message_id</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">u16</span>) <span class="op">-&gt;</span> <span class="ident">u16</span> {
@@ -702,10 +652,21 @@
     <span class="kw">use</span> <span class="ident">server</span>::<span class="ident">CoAPServer</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_get_error_url</span>() {
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">get</span>(<span class="string">&quot;http://127.0.0.1&quot;</span>).<span class="ident">is_err</span>());
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">get</span>(<span class="string">&quot;coap://127.0.0.&quot;</span>).<span class="ident">is_err</span>());
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">get</span>(<span class="string">&quot;127.0.0.1&quot;</span>).<span class="ident">is_err</span>());
+    <span class="kw">fn</span> <span class="ident">test_parse_coap_url_good_url</span>() {
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://127.0.0.1&quot;</span>).<span class="ident">is_ok</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://127.0.0.1:5683&quot;</span>).<span class="ident">is_ok</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://[::1]&quot;</span>).<span class="ident">is_ok</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://[::1]:5683&quot;</span>).<span class="ident">is_ok</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://[bbbb::9329:f033:f558:7418]&quot;</span>).<span class="ident">is_ok</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://[bbbb::9329:f033:f558:7418]:5683&quot;</span>).<span class="ident">is_ok</span>());
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_parse_coap_url_bad_url</span>() {
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://127.0.0.1:65536&quot;</span>).<span class="ident">is_err</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://&quot;</span>).<span class="ident">is_err</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;coap://:5683&quot;</span>).<span class="ident">is_err</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">CoAPClient</span>::<span class="ident">parse_coap_url</span>(<span class="string">&quot;127.0.0.1&quot;</span>).<span class="ident">is_err</span>());
     }
 
     <span class="kw">fn</span> <span class="ident">request_handler</span>(<span class="kw">_</span>: <span class="ident">CoAPRequest</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">CoAPResponse</span><span class="op">&gt;</span> {
@@ -713,8 +674,22 @@
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_get</span>() {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">CoAPServer</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5686&quot;</span>).<span class="ident">unwrap</span>();  <span class="comment">// may fail if port happens to be in use!</span>
+        <span class="ident">server</span>.<span class="ident">handle</span>(<span class="ident">request_handler</span>).<span class="ident">unwrap</span>();
+
+        <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">get</span>(<span class="string">&quot;coap://127.0.0.1:5686/Rust&quot;</span>)
+            .<span class="ident">unwrap_err</span>();
+        <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">windows</span>) {
+            <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">error</span>.<span class="ident">kind</span>(), <span class="ident">ErrorKind</span>::<span class="ident">TimedOut</span>);
+        } <span class="kw">else</span> {
+            <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">error</span>.<span class="ident">kind</span>(), <span class="ident">ErrorKind</span>::<span class="ident">WouldBlock</span>);
+        }
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_get_timeout</span>() {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">CoAPServer</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5684&quot;</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server</span> <span class="op">=</span> <span class="ident">CoAPServer</span>::<span class="ident">new</span>(<span class="string">&quot;127.0.0.1:5684&quot;</span>).<span class="ident">unwrap</span>();  <span class="comment">// may fail if port happens to be in use!</span>
         <span class="ident">server</span>.<span class="ident">handle</span>(<span class="ident">request_handler</span>).<span class="ident">unwrap</span>();
 
         <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">get_with_timeout</span>(<span class="string">&quot;coap://127.0.0.1:5684/Rust&quot;</span>, <span class="ident">Duration</span>::<span class="ident">new</span>(<span class="number">1</span>, <span class="number">0</span>))
@@ -727,68 +702,4 @@
     }
 }
 </pre>
-</section>
-    <section id='search' class="content hidden"></section>
-
-    <section class="footer"></section>
-
-    <aside id="help" class="hidden">
-        <div>
-            <h1 class="hidden">Help</h1>
-
-            <div class="shortcuts">
-                <h2>Keyboard Shortcuts</h2>
-
-                <dl>
-                    <dt><kbd>?</kbd></dt>
-                    <dd>Show this help dialog</dd>
-                    <dt><kbd>S</kbd></dt>
-                    <dd>Focus the search field</dd>
-                    <dt><kbd>↑</kbd></dt>
-                    <dd>Move up in search results</dd>
-                    <dt><kbd>↓</kbd></dt>
-                    <dd>Move down in search results</dd>
-                    <dt><kbd>↹</kbd></dt>
-                    <dd>Switch tab</dd>
-                    <dt><kbd>&#9166;</kbd></dt>
-                    <dd>Go to active search result</dd>
-                    <dt><kbd>+</kbd></dt>
-                    <dd>Expand all sections</dd>
-                    <dt><kbd>-</kbd></dt>
-                    <dd>Collapse all sections</dd>
-                </dl>
-            </div>
-
-            <div class="infos">
-                <h2>Search Tricks</h2>
-
-                <p>
-                    Prefix searches with a type followed by a colon (e.g.
-                    <code>fn:</code>) to restrict the search to a given type.
-                </p>
-
-                <p>
-                    Accepted types are: <code>fn</code>, <code>mod</code>,
-                    <code>struct</code>, <code>enum</code>,
-                    <code>trait</code>, <code>type</code>, <code>macro</code>,
-                    and <code>const</code>.
-                </p>
-
-                <p>
-                    Search functions by type signature (e.g.
-                    <code>vec -> usize</code> or <code>* -> vec</code>)
-                </p>
-            </div>
-        </div>
-    </aside>
-
-    
-
-    <script>
-        window.rootPath = "../../";
-        window.currentCrate = "coap";
-    </script>
-    <script src="../../main.js"></script>
-    <script defer src="../../search-index.js"></script>
-</body>
-</html>
+</section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../../";window.currentCrate = "coap";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script defer src="../../search-index.js"></script></body></html>
