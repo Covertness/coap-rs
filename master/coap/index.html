@@ -13,10 +13,10 @@ coap = &quot;0.7&quot;
 </code></pre>
 <p>Then, add this to your crate root:</p>
 
-<pre class="rust rust-example-rendered">
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">coap</span>;</pre>
+<div class="example-wrap"><pre class="rust rust-example-rendered">
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">coap</span>;</pre></div>
 <h1 id="example" class="section-header"><a href="#example">Example</a></h1><h2 id="server" class="section-header"><a href="#server">Server:</a></h2>
-<pre class="rust rust-example-rendered">
+<div class="example-wrap"><pre class="rust rust-example-rendered">
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">coap</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">io</span>;
 <span class="kw">use</span> <span class="ident">coap</span>::{<span class="ident">CoAPServer</span>, <span class="ident">CoAPClient</span>, <span class="ident">CoAPRequest</span>, <span class="ident">CoAPResponse</span>, <span class="ident">Method</span>};
@@ -42,9 +42,9 @@ coap = &quot;0.7&quot;
     <span class="ident">io</span>::<span class="ident">stdin</span>().<span class="ident">read_line</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">String</span>::<span class="ident">new</span>()).<span class="ident">unwrap</span>();
 
     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Server shutdown&quot;</span>);
-}</pre>
+}</pre></div>
 <h2 id="client" class="section-header"><a href="#client">Client:</a></h2>
-<pre class="rust rust-example-rendered">
+<div class="example-wrap"><pre class="rust rust-example-rendered">
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">coap</span>;
 
 <span class="kw">use</span> <span class="ident">coap</span>::{<span class="ident">CoAPClient</span>, <span class="ident">CoAPResponse</span>};
@@ -55,28 +55,7 @@ coap = &quot;0.7&quot;
 
     <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="ident">CoAPClient</span>::<span class="ident">get</span>(<span class="ident">url</span>).<span class="ident">unwrap</span>();
     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Server reply: {}&quot;</span>, <span class="ident">String</span>::<span class="ident">from_utf8</span>(<span class="ident">response</span>.<span class="ident">message</span>.<span class="ident">payload</span>).<span class="ident">unwrap</span>());
-}</pre>
+}</pre></div>
 </div><h2 id='reexports' class='section-header'><a href="#reexports">Re-exports</a></h2>
 <table><tr><td><code>pub use client::<a class="struct" href="../coap/client/struct.CoAPClient.html" title="struct coap::client::CoAPClient">CoAPClient</a>;</code></td></tr><tr><td><code>pub use message::header::<a class="enum" href="../coap/message/header/enum.MessageType.html" title="enum coap::message::header::MessageType">MessageType</a>;</code></td></tr><tr><td><code>pub use message::<a class="trait" href="../coap/message/trait.IsMessage.html" title="trait coap::message::IsMessage">IsMessage</a>;</code></td></tr><tr><td><code>pub use message::packet::<a class="enum" href="../coap/message/packet/enum.CoAPOption.html" title="enum coap::message::packet::CoAPOption">CoAPOption</a>;</code></td></tr><tr><td><code>pub use message::request::<a class="struct" href="../coap/message/request/struct.CoAPRequest.html" title="struct coap::message::request::CoAPRequest">CoAPRequest</a>;</code></td></tr><tr><td><code>pub use message::request::<a class="enum" href="../coap/message/header/enum.RequestType.html" title="enum coap::message::header::RequestType">Method</a>;</code></td></tr><tr><td><code>pub use message::response::<a class="struct" href="../coap/message/response/struct.CoAPResponse.html" title="struct coap::message::response::CoAPResponse">CoAPResponse</a>;</code></td></tr><tr><td><code>pub use message::response::<a class="enum" href="../coap/message/header/enum.ResponseType.html" title="enum coap::message::header::ResponseType">Status</a>;</code></td></tr><tr><td><code>pub use server::<a class="struct" href="../coap/server/struct.CoAPServer.html" title="struct coap::server::CoAPServer">CoAPServer</a>;</code></td></tr></table><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
-<table>
-                       <tr class=' module-item'>
-                           <td><a class="mod" href="client/index.html"
-                                  title='mod coap::client'>client</a></td>
-                           <td class='docblock-short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class="mod" href="message/index.html"
-                                  title='mod coap::message'>message</a></td>
-                           <td class='docblock-short'>
-                                
-                           </td>
-                       </tr>
-                       <tr class=' module-item'>
-                           <td><a class="mod" href="server/index.html"
-                                  title='mod coap::server'>server</a></td>
-                           <td class='docblock-short'>
-                                
-                           </td>
-                       </tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../";window.currentCrate = "coap";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
+<table><tr class='module-item'><td><a class="mod" href="client/index.html" title='coap::client mod'>client</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="mod" href="message/index.html" title='coap::message mod'>message</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="mod" href="server/index.html" title='coap::server mod'>server</a></td><td class='docblock-short'></td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../";window.currentCrate = "coap";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
