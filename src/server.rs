@@ -6,7 +6,8 @@ use std::sync::mpsc;
 use mio::{EventLoop, PollOpt, EventSet, Handler, Sender, Token};
 use mio::udp::UdpSocket;
 use message::packet::Packet;
-use message::request::CoAPRequest;
+use message::request::{CoAPRequest};
+use message::IsMessage;
 use message::response::CoAPResponse;
 use threadpool::ThreadPool;
 use observer::Observer;
@@ -21,6 +22,7 @@ pub enum CoAPServerError {
     NetworkError,
     EventLoopError,
     AnotherHandlerIsRunning,
+    EventSendError,
 }
 
 #[derive(Debug)]
@@ -30,9 +32,16 @@ pub struct QueuedMessage {
 }
 
 #[derive(Debug)]
-enum EventLoopNotify {
+enum EventLoopNotifyType {
     NewResponse,
     Shutdown,
+    UpdateResource,
+}
+
+#[derive(Debug)]
+struct EventLoopNotify {
+    notify_type: EventLoopNotifyType,
+    request: Option<CoAPRequest>,
 }
 
 #[derive(Debug)]
@@ -111,7 +120,10 @@ impl<H: CoAPHandler + 'static, N: Fn() + Send + 'static> UdpHandler<H, N> {
                                 address: src,
                                 message: response.message,
                             }).unwrap();
-                            match event_sender.send(EventLoopNotify::NewResponse) {
+                            match event_sender.send(EventLoopNotify {
+                                notify_type: EventLoopNotifyType::NewResponse,
+                                request: None
+                            }) {
                                 Ok(()) => {}
                                 Err(error) => {
                                     warn!("Notify NewResponse failed, {:?}", error);
@@ -220,13 +232,16 @@ impl<H: CoAPHandler + 'static, N: Fn() + Send + 'static> Handler for UdpHandler<
     }
 
     fn notify(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>, msg: EventLoopNotify) {
-        match msg {
-            EventLoopNotify::NewResponse => {
+        match msg.notify_type {
+            EventLoopNotifyType::NewResponse => {
                 event_loop.reregister(&self.socket, Token(0), EventSet::writable(), PollOpt::edge()).unwrap();
             }
-            EventLoopNotify::Shutdown => {
+            EventLoopNotifyType::Shutdown => {
                 info!("Shutting down request handler");
                 event_loop.shutdown();
+            }
+            EventLoopNotifyType::UpdateResource => {
+                self.observer.change_resource(&msg.request.unwrap());
             }
         }
     }
@@ -303,7 +318,10 @@ impl CoAPServer {
 
             let event_sender = event_loop.channel();
             event_loop.run(&mut UdpHandler::new(socket, tx_send, tx_recv, worker_num, handler, move || {
-                match event_sender.send(EventLoopNotify::NewResponse) {
+                match event_sender.send(EventLoopNotify {
+                                notify_type: EventLoopNotifyType::NewResponse,
+                                request: None
+                            }) {
                     Ok(()) => {}
                     Err(error) => {
                         warn!("Notify NewResponse failed, {:?}", error);
@@ -328,7 +346,10 @@ impl CoAPServer {
         let event_sender = self.event_sender.take();
         match event_sender {
             Some(ref sender) => {
-                sender.send(EventLoopNotify::Shutdown).unwrap();
+                sender.send(EventLoopNotify {
+                                notify_type: EventLoopNotifyType::Shutdown,
+                                request: None
+                            }).unwrap();
                 self.event_thread.take().map(|g| g.join().unwrap());
             }
             _ => {}
@@ -338,6 +359,26 @@ impl CoAPServer {
     /// Set the number of threads for handling requests
     pub fn set_worker_num(&mut self, worker_num: usize) {
         self.worker_num = worker_num;
+    }
+
+    /// Update the resource asynchronously, like PUT method in client
+    pub fn update_resource(&mut self, path: &str, payload: Vec<u8>) -> Result<(), CoAPServerError> {
+        let mut request = CoAPRequest::new();
+        request.set_path(path);
+        request.set_payload(payload);
+
+        match self.event_sender {
+            Some(ref event_sender) => {
+                match event_sender.send(EventLoopNotify {
+                    notify_type: EventLoopNotifyType::UpdateResource,
+                    request: Some(request)
+                }) {
+                    Ok(_) => Ok(()),
+                    _ => Err(CoAPServerError::EventSendError),
+                }
+            },
+            _ => Err(CoAPServerError::EventSendError),
+        }
     }
 }
 
@@ -351,11 +392,12 @@ impl Drop for CoAPServer {
 
 #[cfg(test)]
 mod test {
+    use std::time::Duration;
     use client::CoAPClient;
     use message::header;
     use message::IsMessage;
     use message::packet::CoAPOption;
-    use message::request::CoAPRequest;
+    use message::request::{CoAPRequest, Method};
     use message::response::CoAPResponse;
     use super::*;
 
@@ -407,5 +449,52 @@ mod test {
 
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
+    }
+
+    #[test]
+    fn test_update_resource() {
+        let path = "/test";
+        let payload1 = b"data1".to_vec();
+        let payload2 = b"data2".to_vec();
+        let (tx, rx) = mpsc::channel();
+        let (tx2, rx2) = mpsc::channel();
+        let mut step = 1;
+
+        let mut server = CoAPServer::new("127.0.0.1:5690").unwrap();
+        server.handle(request_handler).unwrap();
+
+        let mut client = CoAPClient::new("127.0.0.1:5690").unwrap();
+
+        tx.send(step).unwrap();
+        let mut request = CoAPRequest::new();
+        request.set_method(Method::Put);
+        request.set_path(path);
+        request.set_payload(payload1.clone());
+        client.send(&request).unwrap();
+        client.receive().unwrap();
+
+        let mut receive_step = 1;
+        let payload1_clone = payload1.clone();
+        let payload2_clone = payload2.clone();
+        client.observe(path, move |msg| {
+            match rx.try_recv() {
+                Ok(n) => receive_step = n,
+                _ => (),
+            }
+
+            match receive_step {
+                1 => assert_eq!(msg.payload, payload1_clone),
+                2 => {
+                    assert_eq!(msg.payload, payload2_clone);
+                    tx2.send(()).unwrap();
+                }
+                _ => panic!("unexpected step"),
+            }
+        }).unwrap();
+
+        step = 2;
+        tx.send(step).unwrap();
+        server.update_resource(path, payload2.clone()).unwrap();
+        assert_eq!(rx2.recv_timeout(Duration::new(5, 0)).unwrap(), ());
     }
 }
