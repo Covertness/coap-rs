@@ -102,6 +102,10 @@ impl<N: Fn() + Send + 'static> Observer<N> {
         }
     }
 
+    pub fn change_resource(&mut self, request: &CoAPRequest) {
+        self.resource_changed(request);
+    }
+
     fn register(&mut self, request: &CoAPRequest) {
         let register_address = request.source.unwrap();
         let resource_path = request.get_path();
