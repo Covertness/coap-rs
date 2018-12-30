@@ -1,11 +1,11 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `bincode` crate."><meta name="keywords" content="rust, rustlang, rust-lang, bincode"><title>bincode - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../dark.css"><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script src="../storage.js"></script><noscript><link rel="stylesheet" href="../noscript.css"></noscript><style type="text/css">#crate-search{background-image:url("../down-arrow.svg");}</style></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../bincode/index.html'><img src='./icon.png' alt='logo' width='100'></a><p class='location'>Crate bincode</p><div class="sidebar-elems"><a id='all-types' href='all.html'><p>See all bincode's items</p></a><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#functions">Functions</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'bincode', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/bincode/lib.rs.html#1-161' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>bincode</a></span></h1><div class='docblock'><p><code>bincode</code> is a crate for encoding and decoding using a tiny binary
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="API documentation for the Rust `bincode` crate."><meta name="keywords" content="rust, rustlang, rust-lang, bincode"><title>bincode - Rust</title><link rel="stylesheet" type="text/css" href="../normalize.css"><link rel="stylesheet" type="text/css" href="../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../dark.css"><link rel="stylesheet" type="text/css" href="../light.css" id="themeStyle"><script src="../storage.js"></script></head><body class="rustdoc mod"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../bincode/index.html'><img src='./icon.png' alt='logo' width='100'></a><p class='location'>Crate bincode</p><div class="sidebar-elems"><a id='all-types' href='all.html'><p>See all bincode's items</p></a><div class="block items"><ul><li><a href="#structs">Structs</a></li><li><a href="#enums">Enums</a></li><li><a href="#functions">Functions</a></li><li><a href="#types">Type Definitions</a></li></ul></div><p class='location'></p><script>window.sidebarCurrent = {name: 'bincode', ty: 'mod', relpath: '../'};</script></div></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><a id="settings-menu" href="../settings.html"><img src="../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><h1 class='fqn'><span class='out-of-band'><span id='render-detail'><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class='inner'>&#x2212;</span>]</a></span><a class='srclink' href='../src/bincode/lib.rs.html#1-161' title='goto source code'>[src]</a></span><span class='in-band'>Crate <a class="mod" href=''>bincode</a></span></h1><div class='docblock'><p><code>bincode</code> is a crate for encoding and decoding using a tiny binary
 serialization strategy.</p>
 <p>There are simple functions for encoding to <code>Vec&lt;u8&gt;</code> and decoding from
 <code>&amp;[u8]</code>, but the meat of the library is the <code>encode_into</code> and <code>decode_from</code>
 functions which respectively allow encoding into a <code>std::io::Writer</code>
 and decoding from a <code>std::io::Buffer</code>.</p>
 <h3 id="using-basic-functions" class="section-header"><a href="#using-basic-functions">Using Basic Functions</a></h3>
-<div class="example-wrap"><pre class="rust rust-example-rendered">
+<pre class="rust rust-example-rendered">
 <span class="attribute">#![<span class="ident">allow</span>(<span class="ident">unstable</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">bincode</span>;
 <span class="kw">fn</span> <span class="ident">main</span>() {
@@ -17,24 +17,136 @@ and decoding from a <code>std::io::Buffer</code>.</p>
     <span class="kw">let</span> <span class="ident">encoded</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>        <span class="op">=</span> <span class="ident">bincode</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="ident">target</span>, <span class="ident">limit</span>).<span class="ident">unwrap</span>();
     <span class="kw">let</span> <span class="ident">decoded</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">bincode</span>::<span class="ident">decode</span>(<span class="kw-2">&amp;</span><span class="ident">encoded</span>[..]).<span class="ident">unwrap</span>();
     <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">target</span>, <span class="ident">decoded</span>);
-}</pre></div>
+}</pre>
 </div><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
-<table><tr class='module-item'><td><a class="struct" href="struct.DecoderReader.html" title='bincode::DecoderReader struct'>DecoderReader</a></td><td class='docblock-short'><p>A Decoder that reads bytes from a buffer.</p>
-</td></tr><tr class='module-item'><td><a class="struct" href="struct.EncoderWriter.html" title='bincode::EncoderWriter struct'>EncoderWriter</a></td><td class='docblock-short'><p>An Encoder that encodes values directly into a Writer.</p>
-</td></tr><tr class='module-item'><td><a class="struct" href="struct.RefBox.html" title='bincode::RefBox struct'>RefBox</a></td><td class='docblock-short'><p>A struct for encoding nested reference types.</p>
-</td></tr><tr class='module-item'><td><a class="struct" href="struct.SliceBox.html" title='bincode::SliceBox struct'>SliceBox</a></td><td class='docblock-short'><p>Like a RefBox, but encodes from a <code>[T]</code> and encodes to a <code>Vec&lt;T&gt;</code>.</p>
-</td></tr><tr class='module-item'><td><a class="struct" href="struct.StrBox.html" title='bincode::StrBox struct'>StrBox</a></td><td class='docblock-short'><p>Like a RefBox, but encoding from a <code>str</code> and decoedes to a <code>String</code>.</p>
-</td></tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
-<table><tr class='module-item'><td><a class="enum" href="enum.DecodingError.html" title='bincode::DecodingError enum'>DecodingError</a></td><td class='docblock-short'><p>An error that can be produced during decoding.</p>
-</td></tr><tr class='module-item'><td><a class="enum" href="enum.EncodingError.html" title='bincode::EncodingError enum'>EncodingError</a></td><td class='docblock-short'><p>An error that can be produced during encoding.</p>
-</td></tr><tr class='module-item'><td><a class="enum" href="enum.SizeLimit.html" title='bincode::SizeLimit enum'>SizeLimit</a></td><td class='docblock-short'><p>A limit on the amount of bytes that can be read or written.</p>
-</td></tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
-<table><tr class='module-item'><td><a class="fn" href="fn.decode.html" title='bincode::decode fn'>decode</a></td><td class='docblock-short'><p>Decodes a slice of bytes into an object.</p>
-</td></tr><tr class='module-item'><td><a class="fn" href="fn.decode_from.html" title='bincode::decode_from fn'>decode_from</a></td><td class='docblock-short'><p>Decoes an object directly from a <code>Buffer</code>ed Reader.</p>
-</td></tr><tr class='module-item'><td><a class="fn" href="fn.encode.html" title='bincode::encode fn'>encode</a></td><td class='docblock-short'><p>Encodes an encodable object into a <code>Vec</code> of bytes.</p>
-</td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_into.html" title='bincode::encode_into fn'>encode_into</a></td><td class='docblock-short'><p>Encodes an object directly into a <code>Writer</code>.</p>
-</td></tr><tr class='module-item'><td><a class="fn" href="fn.encoded_size.html" title='bincode::encoded_size fn'>encoded_size</a></td><td class='docblock-short'><p>Returns the size that an object would be if encoded using bincode.</p>
-</td></tr><tr class='module-item'><td><a class="fn" href="fn.encoded_size_bounded.html" title='bincode::encoded_size_bounded fn'>encoded_size_bounded</a></td><td class='docblock-short'><p>Given a maximum size limit, check how large an object would be if it
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.DecoderReader.html"
+                                  title='struct bincode::DecoderReader'>DecoderReader</a></td>
+                           <td class='docblock-short'>
+                                <p>A Decoder that reads bytes from a buffer.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.EncoderWriter.html"
+                                  title='struct bincode::EncoderWriter'>EncoderWriter</a></td>
+                           <td class='docblock-short'>
+                                <p>An Encoder that encodes values directly into a Writer.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.RefBox.html"
+                                  title='struct bincode::RefBox'>RefBox</a></td>
+                           <td class='docblock-short'>
+                                <p>A struct for encoding nested reference types.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.SliceBox.html"
+                                  title='struct bincode::SliceBox'>SliceBox</a></td>
+                           <td class='docblock-short'>
+                                <p>Like a RefBox, but encodes from a <code>[T]</code> and encodes to a <code>Vec&lt;T&gt;</code>.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="struct" href="struct.StrBox.html"
+                                  title='struct bincode::StrBox'>StrBox</a></td>
+                           <td class='docblock-short'>
+                                <p>Like a RefBox, but encoding from a <code>str</code> and decoedes to a <code>String</code>.</p>
+
+                           </td>
+                       </tr></table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.DecodingError.html"
+                                  title='enum bincode::DecodingError'>DecodingError</a></td>
+                           <td class='docblock-short'>
+                                <p>An error that can be produced during decoding.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.EncodingError.html"
+                                  title='enum bincode::EncodingError'>EncodingError</a></td>
+                           <td class='docblock-short'>
+                                <p>An error that can be produced during encoding.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="enum" href="enum.SizeLimit.html"
+                                  title='enum bincode::SizeLimit'>SizeLimit</a></td>
+                           <td class='docblock-short'>
+                                <p>A limit on the amount of bytes that can be read or written.</p>
+
+                           </td>
+                       </tr></table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.decode.html"
+                                  title='fn bincode::decode'>decode</a></td>
+                           <td class='docblock-short'>
+                                <p>Decodes a slice of bytes into an object.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.decode_from.html"
+                                  title='fn bincode::decode_from'>decode_from</a></td>
+                           <td class='docblock-short'>
+                                <p>Decoes an object directly from a <code>Buffer</code>ed Reader.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.encode.html"
+                                  title='fn bincode::encode'>encode</a></td>
+                           <td class='docblock-short'>
+                                <p>Encodes an encodable object into a <code>Vec</code> of bytes.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.encode_into.html"
+                                  title='fn bincode::encode_into'>encode_into</a></td>
+                           <td class='docblock-short'>
+                                <p>Encodes an object directly into a <code>Writer</code>.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.encoded_size.html"
+                                  title='fn bincode::encoded_size'>encoded_size</a></td>
+                           <td class='docblock-short'>
+                                <p>Returns the size that an object would be if encoded using bincode.</p>
+
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="fn" href="fn.encoded_size_bounded.html"
+                                  title='fn bincode::encoded_size_bounded'>encoded_size_bounded</a></td>
+                           <td class='docblock-short'>
+                                <p>Given a maximum size limit, check how large an object would be if it
 were to be encoded.</p>
-</td></tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
-<table><tr class='module-item'><td><a class="type" href="type.DecodingResult.html" title='bincode::DecodingResult type'>DecodingResult</a></td><td class='docblock-short'></td></tr><tr class='module-item'><td><a class="type" href="type.EncodingResult.html" title='bincode::EncodingResult type'>EncodingResult</a></td><td class='docblock-short'></td></tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g., <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g., <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g., <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../";window.currentCrate = "bincode";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
+
+                           </td>
+                       </tr></table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.DecodingResult.html"
+                                  title='type bincode::DecodingResult'>DecodingResult</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr>
+                       <tr class=' module-item'>
+                           <td><a class="type" href="type.EncodingResult.html"
+                                  title='type bincode::EncodingResult'>EncodingResult</a></td>
+                           <td class='docblock-short'>
+                                
+                           </td>
+                       </tr></table></section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g. <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g. <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g. <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../";window.currentCrate = "bincode";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
