@@ -13,7 +13,7 @@ Features:
 - CoAP core protocol [RFC 7252](https://tools.ietf.org/rfc/rfc7252.txt)
 - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
 
-[Documentation](http://covertness.github.io/coap-rs/coap/index.html)
+[Documentation](http://covertness.github.io/coap-rs/master/coap/index.html)
 
 ## Installation
 
