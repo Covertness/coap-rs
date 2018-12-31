@@ -7,6 +7,7 @@ ALIASES['bytes'] = {};
 ALIASES['cfg_if'] = {};
 ALIASES['coap'] = {};
 ALIASES['coap'] = {};
+ALIASES['coap'] = {};
 ALIASES['enum_primitive'] = {};
 ALIASES['idna'] = {};
 ALIASES['kernel32'] = {};
