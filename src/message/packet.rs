@@ -43,6 +43,15 @@ pub enum ContentFormat {
     ApplicationOctetStream = 42,
     ApplicationEXI = 47,
     ApplicationJSON = 50,
+    ApplicationCBOR = 60,
+    ApplicationSenmlJSON = 110,
+    ApplicationSensmlJSON = 111,
+    ApplicationSenmlCBOR = 112,
+    ApplicationSensmlCBOR = 113,
+    ApplicationSenmlExi = 114,
+    ApplicationSensmlExi = 115,
+    ApplicationSenmlXML = 310,
+    ApplicationSensmlXML = 311,
 }
 }
 
