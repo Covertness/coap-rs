@@ -32,6 +32,8 @@ pub enum CoAPOption {
     ProxyUri,
     ProxyScheme,
     Size1,
+    Size2,
+    NoResponse,
 }
 
 enum_from_primitive! {
@@ -425,6 +427,8 @@ impl Packet {
             CoAPOption::ProxyUri => 35,
             CoAPOption::ProxyScheme => 39,
             CoAPOption::Size1 => 60,
+            CoAPOption::Size2 => 28,
+            CoAPOption::NoResponse => 258
         }
     }
 }
