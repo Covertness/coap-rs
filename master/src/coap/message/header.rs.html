@@ -283,6 +283,11 @@
 <span id="283">283</span>
 <span id="284">284</span>
 <span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">RustcEncodable</span>, <span class="ident">RustcDecodable</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HeaderRaw</span> {
@@ -333,6 +338,7 @@
     <span class="ident">Valid</span>,
     <span class="ident">Changed</span>,
     <span class="ident">Content</span>,
+    <span class="ident">Continue</span>,
 
     <span class="comment">// 400 Codes</span>
     <span class="ident">BadRequest</span>,
@@ -345,6 +351,7 @@
     <span class="ident">PreconditionFailed</span>,
     <span class="ident">RequestEntityTooLarge</span>,
     <span class="ident">UnsupportedContentFormat</span>,
+    <span class="ident">RequestEntityIncomplete</span>,
 
     <span class="comment">// 500 Codes</span>
     <span class="ident">InternalServerError</span>,
@@ -478,6 +485,7 @@
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Valid</span>) <span class="op">=&gt;</span> <span class="number">0x43</span>,
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Changed</span>) <span class="op">=&gt;</span> <span class="number">0x44</span>,
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Content</span>) <span class="op">=&gt;</span> <span class="number">0x45</span>,
+        <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Continue</span>) <span class="op">=&gt;</span> <span class="number">0x5F</span>,
 
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">BadRequest</span>) <span class="op">=&gt;</span> <span class="number">0x80</span>,
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Unauthorized</span>) <span class="op">=&gt;</span> <span class="number">0x81</span>,
@@ -489,6 +497,7 @@
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">PreconditionFailed</span>) <span class="op">=&gt;</span> <span class="number">0x8C</span>,
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">RequestEntityTooLarge</span>) <span class="op">=&gt;</span> <span class="number">0x8D</span>,
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">UnsupportedContentFormat</span>) <span class="op">=&gt;</span> <span class="number">0x8F</span>,
+        <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">RequestEntityIncomplete</span>) <span class="op">=&gt;</span> <span class="number">0x88</span>,
 
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">InternalServerError</span>) <span class="op">=&gt;</span> <span class="number">0x90</span>,
         <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">NotImplemented</span>) <span class="op">=&gt;</span> <span class="number">0x91</span>,
@@ -515,6 +524,7 @@
         <span class="number">0x43</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Valid</span>),
         <span class="number">0x44</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Changed</span>),
         <span class="number">0x45</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Content</span>),
+        <span class="number">0x5F</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Continue</span>),
 
         <span class="number">0x80</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">BadRequest</span>),
         <span class="number">0x81</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">Unauthorized</span>),
@@ -526,6 +536,7 @@
         <span class="number">0x8C</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">PreconditionFailed</span>),
         <span class="number">0x8D</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">RequestEntityTooLarge</span>),
         <span class="number">0x8F</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">UnsupportedContentFormat</span>),
+        <span class="number">0x88</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">RequestEntityIncomplete</span>),
 
         <span class="number">0x90</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">InternalServerError</span>),
         <span class="number">0x91</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">NotImplemented</span>),
@@ -533,7 +544,6 @@
         <span class="number">0x93</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">ServiceUnavailable</span>),
         <span class="number">0x94</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">GatewayTimeout</span>),
         <span class="number">0x95</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Response</span>(<span class="ident">ResponseType</span>::<span class="ident">ProxyingNotSupported</span>),
-
         <span class="kw">_</span> <span class="op">=&gt;</span> <span class="ident">MessageClass</span>::<span class="ident">Reserved</span>,
     }
 }

@@ -539,6 +539,19 @@
 <span id="539">539</span>
 <span id="540">540</span>
 <span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="kw">use</span> <span class="ident">bincode</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeMap</span>;
@@ -574,6 +587,8 @@
     <span class="ident">ProxyUri</span>,
     <span class="ident">ProxyScheme</span>,
     <span class="ident">Size1</span>,
+    <span class="ident">Size2</span>,
+    <span class="ident">NoResponse</span>,
 }
 
 <span class="macro">enum_from_primitive</span><span class="macro">!</span> {
@@ -585,6 +600,15 @@
     <span class="ident">ApplicationOctetStream</span> <span class="op">=</span> <span class="number">42</span>,
     <span class="ident">ApplicationEXI</span> <span class="op">=</span> <span class="number">47</span>,
     <span class="ident">ApplicationJSON</span> <span class="op">=</span> <span class="number">50</span>,
+    <span class="ident">ApplicationCBOR</span> <span class="op">=</span> <span class="number">60</span>,
+    <span class="ident">ApplicationSenmlJSON</span> <span class="op">=</span> <span class="number">110</span>,
+    <span class="ident">ApplicationSensmlJSON</span> <span class="op">=</span> <span class="number">111</span>,
+    <span class="ident">ApplicationSenmlCBOR</span> <span class="op">=</span> <span class="number">112</span>,
+    <span class="ident">ApplicationSensmlCBOR</span> <span class="op">=</span> <span class="number">113</span>,
+    <span class="ident">ApplicationSenmlExi</span> <span class="op">=</span> <span class="number">114</span>,
+    <span class="ident">ApplicationSensmlExi</span> <span class="op">=</span> <span class="number">115</span>,
+    <span class="ident">ApplicationSenmlXML</span> <span class="op">=</span> <span class="number">310</span>,
+    <span class="ident">ApplicationSensmlXML</span> <span class="op">=</span> <span class="number">311</span>,
 }
 }
 
@@ -958,6 +982,8 @@
             <span class="ident">CoAPOption</span>::<span class="ident">ProxyUri</span> <span class="op">=&gt;</span> <span class="number">35</span>,
             <span class="ident">CoAPOption</span>::<span class="ident">ProxyScheme</span> <span class="op">=&gt;</span> <span class="number">39</span>,
             <span class="ident">CoAPOption</span>::<span class="ident">Size1</span> <span class="op">=&gt;</span> <span class="number">60</span>,
+            <span class="ident">CoAPOption</span>::<span class="ident">Size2</span> <span class="op">=&gt;</span> <span class="number">28</span>,
+            <span class="ident">CoAPOption</span>::<span class="ident">NoResponse</span> <span class="op">=&gt;</span> <span class="number">258</span>
         }
     }
 }
