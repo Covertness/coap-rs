@@ -47,6 +47,7 @@ pub enum ResponseType {
     Valid,
     Changed,
     Content,
+    Continue,
 
     // 400 Codes
     BadRequest,
@@ -59,6 +60,7 @@ pub enum ResponseType {
     PreconditionFailed,
     RequestEntityTooLarge,
     UnsupportedContentFormat,
+    RequestEntityIncomplete,
 
     // 500 Codes
     InternalServerError,
@@ -192,6 +194,7 @@ pub fn class_to_code(class: &MessageClass) -> u8 {
         MessageClass::Response(ResponseType::Valid) => 0x43,
         MessageClass::Response(ResponseType::Changed) => 0x44,
         MessageClass::Response(ResponseType::Content) => 0x45,
+        MessageClass::Response(ResponseType::Continue) => 0x5F,
 
         MessageClass::Response(ResponseType::BadRequest) => 0x80,
         MessageClass::Response(ResponseType::Unauthorized) => 0x81,
@@ -203,6 +206,7 @@ pub fn class_to_code(class: &MessageClass) -> u8 {
         MessageClass::Response(ResponseType::PreconditionFailed) => 0x8C,
         MessageClass::Response(ResponseType::RequestEntityTooLarge) => 0x8D,
         MessageClass::Response(ResponseType::UnsupportedContentFormat) => 0x8F,
+        MessageClass::Response(ResponseType::RequestEntityIncomplete) => 0x88,
 
         MessageClass::Response(ResponseType::InternalServerError) => 0x90,
         MessageClass::Response(ResponseType::NotImplemented) => 0x91,
@@ -229,6 +233,7 @@ pub fn code_to_class(code: &u8) -> MessageClass {
         0x43 => MessageClass::Response(ResponseType::Valid),
         0x44 => MessageClass::Response(ResponseType::Changed),
         0x45 => MessageClass::Response(ResponseType::Content),
+        0x5F => MessageClass::Response(ResponseType::Continue),
 
         0x80 => MessageClass::Response(ResponseType::BadRequest),
         0x81 => MessageClass::Response(ResponseType::Unauthorized),
@@ -240,6 +245,7 @@ pub fn code_to_class(code: &u8) -> MessageClass {
         0x8C => MessageClass::Response(ResponseType::PreconditionFailed),
         0x8D => MessageClass::Response(ResponseType::RequestEntityTooLarge),
         0x8F => MessageClass::Response(ResponseType::UnsupportedContentFormat),
+        0x88 => MessageClass::Response(ResponseType::RequestEntityIncomplete),
 
         0x90 => MessageClass::Response(ResponseType::InternalServerError),
         0x91 => MessageClass::Response(ResponseType::NotImplemented),
@@ -247,7 +253,6 @@ pub fn code_to_class(code: &u8) -> MessageClass {
         0x93 => MessageClass::Response(ResponseType::ServiceUnavailable),
         0x94 => MessageClass::Response(ResponseType::GatewayTimeout),
         0x95 => MessageClass::Response(ResponseType::ProxyingNotSupported),
-
         _ => MessageClass::Reserved,
     }
 }

@@ -32,6 +32,8 @@ pub enum CoAPOption {
     ProxyUri,
     ProxyScheme,
     Size1,
+    Size2,
+    NoResponse,
 }
 
 enum_from_primitive! {
@@ -43,6 +45,15 @@ pub enum ContentFormat {
     ApplicationOctetStream = 42,
     ApplicationEXI = 47,
     ApplicationJSON = 50,
+    ApplicationCBOR = 60,
+    ApplicationSenmlJSON = 110,
+    ApplicationSensmlJSON = 111,
+    ApplicationSenmlCBOR = 112,
+    ApplicationSensmlCBOR = 113,
+    ApplicationSenmlExi = 114,
+    ApplicationSensmlExi = 115,
+    ApplicationSenmlXML = 310,
+    ApplicationSensmlXML = 311,
 }
 }
 
@@ -416,6 +427,8 @@ impl Packet {
             CoAPOption::ProxyUri => 35,
             CoAPOption::ProxyScheme => 39,
             CoAPOption::Size1 => 60,
+            CoAPOption::Size2 => 28,
+            CoAPOption::NoResponse => 258
         }
     }
 }
