@@ -380,6 +380,12 @@ impl CoAPServer {
             _ => Err(CoAPServerError::EventSendError),
         }
     }
+
+    /// Return the local address that the server is listening on. This can be useful when starting
+    /// a server on a random port as part of unit testing.
+    pub fn socket_addr(&self) -> std::io::Result<SocketAddr> {
+        self.socket.local_addr()
+    }
 }
 
 
@@ -496,5 +502,36 @@ mod test {
         tx.send(step).unwrap();
         server.update_resource(path, payload2.clone()).unwrap();
         assert_eq!(rx2.recv_timeout(Duration::new(5, 0)).unwrap(), ());
+    }
+
+    #[test]
+    fn test_server_socket_addr() {
+        let socket_addr = "127.0.0.1:5690".to_socket_addrs().unwrap().next().unwrap();
+        let server = CoAPServer::new(socket_addr).unwrap();
+        assert_eq!(server.socket_addr().unwrap(), socket_addr);
+    }
+
+    #[test]
+    fn test_random_server_port() {
+        // A port of ZERO should assign a random available port.
+        let mut server = CoAPServer::new("127.0.0.1:0").unwrap();
+        server.handle(request_handler).unwrap();
+
+        let server_port = server.socket_addr().unwrap().port();
+        assert_ne!(server_port, 0); // Ensure a reasonable port number was assigned.
+
+        let client_addr = SocketAddr::from(([127, 0, 0, 1], server_port));
+        let client = CoAPClient::new(client_addr).unwrap();
+        let mut request = CoAPRequest::new();
+        request.set_version(1);
+        request.set_type(header::MessageType::Confirmable);
+        request.set_code("0.01");
+        request.set_message_id(1);
+        request.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
+        request.add_option(CoAPOption::UriPath, b"test-echo".to_vec());
+        client.send(&request).unwrap();
+
+        let recv_packet = client.receive().unwrap();
+        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 }
