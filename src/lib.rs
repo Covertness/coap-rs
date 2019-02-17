@@ -72,33 +72,22 @@
 //! }
 //! ```
 
-extern crate bincode;
-extern crate rustc_serialize;
-extern crate mio;
-extern crate url;
-extern crate num;
-extern crate rand;
-extern crate threadpool;
-extern crate regex;
-#[macro_use] extern crate enum_primitive;
-
 #[cfg(test)]
 extern crate quickcheck;
 
-#[macro_use]
-extern crate log;
-
-pub use client::CoAPClient;
-pub use message::header::MessageType;
-pub use message::IsMessage;
-pub use message::packet::CoAPOption;
-pub use message::request::CoAPRequest;
-pub use message::request::Method;
-pub use message::response::CoAPResponse;
-pub use message::response::Status;
-pub use server::CoAPServer;
-
+pub use self::client::CoAPClient;
+pub use self::message::header::MessageType;
+pub use self::message::IsMessage;
+pub use self::message::packet::CoAPOption;
+pub use self::message::request::CoAPRequest;
+pub use self::message::request::Method;
+pub use self::message::response::CoAPResponse;
+pub use self::message::response::Status;
+pub use self::server::CoAPServer;
 pub mod message;
 pub mod client;
 pub mod server;
 mod observer;
+
+
+

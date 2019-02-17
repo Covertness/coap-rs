@@ -3,9 +3,8 @@ pub mod request;
 pub mod response;
 pub mod packet;
 
-use message::packet::Packet;
-use message::header::Header;
-
+use self::packet::Packet;
+use self::header::Header;
 use std::collections::LinkedList;
 
 pub trait IsMessage {

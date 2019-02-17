@@ -1,4 +1,6 @@
-#[derive(Debug, RustcEncodable, RustcDecodable)]
+use serde::{Serialize, Deserialize};
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HeaderRaw {
     ver_type_tkl: u8,
     code: u8,
@@ -17,7 +19,7 @@ impl Default for HeaderRaw {
 
 #[derive(Clone, Debug)]
 pub struct Header {
-    ver_type_tkl: u8,
+    ver_type_tkl: u8,   
     pub code: MessageClass,
     message_id: u16,
 }
@@ -270,7 +272,7 @@ pub fn class_to_str(class: &MessageClass) -> String {
 
 #[cfg(test)]
 mod test {
-    use message::header::*;
+    use super::*;
 
     #[test]
     fn test_header_codes() {

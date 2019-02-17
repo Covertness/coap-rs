@@ -5,12 +5,13 @@ use std::net::{ToSocketAddrs, SocketAddr};
 use std::sync::mpsc;
 use mio::{EventLoop, PollOpt, EventSet, Handler, Sender, Token};
 use mio::udp::UdpSocket;
-use message::packet::Packet;
-use message::request::{CoAPRequest};
-use message::IsMessage;
-use message::response::CoAPResponse;
+use log::{warn, debug, error, info};
+use super::message::packet::Packet;
+use super::message::request::{CoAPRequest};
+use super::message::IsMessage;
+use super::message::response::CoAPResponse;
 use threadpool::ThreadPool;
-use observer::Observer;
+use super::observer::Observer;
 
 const DEFAULT_WORKER_NUM: usize = 4;
 
@@ -57,7 +58,7 @@ enum ResponseError {
 }
 
 pub trait CoAPHandler: Sync + Send + Copy {
-    fn handle(&self, CoAPRequest) -> Option<CoAPResponse>;
+    fn handle(&self, request: CoAPRequest) -> Option<CoAPResponse>;
 }
 
 impl<F> CoAPHandler for F
@@ -399,12 +400,7 @@ impl Drop for CoAPServer {
 #[cfg(test)]
 mod test {
     use std::time::Duration;
-    use client::CoAPClient;
-    use message::header;
-    use message::IsMessage;
-    use message::packet::CoAPOption;
-    use message::request::{CoAPRequest, Method};
-    use message::response::CoAPResponse;
+    use super::super::*;
     use super::*;
 
     fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
@@ -428,7 +424,7 @@ mod test {
         let client = CoAPClient::new("127.0.0.1:5683").unwrap();
         let mut request = CoAPRequest::new();
         request.set_version(1);
-        request.set_type(header::MessageType::Confirmable);
+        request.set_type(MessageType::Confirmable);
         request.set_code("0.01");
         request.set_message_id(1);
         request.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
@@ -447,7 +443,7 @@ mod test {
         let client = CoAPClient::new("127.0.0.1:5685").unwrap();
         let mut packet = CoAPRequest::new();
         packet.set_version(1);
-        packet.set_type(header::MessageType::Confirmable);
+        packet.set_type(MessageType::Confirmable);
         packet.set_code("0.01");
         packet.set_message_id(1);
         packet.add_option(CoAPOption::UriPath, b"test-echo".to_vec());
@@ -524,7 +520,7 @@ mod test {
         let client = CoAPClient::new(client_addr).unwrap();
         let mut request = CoAPRequest::new();
         request.set_version(1);
-        request.set_type(header::MessageType::Confirmable);
+        request.set_type(MessageType::Confirmable);
         request.set_code("0.01");
         request.set_message_id(1);
         request.set_token(vec![0x51, 0x55, 0x77, 0xE8]);

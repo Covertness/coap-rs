@@ -1,8 +1,8 @@
-use message::IsMessage;
-use message::packet::Packet;
-use message::header::{Header, MessageClass, MessageType};
+use super::IsMessage;
+use super::packet::Packet;
+use super::header::{Header, MessageClass, MessageType};
 
-pub use message::header::ResponseType as Status;
+pub use super::header::ResponseType as Status;
 
 #[derive(Clone, Debug)]
 pub struct CoAPResponse {
@@ -83,8 +83,8 @@ impl IsMessage for CoAPResponse {
 #[cfg(test)]
 mod test {
     use super::*;
-    use message::packet::Packet;
-    use message::header::MessageType;
+    use super::super::packet::Packet;
+    use super::super::header::MessageType;
 
     #[test]
     fn test_new_response_valid() {

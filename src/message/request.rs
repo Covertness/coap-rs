@@ -1,11 +1,11 @@
-use message::IsMessage;
-use message::response::CoAPResponse;
-use message::packet::{CoAPOption, Packet};
-use message::header::{Header, MessageClass};
+use super::IsMessage;
+use super::response::CoAPResponse;
+use super::packet::{CoAPOption, Packet};
+use super::header::{Header, MessageClass};
 use std::net::SocketAddr;
 use std::str;
 
-pub use message::header::RequestType as Method;
+pub use super::header::RequestType as Method;
 
 #[derive(Clone, Debug)]
 pub struct CoAPRequest {
@@ -92,9 +92,9 @@ impl IsMessage for CoAPRequest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use message::packet::{CoAPOption, Packet};
-    use message::header::MessageType;
-    use message::IsMessage;
+    use super::super::packet::{CoAPOption, Packet};
+    use super::super::header::MessageType;
+    use super::IsMessage;
     use std::net::SocketAddr;
     use std::str::FromStr;
 

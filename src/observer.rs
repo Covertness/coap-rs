@@ -1,13 +1,15 @@
 use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
 use std::net::SocketAddr;
-use message::request::{CoAPRequest, Method};
-use message::response::Status;
-use message::packet::{ObserveOption, Packet};
-use message::IsMessage;
-use message::header::{MessageClass, MessageType, ResponseType};
-use server::{QueuedMessage, TxQueue};
+use log::{debug, warn};
 use bincode;
+
+use super::message::request::{CoAPRequest, Method};
+use super::message::response::Status;
+use super::message::packet::{ObserveOption, Packet};
+use super::message::IsMessage;
+use super::message::header::{MessageClass, MessageType, ResponseType};
+use super::server::{QueuedMessage, TxQueue};
 
 const DEFAULT_UNACKNOWLEDGE_MESSAGE_TRY_TIMES: usize = 10;
 
@@ -349,7 +351,7 @@ impl<N: Fn() + Send + 'static> Observer<N> {
             let resource = self.resources.get(&register_resource.resource).unwrap();
 
             let mut sequence_bin =
-                bincode::encode(&resource.sequence, bincode::SizeLimit::Infinite).unwrap();
+                bincode::config().big_endian().serialize(&resource.sequence).unwrap();
             let index = sequence_bin.iter().position(|&x| x > 0).unwrap();
             sequence_bin.drain(0..index);
 
@@ -395,12 +397,8 @@ mod test {
     use std::io::ErrorKind;
     use std::sync::mpsc;
     use std::time::Duration;
-    use server::CoAPServer;
-    use client::CoAPClient;
-    use message::IsMessage;
-    use message::packet::ObserveOption;
-    use message::request::{CoAPRequest, Method};
-    use message::response::CoAPResponse;
+    use super::*;
+    use super::super::*;
 
     fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
         match req.get_method() {
