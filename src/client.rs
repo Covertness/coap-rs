@@ -6,11 +6,12 @@ use std::sync::mpsc;
 use url::Url;
 use num;
 use rand::{random, thread_rng, Rng};
-use message::packet::{Packet, ObserveOption};
-use message::header::MessageType;
-use message::response::{CoAPResponse, Status};
-use message::request::{CoAPRequest, Method};
-use message::IsMessage;
+use log::*;
+use super::message::packet::{Packet, ObserveOption};
+use super::message::header::MessageType;
+use super::message::response::{CoAPResponse, Status};
+use super::message::request::{CoAPRequest, Method};
+use super::message::IsMessage;
 use regex::Regex;
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
@@ -191,10 +192,10 @@ impl CoAPClient {
         packet.set_token(token.clone());
         packet.set_path(path.as_str());
 
-        let client = try!(Self::new((domain.as_str(), port)));
-        try!(client.send(&packet));
+        let client = r#try!(Self::new((domain.as_str(), port)));
+        r#try!(client.send(&packet));
 
-        try!(client.set_receive_timeout(timeout));
+        r#try!(client.set_receive_timeout(timeout));
         match client.receive() {
             Ok(receive_packet) => {
                 if receive_packet.get_message_id() == message_id
@@ -234,7 +235,7 @@ impl CoAPClient {
     fn send_with_socket(socket: &UdpSocket, peer_addr: &SocketAddr, message: &Packet) -> Result<()> {
         match message.to_bytes() {
             Ok(bytes) => {
-                let size = try!(socket.send_to(&bytes[..], peer_addr));
+                let size = r#try!(socket.send_to(&bytes[..], peer_addr));
                 if size == bytes.len() {
                     Ok(())
                 } else {
@@ -248,7 +249,7 @@ impl CoAPClient {
     fn receive_from_socket(socket: &UdpSocket) -> Result<Packet> {
         let mut buf = [0; 1500];
 
-        let (nread, _src) = try!(socket.recv_from(&mut buf));
+        let (nread, _src) = r#try!(socket.recv_from(&mut buf));
         match Packet::from_bytes(&buf[..nread]) {
             Ok(packet) => Ok(packet),
             Err(_) => Err(Error::new(ErrorKind::InvalidInput, "packet error")),
@@ -295,9 +296,9 @@ mod test {
     use super::*;
     use std::time::Duration;
     use std::io::ErrorKind;
-    use message::request::CoAPRequest;
-    use message::response::CoAPResponse;
-    use server::CoAPServer;
+    use super::super::message::request::CoAPRequest;
+    use super::super::message::response::CoAPResponse;
+    use super::super::server::CoAPServer;
 
     #[test]
     fn test_parse_coap_url_good_url() {

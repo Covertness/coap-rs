@@ -2,9 +2,10 @@ use bincode;
 use std::collections::BTreeMap;
 use std::collections::LinkedList;
 
-use num::FromPrimitive;
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 
-use message::header;
+use super::header;
 
 macro_rules! u8_to_unsigned_be {
     ($src:ident, $start:expr, $end:expr, $t:ty) => ({
@@ -36,8 +37,7 @@ pub enum CoAPOption {
     NoResponse,
 }
 
-enum_from_primitive! {
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, FromPrimitive)]
 pub enum ContentFormat {
     TextPlain = 0,
     ApplicationLinkFormat = 40,
@@ -55,14 +55,11 @@ pub enum ContentFormat {
     ApplicationSenmlXML = 310,
     ApplicationSensmlXML = 311,
 }
-}
 
-enum_from_primitive! {
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, FromPrimitive)]
 pub enum ObserveOption {
     Register = 0,
     Deregister = 1,
-}
 }
 
 #[derive(Debug)]
@@ -182,7 +179,8 @@ impl Packet {
 
     /// Decodes a byte slice and construct the equivalent Packet.
     pub fn from_bytes(buf: &[u8]) -> Result<Packet, ParseError> {
-        let header_result: bincode::DecodingResult<header::HeaderRaw> = bincode::decode(buf);
+        
+        let header_result: bincode::Result<header::HeaderRaw> = bincode::config().big_endian().deserialize(buf);
         match header_result {
             Ok(raw_header) => {
                 let header = header::Header::from_raw(&raw_header);
@@ -272,7 +270,7 @@ impl Packet {
                     let options_value = buf[idx..end].to_vec();
 
                     if options.contains_key(&options_number) {
-                        let mut options_list = options.get_mut(&options_number).unwrap();
+                        let options_list = options.get_mut(&options_number).unwrap();
                         options_list.push_back(options_value);
                     } else {
                         let mut list = LinkedList::new();
@@ -370,10 +368,10 @@ impl Packet {
         }
 
         let mut buf: Vec<u8> = Vec::with_capacity(buf_length);
-        let header_result: bincode::EncodingResult<()> =
-            bincode::encode_into(&self.header.to_raw(),
-                                 &mut buf,
-                                 bincode::SizeLimit::Infinite);
+        let header_result: bincode::Result<()> =
+            bincode::config().big_endian().serialize_into(&mut buf, &self.header.to_raw());
+
+
         match header_result {
             Ok(_) => {
                 buf.reserve(self.token.len() + options_bytes.len());
@@ -438,6 +436,7 @@ mod test {
     use super::*;
     use super::super::header;
     use std::collections::LinkedList;
+    use log::*;
 
     #[test]
     fn test_decode_packet_with_options() {
@@ -484,6 +483,7 @@ mod test {
         assert_eq!(packet.header.get_token_length(), 4);
         assert_eq!(packet.header.code,
                    header::MessageClass::Response(header::ResponseType::Content));
+        warn!("{}", packet.header.get_message_id());
         assert_eq!(packet.header.get_message_id(), 5117);
         assert_eq!(*packet.get_token(), vec![0xD0, 0xE2, 0x4D, 0xAC]);
         assert_eq!(packet.payload, "Hello".as_bytes().to_vec());

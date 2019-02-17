@@ -8,15 +8,18 @@ repository = "https://github.com/covertness/coap-rs"
 license = "MIT"
 authors = ["Yang Zhang <wuyingfengsui@gmail.com>"]
 keywords = ["CoAP"]
+edition = "2018"
 
 [dependencies]
-bincode = "0.3.0"
-rustc-serialize = "0.3"
+bincode = "1.1.1"
+serde = { version= "1.0.88", features= [ "derive" ] }
 mio = "0.5"
 url = "1.7.1"
-num = "0.1"
+num = "0.2.0"
+num-derive = "0.2.4"
+num-traits = "0.2.6"
 rand = "0.3"
-log = "0.3"
+log = "0.4.6"
 threadpool = "1.3"
 enum_primitive = "0.1.1"
 regex = "1.0.2"
