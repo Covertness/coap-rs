@@ -49,8 +49,8 @@ impl CoAPRequest {
         self.clear_option(CoAPOption::UriPath);
 
         let segs = path.split("/");
-        for s in segs {
-            if s.len() == 0 {
+        for (i, s) in segs.enumerate() {
+            if i == 0 && s.len() == 0 {
                 continue;
             }
 
@@ -188,5 +188,9 @@ mod test {
                 .front()
                 .unwrap()
         );
+
+        let path3 = "test-interface2/";
+        request.set_path(path3);
+        assert_eq!(path3, request.get_path());
     }
 }
