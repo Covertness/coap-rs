@@ -7,27 +7,28 @@
             <h2 id='required-methods' class='small-section-header'>Required methods<a href='#required-methods' class='anchor'></a></h2><div class='methods'><h3 id='tymethod.parse_any' class='method'><code id='parse_any.v'>fn <a href='#tymethod.parse_any' class='fnname'>parse_any</a>(input: <a class="type" href="../../syn/parse/type.ParseStream.html" title="type syn::parse::ParseStream">ParseStream</a>) -&gt; <a class="type" href="../../syn/parse/type.Result.html" title="type syn::parse::Result">Result</a>&lt;Self&gt;</code></h3><div class='docblock'><p>Parses any identifier including keywords.</p>
 <p>This is useful when parsing a DSL which allows Rust keywords as
 identifiers.</p>
-<pre><code class="language-edition2018">use syn::{Error, Ident, Result, Token};
-use syn::ext::IdentExt;
-use syn::parse::ParseStream;
 
-// Parses input that looks like `name = NAME` where `NAME` can be
-// any identifier.
-//
-// Examples:
-//
-//     name = anything
-//     name = impl
-fn parse_dsl(input: ParseStream) -&gt; Result&lt;Ident&gt; {
-    let name_token: Ident = input.parse()?;
-    if name_token != &quot;name&quot; {
-        return Err(Error::new(name_token.span(), &quot;expected `name`&quot;));
+<div class='information'><div class='tooltip edition'>ⓘ<span class='tooltiptext'>This code runs with edition 2018</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered edition ">
+<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">Error</span>, <span class="ident">Ident</span>, <span class="prelude-ty">Result</span>, <span class="ident">Token</span>};
+<span class="kw">use</span> <span class="ident">syn</span>::<span class="ident">ext</span>::<span class="ident">IdentExt</span>;
+<span class="kw">use</span> <span class="ident">syn</span>::<span class="ident">parse</span>::<span class="ident">ParseStream</span>;
+
+<span class="comment">// Parses input that looks like `name = NAME` where `NAME` can be</span>
+<span class="comment">// any identifier.</span>
+<span class="comment">//</span>
+<span class="comment">// Examples:</span>
+<span class="comment">//</span>
+<span class="comment">//     name = anything</span>
+<span class="comment">//     name = impl</span>
+<span class="kw">fn</span> <span class="ident">parse_dsl</span>(<span class="ident">input</span>: <span class="ident">ParseStream</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ident</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">name_token</span>: <span class="ident">Ident</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>;
+    <span class="kw">if</span> <span class="ident">name_token</span> <span class="op">!=</span> <span class="string">&quot;name&quot;</span> {
+        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">name_token</span>.<span class="ident">span</span>(), <span class="string">&quot;expected `name`&quot;</span>));
     }
-    input.parse::&lt;Token![=]&gt;()?;
-    let name = input.call(Ident::parse_any)?;
-    Ok(name)
-}
-</code></pre>
+    <span class="ident">input</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="macro">Token</span><span class="macro">!</span>[<span class="op">=</span>]<span class="op">&gt;</span>()<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">call</span>(<span class="ident">Ident</span>::<span class="ident">parse_any</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">name</span>)
+}</pre></div>
 </div></div><span class='loading-content'>Loading content...</span>
             <h2 id='implementors' class='small-section-header'>Implementors<a href='#implementors' class='anchor'></a></h2><div class='item-list' id='implementors-list'><h3 id='impl-IdentExt' class='impl'><code class='in-band'>impl IdentExt for <a class="struct" href="../../syn/struct.Ident.html" title="struct syn::Ident">Ident</a></code><a href='#impl-IdentExt' class='anchor'></a><a class='srclink' href='../../src/syn/ext.rs.html#45-52' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='method.parse_any' class="method hidden"><code id='parse_any.v-1'>fn <a href='#method.parse_any' class='fnname'>parse_any</a>(input: <a class="type" href="../../syn/parse/type.ParseStream.html" title="type syn::parse::ParseStream">ParseStream</a>) -&gt; <a class="type" href="../../syn/parse/type.Result.html" title="type syn::parse::Result">Result</a>&lt;Self&gt;</code><a class='srclink' href='../../src/syn/ext.rs.html#46-51' title='goto source code'>[src]</a></h4></div></div><span class='loading-content'>Loading content...</span><script type="text/javascript">window.inlined_types=new Set([]);</script><script type="text/javascript" async
                          src="../../implementors/syn/ext/trait.IdentExt.js">
