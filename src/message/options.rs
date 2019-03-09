@@ -1,5 +1,4 @@
 use num_derive::FromPrimitive;
-//use num_traits::FromPrimitive;
 
 #[derive(Debug)]
 pub enum OptionCreateError {
@@ -83,5 +82,15 @@ impl From<BlockOption> for Vec<u8> {
         result.push(((block_as_u32 >> 16) & 0xff) as u8);
         
         result
+    }
+}
+
+mod test {
+    #[test]
+    fn create_block_option() {
+        use super::{ BlockOption, BlockSize };
+        let block_option = BlockOption::new(20, true, BlockSize::S1024).expect("Failed to create block option");
+        let u8_vector: Vec<u8> = Vec::from(block_option);
+        assert_eq!(u8_vector.len(), 3)
     }
 }
