@@ -6,35 +6,12 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 use super::header;
+use super::options::{CoAPOption};
 
 macro_rules! u8_to_unsigned_be {
     ($src:ident, $start:expr, $end:expr, $t:ty) => ({
         (0 .. $end - $start + 1).rev().fold(0, |acc, i| acc | $src[$start+i] as $t << i * 8)
     })
-}
-
-#[derive(PartialEq, Eq, Debug)]
-pub enum CoAPOption {
-    IfMatch,
-    UriHost,
-    ETag,
-    IfNoneMatch,
-    Observe,
-    UriPort,
-    LocationPath,
-    UriPath,
-    ContentFormat,
-    MaxAge,
-    UriQuery,
-    Accept,
-    LocationQuery,
-    Block2,
-    Block1,
-    ProxyUri,
-    ProxyScheme,
-    Size1,
-    Size2,
-    NoResponse,
 }
 
 #[derive(PartialEq, Eq, Debug, FromPrimitive)]
@@ -56,11 +33,6 @@ pub enum ContentFormat {
     ApplicationSensmlXML = 311,
 }
 
-#[derive(PartialEq, Eq, Debug, FromPrimitive)]
-pub enum ObserveOption {
-    Register = 0,
-    Deregister = 1,
-}
 
 #[derive(Debug)]
 pub enum PackageError {

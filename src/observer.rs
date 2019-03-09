@@ -6,7 +6,8 @@ use bincode;
 
 use super::message::request::{CoAPRequest, Method};
 use super::message::response::Status;
-use super::message::packet::{ObserveOption, Packet};
+use super::message::packet::{Packet};
+use super::message::options::{ObserveOption};
 use super::message::IsMessage;
 use super::message::header::{MessageClass, MessageType, ResponseType};
 use super::server::{QueuedMessage, TxQueue};
