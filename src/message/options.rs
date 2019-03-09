@@ -52,7 +52,7 @@ pub struct BlockOption {
 }
 
 impl BlockOption {
-    fn new(num: u32, m: bool, block_size: BlockSize) -> Result<BlockOption, OptionCreateError> {
+    pub fn new(num: u32, m: bool, block_size: BlockSize) -> Result<BlockOption, OptionCreateError> {
         if num > 2u32.pow(20) {
             return Err(OptionCreateError::InvalidBlockNumber)
         }
@@ -74,12 +74,16 @@ impl From<BlockOption> for Vec<u8> {
                  (more_blocks << 3) |
                  (block_size);
 
-        // TODO: Truncate the result to the needed option length
-        // For now, always uses the full 3 byte length
         let mut result: Vec<u8> = Vec::new();
+        let mut next_byte = ((block_as_u32 >> 16) & 0xff) as u8;
+        if next_byte != 0 {
+            result.push(next_byte);    
+        }
+        next_byte = ((block_as_u32 >> 8) & 0xff) as u8;
+        if next_byte != 0 {
+            result.push(next_byte);
+        }
         result.push((block_as_u32 & 0xff) as u8);
-        result.push(((block_as_u32 >> 8) & 0xff) as u8);
-        result.push(((block_as_u32 >> 16) & 0xff) as u8);
         
         result
     }
@@ -88,9 +92,25 @@ impl From<BlockOption> for Vec<u8> {
 #[cfg(test)]
 mod test {
     #[test]
-    fn create_block_option() {
+    fn create_one_byte_block_option() {
+        use super::{ BlockOption, BlockSize };
+        let block_option = BlockOption::new(3, true, BlockSize::S1024).expect("Failed to create block option");
+        let u8_vector: Vec<u8> = Vec::from(block_option);
+        assert_eq!(u8_vector.len(), 1)
+    }
+
+    #[test]
+    fn create_two_byte_block_option() {
         use super::{ BlockOption, BlockSize };
         let block_option = BlockOption::new(20, true, BlockSize::S1024).expect("Failed to create block option");
+        let u8_vector: Vec<u8> = Vec::from(block_option);
+        assert_eq!(u8_vector.len(), 2)
+    }
+
+    #[test]
+    fn create_three_byte_block_option() {
+        use super::{ BlockOption, BlockSize };
+        let block_option = BlockOption::new(1000000, true, BlockSize::S1024).expect("Failed to create block option");
         let u8_vector: Vec<u8> = Vec::from(block_option);
         assert_eq!(u8_vector.len(), 3)
     }
