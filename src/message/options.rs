@@ -85,6 +85,7 @@ impl From<BlockOption> for Vec<u8> {
     }
 }
 
+#[cfg(test)]
 mod test {
     #[test]
     fn create_block_option() {
