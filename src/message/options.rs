@@ -5,6 +5,7 @@ pub enum OptionCreateError {
     InvalidBlockNumber
 }
 
+#[derive(Debug)]
 pub enum BlockSize {
     S1024 = 6,
     S515 = 5,
@@ -45,6 +46,7 @@ pub enum ObserveOption {
     Deregister = 1,
 }
 
+#[derive(Debug)]
 pub struct BlockOption {
     num: u32,
     m: bool,
@@ -91,9 +93,10 @@ impl From<BlockOption> for Vec<u8> {
 
 #[cfg(test)]
 mod test {
+    use super::{ BlockOption, BlockSize };
+
     #[test]
     fn create_one_byte_block_option() {
-        use super::{ BlockOption, BlockSize };
         let block_option = BlockOption::new(3, true, BlockSize::S1024).expect("Failed to create block option");
         let u8_vector: Vec<u8> = Vec::from(block_option);
         assert_eq!(u8_vector.len(), 1)
@@ -101,7 +104,6 @@ mod test {
 
     #[test]
     fn create_two_byte_block_option() {
-        use super::{ BlockOption, BlockSize };
         let block_option = BlockOption::new(20, true, BlockSize::S1024).expect("Failed to create block option");
         let u8_vector: Vec<u8> = Vec::from(block_option);
         assert_eq!(u8_vector.len(), 2)
@@ -109,9 +111,13 @@ mod test {
 
     #[test]
     fn create_three_byte_block_option() {
-        use super::{ BlockOption, BlockSize };
         let block_option = BlockOption::new(1000000, true, BlockSize::S1024).expect("Failed to create block option");
         let u8_vector: Vec<u8> = Vec::from(block_option);
         assert_eq!(u8_vector.len(), 3)
+    }
+
+    #[test]
+    fn fail_on_to_large_num_for_block_option() {
+        BlockOption::new(2000000, true, BlockSize::S1024).expect_err("Creating block with NUM so large should fail");
     }
 }
