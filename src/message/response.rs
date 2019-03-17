@@ -36,32 +36,11 @@ impl CoAPResponse {
     }
 
     pub fn get_status(&self) -> &Status {
-        match self.message.header.code {
-            MessageClass::Response(Status::Created) => &Status::Created,
-            MessageClass::Response(Status::Deleted) => &Status::Deleted,
-            MessageClass::Response(Status::Valid) => &Status::Valid,
-            MessageClass::Response(Status::Changed) => &Status::Changed,
-            MessageClass::Response(Status::Content) => &Status::Content,
-
-            MessageClass::Response(Status::BadRequest) => &Status::BadRequest,
-            MessageClass::Response(Status::Unauthorized) => &Status::Unauthorized,
-            MessageClass::Response(Status::BadOption) => &Status::BadOption,
-            MessageClass::Response(Status::Forbidden) => &Status::Forbidden,
-            MessageClass::Response(Status::NotFound) => &Status::NotFound,
-            MessageClass::Response(Status::MethodNotAllowed) => &Status::MethodNotAllowed,
-            MessageClass::Response(Status::NotAcceptable) => &Status::NotAcceptable,
-            MessageClass::Response(Status::PreconditionFailed) => &Status::PreconditionFailed,
-            MessageClass::Response(Status::RequestEntityTooLarge) => &Status::RequestEntityTooLarge,
-            MessageClass::Response(Status::UnsupportedContentFormat) => &Status::UnsupportedContentFormat,
-
-            MessageClass::Response(Status::InternalServerError) => &Status::InternalServerError,
-            MessageClass::Response(Status::NotImplemented) => &Status::NotImplemented,
-            MessageClass::Response(Status::BadGateway) => &Status::BadGateway,
-            MessageClass::Response(Status::ServiceUnavailable) => &Status::ServiceUnavailable,
-            MessageClass::Response(Status::GatewayTimeout) => &Status::GatewayTimeout,
-            MessageClass::Response(Status::ProxyingNotSupported) => &Status::ProxyingNotSupported,
-            _ => &Status::UnKnown,
+        if let MessageClass::Response(ref status) = &self.message.header.code {
+            return status;
         }
+
+        &Status::UnKnown
     }
 }
 

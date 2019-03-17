@@ -84,9 +84,11 @@ pub use self::message::request::Method;
 pub use self::message::response::CoAPResponse;
 pub use self::message::response::Status;
 pub use self::server::CoAPServer;
+pub use block_transfer::send;
 pub mod message;
 pub mod client;
 pub mod server;
+pub mod block_transfer;
 mod observer;
 
 

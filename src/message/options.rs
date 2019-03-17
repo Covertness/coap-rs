@@ -1,19 +1,36 @@
 use num_derive::FromPrimitive;
+use std::ops::Add;
 
 #[derive(Debug)]
 pub enum OptionCreateError {
     InvalidBlockNumber
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum BlockSize {
     S1024 = 6,
-    S515 = 5,
+    S512 = 5,
     S256 = 4,
     S128 = 3,
     S64 = 2,
     S32 = 1,
     S16 = 0
+}
+
+impl Add<BlockSize> for u64 {
+    type Output = u64;
+    fn add(self, other: BlockSize) -> u64 {
+        let nr_of_bytes = match other {
+            BlockSize::S1024 => 1024,
+            BlockSize::S512 => 512,
+            BlockSize::S256 => 256,
+            BlockSize::S128 => 128,
+            BlockSize::S64 => 64,
+            BlockSize::S32 => 32,
+            BlockSize::S16 => 16
+        };
+        self + nr_of_bytes
+    }
 }
 
 #[derive(PartialEq, Eq, Debug)]
@@ -119,5 +136,16 @@ mod test {
     #[test]
     fn fail_on_to_large_num_for_block_option() {
         BlockOption::new(2000000, true, BlockSize::S1024).expect_err("Creating block with NUM so large should fail");
+    }
+
+    #[test]
+    fn test_to_add_u64_to_block_option() {
+        assert_eq!(1 + BlockSize::S1024, 1025);
+        assert_eq!(1 + BlockSize::S512, 513);
+        assert_eq!(1 + BlockSize::S256, 257);
+        assert_eq!(1 + BlockSize::S128, 129);
+        assert_eq!(1 + BlockSize::S64, 65);
+        assert_eq!(1 + BlockSize::S32, 33);
+        assert_eq!(1 + BlockSize::S16, 17);
     }
 }
