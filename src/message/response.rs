@@ -4,7 +4,7 @@ use super::header::{Header, MessageClass, MessageType};
 
 pub use super::header::ResponseType as Status;
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct CoAPResponse {
     pub message: Packet,
 }

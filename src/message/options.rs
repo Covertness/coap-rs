@@ -17,9 +17,9 @@ pub enum BlockSize {
     S16 = 0
 }
 
-impl Add<BlockSize> for u64 {
-    type Output = u64;
-    fn add(self, other: BlockSize) -> u64 {
+impl Add<BlockSize> for usize {
+    type Output = usize;
+    fn add(self, other: BlockSize) -> usize {
         let nr_of_bytes = match other {
             BlockSize::S1024 => 1024,
             BlockSize::S512 => 512,
@@ -139,7 +139,7 @@ mod test {
     }
 
     #[test]
-    fn test_to_add_u64_to_block_option() {
+    fn test_to_add_usize_to_block_option() {
         assert_eq!(1 + BlockSize::S1024, 1025);
         assert_eq!(1 + BlockSize::S512, 513);
         assert_eq!(1 + BlockSize::S256, 257);

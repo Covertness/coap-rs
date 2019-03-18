@@ -8,11 +8,12 @@ use num;
 use rand::{random, thread_rng, Rng};
 use log::*;
 use super::message::packet::{Packet};
-use super::message::options::{ObserveOption};
+use super::message::options::{ObserveOption, BlockSize};
 use super::message::header::MessageType;
 use super::message::response::{CoAPResponse, Status};
 use super::message::request::{CoAPRequest, Method};
 use super::message::IsMessage;
+use super::block_transfer;
 use regex::Regex;
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
@@ -21,7 +22,34 @@ enum ObserveMessage {
     Terminate,
 }
 
+pub struct Configuration {
+    timeout: Duration,
+    block_size: BlockSize
+}
+
+impl Default for Configuration {
+    fn default() -> Configuration {
+        Configuration {
+            timeout: Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
+            block_size: BlockSize::S1024
+        }
+    }
+}
+
+impl Configuration {
+    pub fn set_block_size(&mut self, block_size: BlockSize) -> &Self {
+        self.block_size = block_size;
+        self
+    }
+
+    pub fn set_timeout(&mut self, timeout: Duration) -> &Self {
+        self.timeout = timeout;
+        self
+    }
+}
+
 pub struct CoAPClient {
+    configuration: Configuration,
     socket: UdpSocket,
     peer_addr: SocketAddr,
     observe_sender: Option<mpsc::Sender<ObserveMessage>>,
@@ -41,6 +69,7 @@ impl CoAPClient {
                     s.set_read_timeout(Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)))
                         .and_then(|_| {
                             Ok(CoAPClient {
+                                configuration: Configuration::default(),
                                 socket: s,
                                 peer_addr: paddr,
                                 observe_sender: None,
@@ -81,6 +110,29 @@ impl CoAPClient {
         match client.receive() {
             Ok(receive_packet) => Ok(receive_packet),
             Err(e) => Err(e),
+        }
+    }
+
+    pub fn get_config(&self) -> &Configuration {
+        &self.configuration
+    }
+
+    pub fn put(&self, path: &str, payload: Vec<u8>) -> Result<CoAPResponse> {
+        if payload.len() > self.configuration.block_size as usize {
+            return block_transfer::send(path, payload, &self)
+        }
+        else {
+            let mut packet = CoAPRequest::new();
+            packet.set_path(path);
+            packet.set_method(Method::Put);
+
+            self.send(&packet)?;
+            self.set_receive_timeout(Some(self.configuration.timeout)).expect(format!("Failed to set timeout: {:?}", self.configuration.timeout).as_str());
+
+            match self.receive() {
+                Ok(receive_packet) => Ok(receive_packet),
+                Err(e) => Err(e),
+            }
         }
     }
 

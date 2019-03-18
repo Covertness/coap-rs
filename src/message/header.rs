@@ -17,7 +17,7 @@ impl Default for HeaderRaw {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct Header {
     ver_type_tkl: u8,   
     pub code: MessageClass,
