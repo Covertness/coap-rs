@@ -14,7 +14,7 @@ enum BlockTransferProgress {
 }
 
 pub fn send(path: &str, payload: Vec<u8>, client: &CoAPClient) -> Result<CoAPResponse, Error> {
-    let mut send_progress = BlockTransferProgress::Progress(0, 0, BlockSize::S1024, rand::thread_rng().gen());
+    let mut send_progress = BlockTransferProgress::Progress(0, 0, client.get_config().get_block_size(), rand::thread_rng().gen());
 
     loop {
         send_progress = send_next_block(&path, &payload, client, send_progress)?;
@@ -55,6 +55,7 @@ fn send_next_block(
     }
 
     client.send(&request)?;
+    client.set_receive_timeout(Some(client.get_config().get_timeout())).expect("Set timeout to zero");
 
     match client.receive() {
         Ok(response) => match response.get_status() {

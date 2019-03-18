@@ -42,9 +42,17 @@ impl Configuration {
         self
     }
 
+    pub fn get_block_size(&self) -> BlockSize {
+        self.block_size
+    }
+
     pub fn set_timeout(&mut self, timeout: Duration) -> &Self {
         self.timeout = timeout;
         self
+    }
+
+    pub fn get_timeout(&self) -> Duration {
+        self.timeout
     }
 }
 
