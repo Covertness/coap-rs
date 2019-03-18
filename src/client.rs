@@ -125,6 +125,7 @@ impl CoAPClient {
             let mut packet = CoAPRequest::new();
             packet.set_path(path);
             packet.set_method(Method::Put);
+            packet.set_payload(payload);
 
             self.send(&packet)?;
             self.set_receive_timeout(Some(self.configuration.timeout)).expect(format!("Failed to set timeout: {:?}", self.configuration.timeout).as_str());
