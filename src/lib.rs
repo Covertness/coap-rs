@@ -78,15 +78,17 @@ extern crate quickcheck;
 pub use self::client::CoAPClient;
 pub use self::message::header::MessageType;
 pub use self::message::IsMessage;
-pub use self::message::packet::CoAPOption;
+pub use self::message::options::CoAPOption;
 pub use self::message::request::CoAPRequest;
 pub use self::message::request::Method;
 pub use self::message::response::CoAPResponse;
 pub use self::message::response::Status;
 pub use self::server::CoAPServer;
+pub use block_transfer::send;
 pub mod message;
 pub mod client;
 pub mod server;
+pub mod block_transfer;
 mod observer;
 
 
