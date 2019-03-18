@@ -130,10 +130,7 @@ impl CoAPClient {
             self.send(&packet)?;
             self.set_receive_timeout(Some(self.configuration.timeout)).expect(format!("Failed to set timeout: {:?}", self.configuration.timeout).as_str());
 
-            match self.receive() {
-                Ok(receive_packet) => Ok(receive_packet),
-                Err(e) => Err(e),
-            }
+            self.receive()
         }
     }
 

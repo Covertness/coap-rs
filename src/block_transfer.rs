@@ -4,16 +4,17 @@ use super::message::request::{CoAPRequest, Method};
 use super::message::response::{CoAPResponse, Status};
 use super::message::IsMessage;
 use std::io::{Error};
-use url::Url;
+use rand::Rng;
+
 
 #[derive(PartialEq)]
 enum BlockTransferProgress {
-    Progress(u32, usize, BlockSize),
+    Progress(u32, usize, BlockSize, u16),
     Finished(CoAPResponse),
 }
 
 pub fn send(path: &str, payload: Vec<u8>, client: &CoAPClient) -> Result<CoAPResponse, Error> {
-    let mut send_progress = BlockTransferProgress::Progress(0, 0, BlockSize::S1024);
+    let mut send_progress = BlockTransferProgress::Progress(0, 0, BlockSize::S1024, rand::thread_rng().gen());
 
     loop {
         send_progress = send_next_block(&path, &payload, client, send_progress)?;
@@ -32,8 +33,10 @@ fn send_next_block(
     let mut request = CoAPRequest::new();
     request.set_method(Method::Put);
     request.set_path(path);
+        
     match send_progress {
-        BlockTransferProgress::Progress(block_nr, bytes_sent, negotiated_block_size) => {
+        BlockTransferProgress::Progress(block_nr, bytes_sent, negotiated_block_size, message_id) => {
+            request.set_message_id(message_id);
             let byte_index_of_block_end =
                 std::cmp::min(bytes_sent + negotiated_block_size, payload.len());
             request.set_payload(payload[bytes_sent..byte_index_of_block_end].to_vec());
@@ -56,11 +59,12 @@ fn send_next_block(
     match client.receive() {
         Ok(response) => match response.get_status() {
             Status::Continue => match send_progress {
-                BlockTransferProgress::Progress(block_nr, bytes_sent, block_size) => {
+                BlockTransferProgress::Progress(block_nr, bytes_sent, block_size, message_id) => {
                     Ok(BlockTransferProgress::Progress(
                         block_nr + 1,
                         bytes_sent + block_size,
                         block_size,
+                        message_id + 1,
                     ))
                 }
                 BlockTransferProgress::Finished(_) => Ok(send_progress),
