@@ -123,13 +123,10 @@ impl Packet {
 
     pub fn add_option(&mut self, tp: CoAPOption, value: Vec<u8>) {
         let num = Self::get_option_number(tp);
-        match self.options.get_mut(&num) {
-            Some(list) => {
-                list.push_back(value);
-                return;
-            }
-            None => (),
-        };
+        if let Some(list) = self.options.get_mut(&num) {
+            list.push_back(value);
+            return;
+        }
 
         let mut list = LinkedList::new();
         list.push_back(value);
