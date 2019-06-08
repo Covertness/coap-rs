@@ -8,27 +8,31 @@ tokens fail to parse.</p>
 <p>Refer to the <a href="parse/index.html"><code>parse</code> module</a> documentation for more details about parsing
 in Syn.</p>
 <h1 id="intended-usage" class="section-header"><a href="#intended-usage">Intended usage</a></h1>
-<div class='information'><div class='tooltip edition'>ⓘ<span class='tooltiptext'>This code runs with edition 2018</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered edition ">
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">proc_macro</span>;
+<pre><code class="language-edition2018">extern crate proc_macro;
 
-<span class="kw">use</span> <span class="ident">proc_macro</span>::<span class="ident">TokenStream</span>;
-<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">parse_macro_input</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">syn</span>::<span class="ident">parse</span>::{<span class="ident">Parse</span>, <span class="ident">ParseStream</span>};
+use proc_macro::TokenStream;
+use syn::{parse_macro_input, Result};
+use syn::parse::{Parse, ParseStream};
 
-<span class="kw">struct</span> <span class="ident">MyMacroInput</span> {
-    <span class="comment">/* ... */</span>
+struct MyMacroInput {
+    /* ... */
 }
 
-<span class="kw">impl</span> <span class="ident">Parse</span> <span class="kw">for</span> <span class="ident">MyMacroInput</span> {
-    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">ParseStream</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
-        <span class="comment">/* ... */</span>
+impl Parse for MyMacroInput {
+    fn parse(input: ParseStream) -&gt; Result&lt;Self&gt; {
+        /* ... */
+#       Ok(MyMacroInput {})
     }
 }
 
-<span class="attribute">#[<span class="ident">proc_macro</span>]</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">my_macro</span>(<span class="ident">tokens</span>: <span class="ident">TokenStream</span>) <span class="op">-&gt;</span> <span class="ident">TokenStream</span> {
-    <span class="kw">let</span> <span class="ident">input</span> <span class="op">=</span> <span class="macro">parse_macro_input</span><span class="macro">!</span>(<span class="ident">tokens</span> <span class="kw">as</span> <span class="ident">MyMacroInput</span>);
+# const IGNORE: &amp;str = stringify! {
+#[proc_macro]
+# };
+pub fn my_macro(tokens: TokenStream) -&gt; TokenStream {
+    let input = parse_macro_input!(tokens as MyMacroInput);
 
-    <span class="comment">/* ... */</span>
-}</pre></div>
+    /* ... */
+#   &quot;&quot;.parse().unwrap()
+}
+</code></pre>
 </div></section><section id="search" class="content hidden"></section><section class="footer"></section><aside id="help" class="hidden"><div><h1 class="hidden">Help</h1><div class="shortcuts"><h2>Keyboard Shortcuts</h2><dl><dt><kbd>?</kbd></dt><dd>Show this help dialog</dd><dt><kbd>S</kbd></dt><dd>Focus the search field</dd><dt><kbd>↑</kbd></dt><dd>Move up in search results</dd><dt><kbd>↓</kbd></dt><dd>Move down in search results</dd><dt><kbd>↹</kbd></dt><dd>Switch tab</dd><dt><kbd>&#9166;</kbd></dt><dd>Go to active search result</dd><dt><kbd>+</kbd></dt><dd>Expand all sections</dd><dt><kbd>-</kbd></dt><dd>Collapse all sections</dd></dl></div><div class="infos"><h2>Search Tricks</h2><p>Prefix searches with a type followed by a colon (e.g., <code>fn:</code>) to restrict the search to a given type.</p><p>Accepted types are: <code>fn</code>, <code>mod</code>, <code>struct</code>, <code>enum</code>, <code>trait</code>, <code>type</code>, <code>macro</code>, and <code>const</code>.</p><p>Search functions by type signature (e.g., <code>vec -> usize</code> or <code>* -> vec</code>)</p><p>Search multiple things at once by splitting your query with comma (e.g., <code>str,u8</code> or <code>String,struct:Vec,test</code>)</p></div></div></aside><script>window.rootPath = "../";window.currentCrate = "syn";</script><script src="../aliases.js"></script><script src="../main.js"></script><script defer src="../search-index.js"></script></body></html>
