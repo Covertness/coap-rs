@@ -176,7 +176,7 @@ impl Packet {
 
     /// Decodes a byte slice and construct the equivalent Packet.
     pub fn from_bytes(buf: &[u8]) -> Result<Packet, ParseError> {
-        
+
         let header_result: bincode::Result<header::HeaderRaw> = bincode::config().big_endian().deserialize(buf);
         match header_result {
             Ok(raw_header) => {
