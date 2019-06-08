@@ -21,7 +21,6 @@ num-traits = "0.2.6"
 rand = "0.3"
 log = "0.4.6"
 threadpool = "1.7.1"
-enum_primitive = "0.1.1"
 regex = "1.1.0"
 
 [dev-dependencies]
