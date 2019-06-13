@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `/home/travis/.cargo/registry/src/github.com-1ecc6299db9ec823/num-rational-0.2.1/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../num_rational/index.html'><img src='../../rust-logo.png' alt='logo' width='100'></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">   1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source to the Rust file `/home/travis/.cargo/registry/src/github.com-1ecc6299db9ec823/num-rational-0.2.2/src/lib.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>lib.rs.html -- source</title><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../dark.css"><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script src="../../storage.js"></script><noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="shortcut icon" href="../../favicon.ico"><style type="text/css">#crate-search{background-image:url("../../down-arrow.svg");}</style></head><body class="rustdoc source"><!--[if lte IE 8]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu">&#9776;</div><a href='../../num_rational/index.html'><div class='logo-container'><img src='../../rust-logo.png' alt='logo'></div></a></nav><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!"><img src="../../brush.svg" width="18" alt="Pick another theme!"></button><div id="theme-choices"></div></div><script src="../../theme.js"></script><nav class="sub"><form class="search-form js-only"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><a id="settings-menu" href="../../settings.html"><img src="../../wheel.svg" width="18" alt="Change settings"></a></div></form></nav><section id="main" class="content"><pre class="line-numbers"><span id="1">   1</span>
 <span id="2">   2</span>
 <span id="3">   3</span>
 <span id="4">   4</span>
@@ -1925,6 +1925,153 @@
 <span id="1925">1925</span>
 <span id="1926">1926</span>
 <span id="1927">1927</span>
+<span id="1928">1928</span>
+<span id="1929">1929</span>
+<span id="1930">1930</span>
+<span id="1931">1931</span>
+<span id="1932">1932</span>
+<span id="1933">1933</span>
+<span id="1934">1934</span>
+<span id="1935">1935</span>
+<span id="1936">1936</span>
+<span id="1937">1937</span>
+<span id="1938">1938</span>
+<span id="1939">1939</span>
+<span id="1940">1940</span>
+<span id="1941">1941</span>
+<span id="1942">1942</span>
+<span id="1943">1943</span>
+<span id="1944">1944</span>
+<span id="1945">1945</span>
+<span id="1946">1946</span>
+<span id="1947">1947</span>
+<span id="1948">1948</span>
+<span id="1949">1949</span>
+<span id="1950">1950</span>
+<span id="1951">1951</span>
+<span id="1952">1952</span>
+<span id="1953">1953</span>
+<span id="1954">1954</span>
+<span id="1955">1955</span>
+<span id="1956">1956</span>
+<span id="1957">1957</span>
+<span id="1958">1958</span>
+<span id="1959">1959</span>
+<span id="1960">1960</span>
+<span id="1961">1961</span>
+<span id="1962">1962</span>
+<span id="1963">1963</span>
+<span id="1964">1964</span>
+<span id="1965">1965</span>
+<span id="1966">1966</span>
+<span id="1967">1967</span>
+<span id="1968">1968</span>
+<span id="1969">1969</span>
+<span id="1970">1970</span>
+<span id="1971">1971</span>
+<span id="1972">1972</span>
+<span id="1973">1973</span>
+<span id="1974">1974</span>
+<span id="1975">1975</span>
+<span id="1976">1976</span>
+<span id="1977">1977</span>
+<span id="1978">1978</span>
+<span id="1979">1979</span>
+<span id="1980">1980</span>
+<span id="1981">1981</span>
+<span id="1982">1982</span>
+<span id="1983">1983</span>
+<span id="1984">1984</span>
+<span id="1985">1985</span>
+<span id="1986">1986</span>
+<span id="1987">1987</span>
+<span id="1988">1988</span>
+<span id="1989">1989</span>
+<span id="1990">1990</span>
+<span id="1991">1991</span>
+<span id="1992">1992</span>
+<span id="1993">1993</span>
+<span id="1994">1994</span>
+<span id="1995">1995</span>
+<span id="1996">1996</span>
+<span id="1997">1997</span>
+<span id="1998">1998</span>
+<span id="1999">1999</span>
+<span id="2000">2000</span>
+<span id="2001">2001</span>
+<span id="2002">2002</span>
+<span id="2003">2003</span>
+<span id="2004">2004</span>
+<span id="2005">2005</span>
+<span id="2006">2006</span>
+<span id="2007">2007</span>
+<span id="2008">2008</span>
+<span id="2009">2009</span>
+<span id="2010">2010</span>
+<span id="2011">2011</span>
+<span id="2012">2012</span>
+<span id="2013">2013</span>
+<span id="2014">2014</span>
+<span id="2015">2015</span>
+<span id="2016">2016</span>
+<span id="2017">2017</span>
+<span id="2018">2018</span>
+<span id="2019">2019</span>
+<span id="2020">2020</span>
+<span id="2021">2021</span>
+<span id="2022">2022</span>
+<span id="2023">2023</span>
+<span id="2024">2024</span>
+<span id="2025">2025</span>
+<span id="2026">2026</span>
+<span id="2027">2027</span>
+<span id="2028">2028</span>
+<span id="2029">2029</span>
+<span id="2030">2030</span>
+<span id="2031">2031</span>
+<span id="2032">2032</span>
+<span id="2033">2033</span>
+<span id="2034">2034</span>
+<span id="2035">2035</span>
+<span id="2036">2036</span>
+<span id="2037">2037</span>
+<span id="2038">2038</span>
+<span id="2039">2039</span>
+<span id="2040">2040</span>
+<span id="2041">2041</span>
+<span id="2042">2042</span>
+<span id="2043">2043</span>
+<span id="2044">2044</span>
+<span id="2045">2045</span>
+<span id="2046">2046</span>
+<span id="2047">2047</span>
+<span id="2048">2048</span>
+<span id="2049">2049</span>
+<span id="2050">2050</span>
+<span id="2051">2051</span>
+<span id="2052">2052</span>
+<span id="2053">2053</span>
+<span id="2054">2054</span>
+<span id="2055">2055</span>
+<span id="2056">2056</span>
+<span id="2057">2057</span>
+<span id="2058">2058</span>
+<span id="2059">2059</span>
+<span id="2060">2060</span>
+<span id="2061">2061</span>
+<span id="2062">2062</span>
+<span id="2063">2063</span>
+<span id="2064">2064</span>
+<span id="2065">2065</span>
+<span id="2066">2066</span>
+<span id="2067">2067</span>
+<span id="2068">2068</span>
+<span id="2069">2069</span>
+<span id="2070">2070</span>
+<span id="2071">2071</span>
+<span id="2072">2072</span>
+<span id="2073">2073</span>
+<span id="2074">2074</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright 2013-2014 The Rust Project Developers. See the COPYRIGHT</span>
 <span class="comment">// file at the top-level directory of this distribution and at</span>
@@ -1943,36 +2090,37 @@
 <span class="doccomment">//! The `num-rational` crate is tested for rustc 1.15 and greater.</span>
 
 <span class="attribute">#![<span class="ident">doc</span>(<span class="ident">html_root_url</span> <span class="op">=</span> <span class="string">&quot;https://docs.rs/num-rational/0.2&quot;</span>)]</span>
-
 <span class="attribute">#![<span class="ident">no_std</span>]</span>
 
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>)]</span>
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;bigint&quot;</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">num_bigint</span> <span class="kw">as</span> <span class="ident">bigint</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>)]</span>
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">serde</span>;
 
-<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">num_traits</span> <span class="kw">as</span> <span class="ident">traits</span>;
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">num_integer</span> <span class="kw">as</span> <span class="ident">integer</span>;
+<span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">num_traits</span> <span class="kw">as</span> <span class="ident">traits</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">test</span>, <span class="ident">macro_use</span>)]</span>
 <span class="kw">extern</span> <span class="kw">crate</span> <span class="ident">std</span>;
 
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">cmp</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span>;
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">fmt</span>;
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">hash</span>::{<span class="ident">Hash</span>, <span class="ident">Hasher</span>};
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">ops</span>::{<span class="ident">Add</span>, <span class="ident">Div</span>, <span class="ident">Mul</span>, <span class="ident">Neg</span>, <span class="ident">Rem</span>, <span class="ident">Sub</span>};
 <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">error</span>::<span class="ident">Error</span>;
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;bigint&quot;</span>)]</span>
 <span class="kw">use</span> <span class="ident">bigint</span>::{<span class="ident">BigInt</span>, <span class="ident">BigUint</span>, <span class="ident">Sign</span>};
 
 <span class="kw">use</span> <span class="ident">integer</span>::<span class="ident">Integer</span>;
 <span class="kw">use</span> <span class="ident">traits</span>::<span class="ident">float</span>::<span class="ident">FloatCore</span>;
-<span class="kw">use</span> <span class="ident">traits</span>::{<span class="ident">Bounded</span>, <span class="ident">CheckedAdd</span>, <span class="ident">CheckedDiv</span>, <span class="ident">CheckedMul</span>, <span class="ident">CheckedSub</span>, <span class="ident">FromPrimitive</span>, <span class="ident">Inv</span>, <span class="ident">Num</span>,
-             <span class="ident">NumCast</span>, <span class="ident">One</span>, <span class="ident">Pow</span>, <span class="ident">Signed</span>, <span class="ident">Zero</span>};
+<span class="kw">use</span> <span class="ident">traits</span>::{
+    <span class="ident">Bounded</span>, <span class="ident">CheckedAdd</span>, <span class="ident">CheckedDiv</span>, <span class="ident">CheckedMul</span>, <span class="ident">CheckedSub</span>, <span class="ident">FromPrimitive</span>, <span class="ident">Inv</span>, <span class="ident">Num</span>, <span class="ident">NumCast</span>, <span class="ident">One</span>,
+    <span class="ident">Pow</span>, <span class="ident">Signed</span>, <span class="ident">Zero</span>,
+};
 
 <span class="doccomment">/// Represents the ratio between two numbers.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
@@ -2084,8 +2232,10 @@
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">T</span>::<span class="ident">zero</span>()) {
             <span class="ident">cmp</span>::<span class="ident">Ordering</span>::<span class="ident">Equal</span> <span class="op">=&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;numerator == 0&quot;</span>),
             <span class="ident">cmp</span>::<span class="ident">Ordering</span>::<span class="ident">Greater</span> <span class="op">=&gt;</span> <span class="ident">Ratio</span>::<span class="ident">new_raw</span>(<span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>()),
-            <span class="ident">cmp</span>::<span class="ident">Ordering</span>::<span class="ident">Less</span> <span class="op">=&gt;</span> <span class="ident">Ratio</span>::<span class="ident">new_raw</span>(<span class="ident">T</span>::<span class="ident">zero</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>(),
-                                                  <span class="ident">T</span>::<span class="ident">zero</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>())
+            <span class="ident">cmp</span>::<span class="ident">Ordering</span>::<span class="ident">Less</span> <span class="op">=&gt;</span> <span class="ident">Ratio</span>::<span class="ident">new_raw</span>(
+                <span class="ident">T</span>::<span class="ident">zero</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>(),
+                <span class="ident">T</span>::<span class="ident">zero</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>(),
+            ),
         }
     }
 
@@ -2094,8 +2244,9 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">floor</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw-2">*</span><span class="self">self</span> <span class="op">&lt;</span> <span class="ident">Zero</span>::<span class="ident">zero</span>() {
             <span class="kw">let</span> <span class="ident">one</span>: <span class="ident">T</span> <span class="op">=</span> <span class="ident">One</span>::<span class="ident">one</span>();
-            <span class="ident">Ratio</span>::<span class="ident">from_integer</span>((<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">one</span>) <span class="op">/</span>
-                                <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>())
+            <span class="ident">Ratio</span>::<span class="ident">from_integer</span>(
+                (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="ident">one</span>) <span class="op">/</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>(),
+            )
         } <span class="kw">else</span> {
             <span class="ident">Ratio</span>::<span class="ident">from_integer</span>(<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>() <span class="op">/</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>())
         }
@@ -2108,8 +2259,9 @@
             <span class="ident">Ratio</span>::<span class="ident">from_integer</span>(<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>() <span class="op">/</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>())
         } <span class="kw">else</span> {
             <span class="kw">let</span> <span class="ident">one</span>: <span class="ident">T</span> <span class="op">=</span> <span class="ident">One</span>::<span class="ident">one</span>();
-            <span class="ident">Ratio</span>::<span class="ident">from_integer</span>((<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">one</span>) <span class="op">/</span>
-                                <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>())
+            <span class="ident">Ratio</span>::<span class="ident">from_integer</span>(
+                (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">clone</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">one</span>) <span class="op">/</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>(),
+            )
         }
     }
 
@@ -2171,10 +2323,10 @@
 }
 
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">pow_impl</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span>: <span class="ident">ty</span>) <span class="op">=&gt;</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span>:<span class="ident">ty</span>) <span class="op">=&gt;</span> {
         <span class="macro">pow_impl</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span>);
     };
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span>: <span class="ident">ty</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>: <span class="ident">ty</span>) <span class="op">=&gt;</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span>:<span class="ident">ty</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>:<span class="ident">ty</span>) <span class="op">=&gt;</span> {
         <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Pow</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="ident">Pow</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
             <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
             <span class="attribute">#[<span class="ident">inline</span>]</span>
@@ -2183,17 +2335,12 @@
                     <span class="ident">cmp</span>::<span class="ident">Ordering</span>::<span class="ident">Equal</span> <span class="op">=&gt;</span> <span class="ident">One</span>::<span class="ident">one</span>(),
                     <span class="ident">cmp</span>::<span class="ident">Ordering</span>::<span class="ident">Less</span> <span class="op">=&gt;</span> {
                         <span class="kw">let</span> <span class="ident">expon</span> <span class="op">=</span> <span class="ident">expon</span>.<span class="ident">wrapping_abs</span>() <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>;
-                        <span class="ident">Ratio</span>::<span class="ident">new_raw</span>(
-                            <span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>.<span class="ident">denom</span>, <span class="ident">expon</span>),
-                            <span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>.<span class="ident">numer</span>, <span class="ident">expon</span>),
-                        )
-                    },
-                    <span class="ident">cmp</span>::<span class="ident">Ordering</span>::<span class="ident">Greater</span> <span class="op">=&gt;</span> {
-                        <span class="ident">Ratio</span>::<span class="ident">new_raw</span>(
-                            <span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>.<span class="ident">numer</span>, <span class="ident">expon</span> <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>),
-                            <span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>.<span class="ident">denom</span>, <span class="ident">expon</span> <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>),
-                        )
+                        <span class="ident">Ratio</span>::<span class="ident">new_raw</span>(<span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>.<span class="ident">denom</span>, <span class="ident">expon</span>), <span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>.<span class="ident">numer</span>, <span class="ident">expon</span>))
                     }
+                    <span class="ident">cmp</span>::<span class="ident">Ordering</span>::<span class="ident">Greater</span> <span class="op">=&gt;</span> <span class="ident">Ratio</span>::<span class="ident">new_raw</span>(
+                        <span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>.<span class="ident">numer</span>, <span class="ident">expon</span> <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>),
+                        <span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>.<span class="ident">denom</span>, <span class="ident">expon</span> <span class="kw">as</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>),
+                    ),
                 }
             }
         }
@@ -2211,7 +2358,9 @@
                 <span class="ident">Pow</span>::<span class="ident">pow</span>(<span class="self">self</span>, <span class="kw-2">*</span><span class="ident">expon</span>)
             }
         }
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Pow</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="ident">Pow</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="lifetime">&#39;b</span>, <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Pow</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">unsigned</span>, <span class="ident">Output</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="ident">Pow</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span><span class="op">&gt;</span>
+            <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;b</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+        {
             <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
             <span class="attribute">#[<span class="ident">inline</span>]</span>
             <span class="kw">fn</span> <span class="ident">pow</span>(<span class="self">self</span>, <span class="ident">expon</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
@@ -2254,11 +2403,7 @@
             <span class="kw">return</span> <span class="prelude-val">None</span>;
         }
         <span class="kw">let</span> (<span class="ident">mantissa</span>, <span class="ident">exponent</span>, <span class="ident">sign</span>) <span class="op">=</span> <span class="ident">f</span>.<span class="ident">integer_decode</span>();
-        <span class="kw">let</span> <span class="ident">bigint_sign</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">sign</span> <span class="op">==</span> <span class="number">1</span> {
-            <span class="ident">Sign</span>::<span class="ident">Plus</span>
-        } <span class="kw">else</span> {
-            <span class="ident">Sign</span>::<span class="ident">Minus</span>
-        };
+        <span class="kw">let</span> <span class="ident">bigint_sign</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">sign</span> <span class="op">==</span> <span class="number">1</span> { <span class="ident">Sign</span>::<span class="ident">Plus</span> } <span class="kw">else</span> { <span class="ident">Sign</span>::<span class="ident">Minus</span> };
         <span class="kw">if</span> <span class="ident">exponent</span> <span class="op">&lt;</span> <span class="number">0</span> {
             <span class="kw">let</span> <span class="ident">one</span>: <span class="ident">BigInt</span> <span class="op">=</span> <span class="ident">One</span>::<span class="ident">one</span>();
             <span class="kw">let</span> <span class="ident">denom</span>: <span class="ident">BigInt</span> <span class="op">=</span> <span class="ident">one</span> <span class="op">&lt;&lt;</span> ((<span class="op">-</span><span class="ident">exponent</span>) <span class="kw">as</span> <span class="ident">usize</span>);
@@ -2267,20 +2412,29 @@
         } <span class="kw">else</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">numer</span>: <span class="ident">BigUint</span> <span class="op">=</span> <span class="ident">FromPrimitive</span>::<span class="ident">from_u64</span>(<span class="ident">mantissa</span>).<span class="ident">unwrap</span>();
             <span class="ident">numer</span> <span class="op">=</span> <span class="ident">numer</span> <span class="op">&lt;&lt;</span> (<span class="ident">exponent</span> <span class="kw">as</span> <span class="ident">usize</span>);
-            <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">from_integer</span>(<span class="ident">BigInt</span>::<span class="ident">from_biguint</span>(<span class="ident">bigint_sign</span>, <span class="ident">numer</span>)))
+            <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">from_integer</span>(<span class="ident">BigInt</span>::<span class="ident">from_biguint</span>(
+                <span class="ident">bigint_sign</span>,
+                <span class="ident">numer</span>,
+            )))
         }
     }
 }
 
 <span class="comment">// From integer</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
+{
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">x</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="ident">Ratio</span>::<span class="ident">from_integer</span>(<span class="ident">x</span>)
     }
 }
 
 <span class="comment">// From pair (through the `new` constructor)</span>
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">T</span>, <span class="ident">T</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> {
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">From</span><span class="op">&lt;</span>(<span class="ident">T</span>, <span class="ident">T</span>)<span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
+{
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">pair</span>: (<span class="ident">T</span>, <span class="ident">T</span>)) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="ident">pair</span>.<span class="number">0</span>, <span class="ident">pair</span>.<span class="number">1</span>)
     }
@@ -2376,15 +2530,15 @@
 }
 
 <span class="kw">mod</span> <span class="ident">iter_sum_product</span> {
-    <span class="kw">use</span> ::<span class="ident">core</span>::<span class="ident">iter</span>::{<span class="ident">Sum</span>, <span class="ident">Product</span>};
-    <span class="kw">use</span> <span class="ident">Ratio</span>;
+    <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">iter</span>::{<span class="ident">Product</span>, <span class="ident">Sum</span>};
     <span class="kw">use</span> <span class="ident">integer</span>::<span class="ident">Integer</span>;
-    <span class="kw">use</span> <span class="ident">traits</span>::{<span class="ident">Zero</span>, <span class="ident">One</span>};
+    <span class="kw">use</span> <span class="ident">traits</span>::{<span class="ident">One</span>, <span class="ident">Zero</span>};
+    <span class="kw">use</span> <span class="ident">Ratio</span>;
 
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Sum</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">sum</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-&gt;</span> <span class="self">Self</span>
         <span class="kw">where</span>
-            <span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>
+            <span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>,
         {
             <span class="ident">iter</span>.<span class="ident">fold</span>(<span class="self">Self</span>::<span class="ident">zero</span>(), <span class="op">|</span><span class="ident">sum</span>, <span class="ident">num</span><span class="op">|</span> <span class="ident">sum</span> <span class="op">+</span> <span class="ident">num</span>)
         }
@@ -2393,7 +2547,7 @@
     <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Sum</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">sum</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-&gt;</span> <span class="self">Self</span>
         <span class="kw">where</span>
-            <span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>
+            <span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>,
         {
             <span class="ident">iter</span>.<span class="ident">fold</span>(<span class="self">Self</span>::<span class="ident">zero</span>(), <span class="op">|</span><span class="ident">sum</span>, <span class="ident">num</span><span class="op">|</span> <span class="ident">sum</span> <span class="op">+</span> <span class="ident">num</span>)
         }
@@ -2402,7 +2556,7 @@
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Product</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">product</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-&gt;</span> <span class="self">Self</span>
         <span class="kw">where</span>
-            <span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>
+            <span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>,
         {
             <span class="ident">iter</span>.<span class="ident">fold</span>(<span class="self">Self</span>::<span class="ident">one</span>(), <span class="op">|</span><span class="ident">prod</span>, <span class="ident">num</span><span class="op">|</span> <span class="ident">prod</span> <span class="op">*</span> <span class="ident">num</span>)
         }
@@ -2411,7 +2565,7 @@
     <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span>: <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Clone</span><span class="op">&gt;</span> <span class="ident">Product</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">product</span><span class="op">&lt;</span><span class="ident">I</span><span class="op">&gt;</span>(<span class="ident">iter</span>: <span class="ident">I</span>) <span class="op">-&gt;</span> <span class="self">Self</span>
         <span class="kw">where</span>
-            <span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>
+            <span class="ident">I</span>: <span class="ident">Iterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>,
         {
             <span class="ident">iter</span>.<span class="ident">fold</span>(<span class="self">Self</span>::<span class="ident">one</span>(), <span class="op">|</span><span class="ident">prod</span>, <span class="ident">num</span><span class="op">|</span> <span class="ident">prod</span> <span class="op">*</span> <span class="ident">num</span>)
         }
@@ -2419,11 +2573,11 @@
 }
 
 <span class="kw">mod</span> <span class="ident">opassign</span> {
-    <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">ops</span>::{<span class="ident">AddAssign</span>, <span class="ident">SubAssign</span>, <span class="ident">MulAssign</span>, <span class="ident">DivAssign</span>, <span class="ident">RemAssign</span>};
+    <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">ops</span>::{<span class="ident">AddAssign</span>, <span class="ident">DivAssign</span>, <span class="ident">MulAssign</span>, <span class="ident">RemAssign</span>, <span class="ident">SubAssign</span>};
 
-    <span class="kw">use</span> <span class="ident">Ratio</span>;
     <span class="kw">use</span> <span class="ident">integer</span>::<span class="ident">Integer</span>;
     <span class="kw">use</span> <span class="ident">traits</span>::<span class="ident">NumAssign</span>;
+    <span class="kw">use</span> <span class="ident">Ratio</span>;
 
     <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">NumAssign</span><span class="op">&gt;</span> <span class="ident">AddAssign</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
         <span class="kw">fn</span> <span class="ident">add_assign</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">other</span>: <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) {
@@ -2520,7 +2674,7 @@
                     <span class="self">self</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="ident">other</span>.<span class="ident">clone</span>())
                 }
             }
-        }
+        };
     }
 
     <span class="macro">forward_op_assign</span><span class="macro">!</span>(<span class="kw">impl</span> <span class="ident">AddAssign</span>, <span class="ident">add_assign</span>);
@@ -2548,13 +2702,14 @@
                 <span class="self">self</span>.<span class="ident">clone</span>().<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="ident">other</span>.<span class="ident">clone</span>())
             }
         }
-    }
+    };
 }
 
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">forward_ref_val_binop</span> {
     (<span class="kw">impl</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>:<span class="ident">ident</span>) <span class="op">=&gt;</span> {
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">where</span>
-            <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+        <span class="kw">where</span>
+            <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
         {
             <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
@@ -2563,8 +2718,9 @@
                 <span class="self">self</span>.<span class="ident">clone</span>().<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="ident">other</span>)
             }
         }
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">where</span>
-            <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+        <span class="kw">where</span>
+            <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
         {
             <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
@@ -2573,13 +2729,14 @@
                 <span class="self">self</span>.<span class="ident">clone</span>().<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="ident">other</span>)
             }
         }
-    }
+    };
 }
 
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">forward_val_ref_binop</span> {
     (<span class="kw">impl</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span>:<span class="ident">ident</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>:<span class="ident">ident</span>) <span class="op">=&gt;</span> {
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">where</span>
-            <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+        <span class="kw">where</span>
+            <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
         {
             <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
@@ -2588,8 +2745,9 @@
                 <span class="self">self</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="ident">other</span>.<span class="ident">clone</span>())
             }
         }
-        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">where</span>
-            <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+        <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">imp</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
+        <span class="kw">where</span>
+            <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
         {
             <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
@@ -2598,7 +2756,7 @@
                 <span class="self">self</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="ident">other</span>.<span class="ident">clone</span>())
             }
         }
-    }
+    };
 }
 
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">forward_all_binop</span> {
@@ -2613,50 +2771,50 @@
 <span class="macro">forward_all_binop</span><span class="macro">!</span>(<span class="kw">impl</span> <span class="ident">Mul</span>, <span class="ident">mul</span>);
 <span class="comment">// a/b * c/d = (a*c)/(b*d)</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">numer</span>,
-                   <span class="self">self</span>.<span class="ident">denom</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">denom</span>)
+        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">numer</span>, <span class="self">self</span>.<span class="ident">denom</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">denom</span>)
     }
 }
 <span class="comment">// a/b * c/1 = (a*c) / (b*1) = (a*c) / b</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Mul</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">mul</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span> <span class="op">*</span> <span class="ident">rhs</span>,
-                   <span class="self">self</span>.<span class="ident">denom</span>)
+        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span> <span class="op">*</span> <span class="ident">rhs</span>, <span class="self">self</span>.<span class="ident">denom</span>)
     }
 }
 
 <span class="macro">forward_all_binop</span><span class="macro">!</span>(<span class="kw">impl</span> <span class="ident">Div</span>, <span class="ident">div</span>);
 <span class="comment">// (a/b) / (c/d) = (a*d) / (b*c)</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Div</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">div</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">denom</span>,
-                   <span class="self">self</span>.<span class="ident">denom</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">numer</span>)
+        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">denom</span>, <span class="self">self</span>.<span class="ident">denom</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">numer</span>)
     }
 }
 <span class="comment">// (a/b) / (c/1) = (a*1) / (b*c) = a / (b*c)</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Div</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">div</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span>,
-                   <span class="self">self</span>.<span class="ident">denom</span> <span class="op">*</span> <span class="ident">rhs</span>)
+        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span>, <span class="self">self</span>.<span class="ident">denom</span> <span class="op">*</span> <span class="ident">rhs</span>)
     }
 }
 
@@ -2668,8 +2826,10 @@
             <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
             <span class="attribute">#[<span class="ident">inline</span>]</span>
             <span class="kw">fn</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-                <span class="ident">Ratio</span>::<span class="ident">new</span>((<span class="self">self</span>.<span class="ident">numer</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">denom</span>.<span class="ident">clone</span>()).<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">numer</span>),
-                           <span class="self">self</span>.<span class="ident">denom</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">denom</span>)
+                <span class="ident">Ratio</span>::<span class="ident">new</span>(
+                    (<span class="self">self</span>.<span class="ident">numer</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">denom</span>.<span class="ident">clone</span>()).<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">numer</span>),
+                    <span class="self">self</span>.<span class="ident">denom</span> <span class="op">*</span> <span class="ident">rhs</span>.<span class="ident">denom</span>,
+                )
             }
         }
         <span class="comment">// Abstracts the a/b `op` c/1 = (a*1 `op` b*c) / (b*1) = (a `op` b*c) / b pattern</span>
@@ -2677,11 +2837,10 @@
             <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
             <span class="attribute">#[<span class="ident">inline</span>]</span>
             <span class="kw">fn</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="self">self</span>, <span class="ident">rhs</span>: <span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-                <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">rhs</span>),
-                           <span class="self">self</span>.<span class="ident">denom</span>)
+                <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">numer</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">rhs</span>), <span class="self">self</span>.<span class="ident">denom</span>)
             }
         }
-    }
+    };
 }
 
 <span class="macro">arith_impl</span><span class="macro">!</span>(<span class="kw">impl</span> <span class="ident">Add</span>, <span class="ident">add</span>);
@@ -2691,26 +2850,32 @@
 <span class="comment">// Like `std::try!` for Option&lt;T&gt;, unwrap the value or early-return None.</span>
 <span class="comment">// Since Rust 1.22 this can be replaced by the `?` operator.</span>
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">otry</span> {
-    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">expr</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> (<span class="kw">match</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">expr</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">val</span>) <span class="op">=&gt;</span> <span class="ident">val</span>,
-        <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
-    })
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">expr</span>:<span class="ident">expr</span>) <span class="op">=&gt;</span> {
+        <span class="kw">match</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">expr</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">val</span>) <span class="op">=&gt;</span> <span class="ident">val</span>,
+            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="kw">return</span> <span class="prelude-val">None</span>,
+        }
+    };
 }
 
 <span class="comment">// a/b * c/d = (a*c)/(b*d)</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">CheckedMul</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">CheckedMul</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">CheckedMul</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">checked_mul</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> {
-        <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="macro">otry</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">checked_mul</span>(<span class="kw-2">&amp;</span><span class="ident">rhs</span>.<span class="ident">numer</span>)),
-                        <span class="macro">otry</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">checked_mul</span>(<span class="kw-2">&amp;</span><span class="ident">rhs</span>.<span class="ident">denom</span>))))
+        <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(
+            <span class="macro">otry</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">checked_mul</span>(<span class="kw-2">&amp;</span><span class="ident">rhs</span>.<span class="ident">numer</span>)),
+            <span class="macro">otry</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">checked_mul</span>(<span class="kw-2">&amp;</span><span class="ident">rhs</span>.<span class="ident">denom</span>)),
+        ))
     }
 }
 
 <span class="comment">// (a/b) / (c/d) = (a*d)/(b*c)</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">CheckedDiv</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">CheckedMul</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">CheckedMul</span>,
 {
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">checked_div</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">rhs</span>: <span class="kw-2">&amp;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span> {
@@ -2735,7 +2900,7 @@
                 <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="macro">otry</span><span class="macro">!</span>(<span class="ident">ad</span>.<span class="macro-nonterminal">$</span><span class="macro-nonterminal">method</span>(<span class="kw-2">&amp;</span><span class="ident">bc</span>)), <span class="ident">bd</span>))
             }
         }
-    }
+    };
 }
 
 <span class="comment">// a/b + c/d = (a*d + b*c)/(b*d)</span>
@@ -2745,7 +2910,8 @@
 <span class="macro">checked_arith_impl</span><span class="macro">!</span>(<span class="kw">impl</span> <span class="ident">CheckedSub</span>, <span class="ident">checked_sub</span>);
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Neg</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Neg</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Neg</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
@@ -2756,7 +2922,8 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Neg</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Neg</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Neg</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">T</span><span class="op">&gt;</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
@@ -2767,7 +2934,8 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Inv</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
@@ -2778,7 +2946,8 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">Inv</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span>,
 {
     <span class="kw">type</span> <span class="ident">Output</span> <span class="op">=</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>;
 
@@ -2799,6 +2968,12 @@
     <span class="kw">fn</span> <span class="ident">is_zero</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_zero</span>()
     }
+
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
+    <span class="kw">fn</span> <span class="ident">set_zero</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">set_zero</span>();
+        <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">set_one</span>();
+    }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span><span class="op">&gt;</span> <span class="ident">One</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
@@ -2811,6 +2986,12 @@
     <span class="kw">fn</span> <span class="ident">is_one</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">numer</span> <span class="op">==</span> <span class="self">self</span>.<span class="ident">denom</span>
     }
+
+    <span class="attribute">#[<span class="ident">inline</span>]</span>
+    <span class="kw">fn</span> <span class="ident">set_one</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">set_one</span>();
+        <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">set_one</span>();
+    }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span><span class="op">&gt;</span> <span class="ident">Num</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
@@ -2819,18 +3000,24 @@
     <span class="doccomment">/// Parses `numer/denom` where the numbers are in base `radix`.</span>
     <span class="kw">fn</span> <span class="ident">from_str_radix</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">radix</span>: <span class="ident">u32</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">ParseRatioError</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">s</span>.<span class="ident">splitn</span>(<span class="number">2</span>, <span class="string">&#39;/&#39;</span>).<span class="ident">count</span>() <span class="op">==</span> <span class="number">2</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">parts</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">splitn</span>(<span class="number">2</span>, <span class="string">&#39;/&#39;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">ss</span><span class="op">|</span> <span class="ident">T</span>::<span class="ident">from_str_radix</span>(<span class="ident">ss</span>, <span class="ident">radix</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                <span class="ident">ParseRatioError</span> { <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span> }
-            }));
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">parts</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">splitn</span>(<span class="number">2</span>, <span class="string">&#39;/&#39;</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">ss</span><span class="op">|</span> {
+                <span class="ident">T</span>::<span class="ident">from_str_radix</span>(<span class="ident">ss</span>, <span class="ident">radix</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">ParseRatioError</span> {
+                    <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span>,
+                })
+            });
             <span class="kw">let</span> <span class="ident">numer</span>: <span class="ident">T</span> <span class="op">=</span> <span class="ident">parts</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">denom</span>: <span class="ident">T</span> <span class="op">=</span> <span class="ident">parts</span>.<span class="ident">next</span>().<span class="ident">unwrap</span>()<span class="question-mark">?</span>;
             <span class="kw">if</span> <span class="ident">denom</span>.<span class="ident">is_zero</span>() {
-                <span class="prelude-val">Err</span>(<span class="ident">ParseRatioError</span> { <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ZeroDenominator</span> })
+                <span class="prelude-val">Err</span>(<span class="ident">ParseRatioError</span> {
+                    <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ZeroDenominator</span>,
+                })
             } <span class="kw">else</span> {
                 <span class="prelude-val">Ok</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="ident">numer</span>, <span class="ident">denom</span>))
             }
         } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">ParseRatioError</span> { <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span> })
+            <span class="prelude-val">Err</span>(<span class="ident">ParseRatioError</span> {
+                <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span>,
+            })
         }
     }
 }
@@ -2867,20 +3054,21 @@
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">is_positive</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
-        (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_positive</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">is_positive</span>()) <span class="op">||</span>
-        (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_negative</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">is_negative</span>())
+        (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_positive</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">is_positive</span>())
+            <span class="op">||</span> (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_negative</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">is_negative</span>())
     }
 
     <span class="attribute">#[<span class="ident">inline</span>]</span>
     <span class="kw">fn</span> <span class="ident">is_negative</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-&gt;</span> <span class="ident">bool</span> {
-        (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_negative</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">is_positive</span>()) <span class="op">||</span>
-        (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_positive</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">is_negative</span>())
+        (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_negative</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">is_positive</span>())
+            <span class="op">||</span> (<span class="self">self</span>.<span class="ident">numer</span>.<span class="ident">is_positive</span>() <span class="op">&amp;&amp;</span> <span class="self">self</span>.<span class="ident">denom</span>.<span class="ident">is_negative</span>())
     }
 }
 
 <span class="comment">// String conversions</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">One</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="op">+</span> <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">One</span>,
 {
     <span class="doccomment">/// Renders as `numer/denom`. If denom=1, renders as numer.</span>
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
@@ -2899,16 +3087,22 @@
     <span class="kw">fn</span> <span class="ident">from_str</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">ParseRatioError</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">split</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">splitn</span>(<span class="number">2</span>, <span class="string">&#39;/&#39;</span>);
 
-        <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">split</span>.<span class="ident">next</span>().<span class="ident">ok_or</span>(<span class="ident">ParseRatioError</span> { <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span> }));
-        <span class="kw">let</span> <span class="ident">num</span> <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">n</span>)
-                           .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">ParseRatioError</span> { <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span> }));
+        <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">split</span>.<span class="ident">next</span>().<span class="ident">ok_or</span>(<span class="ident">ParseRatioError</span> {
+            <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span>
+        }));
+        <span class="kw">let</span> <span class="ident">num</span> <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">n</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">ParseRatioError</span> {
+            <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span>
+        }));
 
         <span class="kw">let</span> <span class="ident">d</span> <span class="op">=</span> <span class="ident">split</span>.<span class="ident">next</span>().<span class="ident">unwrap_or</span>(<span class="string">&quot;1&quot;</span>);
-        <span class="kw">let</span> <span class="ident">den</span> <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">d</span>)
-                           .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">ParseRatioError</span> { <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span> }));
+        <span class="kw">let</span> <span class="ident">den</span> <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">d</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">ParseRatioError</span> {
+            <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ParseError</span>
+        }));
 
         <span class="kw">if</span> <span class="ident">Zero</span>::<span class="ident">is_zero</span>(<span class="kw-2">&amp;</span><span class="ident">den</span>) {
-            <span class="prelude-val">Err</span>(<span class="ident">ParseRatioError</span> { <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ZeroDenominator</span> })
+            <span class="prelude-val">Err</span>(<span class="ident">ParseRatioError</span> {
+                <span class="ident">kind</span>: <span class="ident">RatioErrorKind</span>::<span class="ident">ZeroDenominator</span>,
+            })
         } <span class="kw">else</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="ident">num</span>, <span class="ident">den</span>))
         }
@@ -2923,10 +3117,12 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">serde</span>::<span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">serde</span>::<span class="ident">Serialize</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">PartialOrd</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">serde</span>::<span class="ident">Serialize</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">PartialOrd</span>,
 {
     <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S</span>::<span class="prelude-val">Ok</span>, <span class="ident">S</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-        <span class="kw">where</span> <span class="ident">S</span>: <span class="ident">serde</span>::<span class="ident">Serializer</span>
+    <span class="kw">where</span>
+        <span class="ident">S</span>: <span class="ident">serde</span>::<span class="ident">Serializer</span>,
     {
         (<span class="self">self</span>.<span class="ident">numer</span>(), <span class="self">self</span>.<span class="ident">denom</span>()).<span class="ident">serialize</span>(<span class="ident">serializer</span>)
     }
@@ -2934,16 +3130,21 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;serde&quot;</span>)]</span>
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">serde</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">serde</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">PartialOrd</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">serde</span>::<span class="ident">Deserialize</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span> <span class="op">+</span> <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">PartialOrd</span>,
 {
     <span class="kw">fn</span> <span class="ident">deserialize</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>(<span class="ident">deserializer</span>: <span class="ident">D</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident">D</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-        <span class="kw">where</span> <span class="ident">D</span>: <span class="ident">serde</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>
+    <span class="kw">where</span>
+        <span class="ident">D</span>: <span class="ident">serde</span>::<span class="ident">Deserializer</span><span class="op">&lt;</span><span class="lifetime">&#39;de</span><span class="op">&gt;</span>,
     {
-        <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">de</span>::<span class="ident">Unexpected</span>;
         <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">de</span>::<span class="ident">Error</span>;
-        <span class="kw">let</span> (<span class="ident">numer</span>, <span class="ident">denom</span>): (<span class="ident">T</span>,<span class="ident">T</span>) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">serde</span>::<span class="ident">Deserialize</span>::<span class="ident">deserialize</span>(<span class="ident">deserializer</span>));
+        <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">de</span>::<span class="ident">Unexpected</span>;
+        <span class="kw">let</span> (<span class="ident">numer</span>, <span class="ident">denom</span>): (<span class="ident">T</span>, <span class="ident">T</span>) <span class="op">=</span> <span class="macro">try</span><span class="macro">!</span>(<span class="ident">serde</span>::<span class="ident">Deserialize</span>::<span class="ident">deserialize</span>(<span class="ident">deserializer</span>));
         <span class="kw">if</span> <span class="ident">denom</span>.<span class="ident">is_zero</span>() {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">invalid_value</span>(<span class="ident">Unexpected</span>::<span class="ident">Signed</span>(<span class="number">0</span>), <span class="kw-2">&amp;</span><span class="string">&quot;a ratio with non-zero denominator&quot;</span>))
+            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">invalid_value</span>(
+                <span class="ident">Unexpected</span>::<span class="ident">Signed</span>(<span class="number">0</span>),
+                <span class="kw-2">&amp;</span><span class="string">&quot;a ratio with non-zero denominator&quot;</span>,
+            ))
         } <span class="kw">else</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">Ratio</span>::<span class="ident">new_raw</span>(<span class="ident">numer</span>, <span class="ident">denom</span>))
         }
@@ -3042,7 +3243,7 @@
                 <span class="macro-nonterminal">$</span><span class="macro-nonterminal">approx</span>(<span class="ident">n</span>, <span class="number">10e-20</span>, <span class="number">30</span>)
             }
         }
-    }
+    };
 }
 
 <span class="macro">from_primitive_integer</span><span class="macro">!</span>(<span class="ident">i8</span>, <span class="ident">approximate_float</span>);
@@ -3072,8 +3273,9 @@
 }
 
 <span class="kw">fn</span> <span class="ident">approximate_float</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">val</span>: <span class="ident">F</span>, <span class="ident">max_error</span>: <span class="ident">F</span>, <span class="ident">max_iterations</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Signed</span> <span class="op">+</span> <span class="ident">Bounded</span> <span class="op">+</span> <span class="ident">NumCast</span> <span class="op">+</span> <span class="ident">Clone</span>,
-          <span class="ident">F</span>: <span class="ident">FloatCore</span> <span class="op">+</span> <span class="ident">NumCast</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Signed</span> <span class="op">+</span> <span class="ident">Bounded</span> <span class="op">+</span> <span class="ident">NumCast</span> <span class="op">+</span> <span class="ident">Clone</span>,
+    <span class="ident">F</span>: <span class="ident">FloatCore</span> <span class="op">+</span> <span class="ident">NumCast</span>,
 {
     <span class="kw">let</span> <span class="ident">negative</span> <span class="op">=</span> <span class="ident">val</span>.<span class="ident">is_sign_negative</span>();
     <span class="kw">let</span> <span class="ident">abs_val</span> <span class="op">=</span> <span class="ident">val</span>.<span class="ident">abs</span>();
@@ -3091,8 +3293,9 @@
 <span class="comment">// No Unsigned constraint because this also works on positive integers and is called</span>
 <span class="comment">// like that, see above</span>
 <span class="kw">fn</span> <span class="ident">approximate_float_unsigned</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">F</span><span class="op">&gt;</span>(<span class="ident">val</span>: <span class="ident">F</span>, <span class="ident">max_error</span>: <span class="ident">F</span>, <span class="ident">max_iterations</span>: <span class="ident">usize</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ratio</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;&gt;</span>
-    <span class="kw">where</span> <span class="ident">T</span>: <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Bounded</span> <span class="op">+</span> <span class="ident">NumCast</span> <span class="op">+</span> <span class="ident">Clone</span>,
-          <span class="ident">F</span>: <span class="ident">FloatCore</span> <span class="op">+</span> <span class="ident">NumCast</span>
+<span class="kw">where</span>
+    <span class="ident">T</span>: <span class="ident">Integer</span> <span class="op">+</span> <span class="ident">Bounded</span> <span class="op">+</span> <span class="ident">NumCast</span> <span class="op">+</span> <span class="ident">Clone</span>,
+    <span class="ident">F</span>: <span class="ident">FloatCore</span> <span class="op">+</span> <span class="ident">NumCast</span>,
 {
     <span class="comment">// Continued fractions algorithm</span>
     <span class="comment">// http://mathforum.org/dr.math/faq/faq.fractions.html#decfrac</span>
@@ -3134,11 +3337,12 @@
         <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="ident">q</span> <span class="op">-</span> <span class="ident">a_f</span>;
 
         <span class="comment">// Prevent overflow</span>
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">a</span>.<span class="ident">is_zero</span>() <span class="op">&amp;&amp;</span>
-           (<span class="ident">n1</span> <span class="op">&gt;</span> <span class="ident">t_max</span>.<span class="ident">clone</span>() <span class="op">/</span> <span class="ident">a</span>.<span class="ident">clone</span>() <span class="op">||</span>
-            <span class="ident">d1</span> <span class="op">&gt;</span> <span class="ident">t_max</span>.<span class="ident">clone</span>() <span class="op">/</span> <span class="ident">a</span>.<span class="ident">clone</span>() <span class="op">||</span>
-            <span class="ident">a</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">n1</span>.<span class="ident">clone</span>() <span class="op">&gt;</span> <span class="ident">t_max</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">n0</span>.<span class="ident">clone</span>() <span class="op">||</span>
-            <span class="ident">a</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">d1</span>.<span class="ident">clone</span>() <span class="op">&gt;</span> <span class="ident">t_max</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">d0</span>.<span class="ident">clone</span>()) {
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">a</span>.<span class="ident">is_zero</span>()
+            <span class="op">&amp;&amp;</span> (<span class="ident">n1</span> <span class="op">&gt;</span> <span class="ident">t_max</span>.<span class="ident">clone</span>() <span class="op">/</span> <span class="ident">a</span>.<span class="ident">clone</span>()
+                <span class="op">||</span> <span class="ident">d1</span> <span class="op">&gt;</span> <span class="ident">t_max</span>.<span class="ident">clone</span>() <span class="op">/</span> <span class="ident">a</span>.<span class="ident">clone</span>()
+                <span class="op">||</span> <span class="ident">a</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">n1</span>.<span class="ident">clone</span>() <span class="op">&gt;</span> <span class="ident">t_max</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">n0</span>.<span class="ident">clone</span>()
+                <span class="op">||</span> <span class="ident">a</span>.<span class="ident">clone</span>() <span class="op">*</span> <span class="ident">d1</span>.<span class="ident">clone</span>() <span class="op">&gt;</span> <span class="ident">t_max</span>.<span class="ident">clone</span>() <span class="op">-</span> <span class="ident">d0</span>.<span class="ident">clone</span>())
+        {
             <span class="kw">break</span>;
         }
 
@@ -3185,8 +3389,8 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;std&quot;</span>)]</span>
 <span class="kw">fn</span> <span class="ident">hash</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Hash</span><span class="op">&gt;</span>(<span class="ident">x</span>: <span class="kw-2">&amp;</span><span class="ident">T</span>) <span class="op">-&gt;</span> <span class="ident">u64</span> {
-    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">hash</span>::<span class="ident">BuildHasher</span>;
     <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">hash_map</span>::<span class="ident">RandomState</span>;
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">hash</span>::<span class="ident">BuildHasher</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">hasher</span> <span class="op">=</span> <span class="op">&lt;</span><span class="ident">RandomState</span> <span class="kw">as</span> <span class="ident">BuildHasher</span><span class="op">&gt;</span>::<span class="ident">Hasher</span>::<span class="ident">new</span>();
     <span class="ident">x</span>.<span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">hasher</span>);
     <span class="ident">hasher</span>.<span class="ident">finish</span>()
@@ -3194,40 +3398,25 @@
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
-    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Ratio</span>, <span class="ident">Rational</span>};
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;bigint&quot;</span>)]</span>
     <span class="kw">use</span> <span class="kw">super</span>::<span class="ident">BigRational</span>;
+    <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">Ratio</span>, <span class="ident">Rational</span>, <span class="ident">Rational64</span>};
 
-    <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
-    <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">i32</span>;
     <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">f64</span>;
-    <span class="kw">use</span> <span class="ident">traits</span>::{<span class="ident">Zero</span>, <span class="ident">One</span>, <span class="ident">Signed</span>, <span class="ident">FromPrimitive</span>, <span class="ident">Pow</span>};
+    <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">i32</span>;
+    <span class="kw">use</span> <span class="ident">core</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
     <span class="kw">use</span> <span class="ident">integer</span>::<span class="ident">Integer</span>;
+    <span class="kw">use</span> <span class="ident">traits</span>::{<span class="ident">FromPrimitive</span>, <span class="ident">One</span>, <span class="ident">Pow</span>, <span class="ident">Signed</span>, <span class="ident">Zero</span>};
 
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_0</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
-        <span class="ident">numer</span>: <span class="number">0</span>,
-        <span class="ident">denom</span>: <span class="number">1</span>,
-    };
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_1</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
-        <span class="ident">numer</span>: <span class="number">1</span>,
-        <span class="ident">denom</span>: <span class="number">1</span>,
-    };
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_2</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
-        <span class="ident">numer</span>: <span class="number">2</span>,
-        <span class="ident">denom</span>: <span class="number">1</span>,
-    };
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_0</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> { <span class="ident">numer</span>: <span class="number">0</span>, <span class="ident">denom</span>: <span class="number">1</span> };
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_1</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> { <span class="ident">numer</span>: <span class="number">1</span>, <span class="ident">denom</span>: <span class="number">1</span> };
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_2</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> { <span class="ident">numer</span>: <span class="number">2</span>, <span class="ident">denom</span>: <span class="number">1</span> };
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_NEG2</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
         <span class="ident">numer</span>: <span class="op">-</span><span class="number">2</span>,
         <span class="ident">denom</span>: <span class="number">1</span>,
     };
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_1_2</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
-        <span class="ident">numer</span>: <span class="number">1</span>,
-        <span class="ident">denom</span>: <span class="number">2</span>,
-    };
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_3_2</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
-        <span class="ident">numer</span>: <span class="number">3</span>,
-        <span class="ident">denom</span>: <span class="number">2</span>,
-    };
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_1_2</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> { <span class="ident">numer</span>: <span class="number">1</span>, <span class="ident">denom</span>: <span class="number">2</span> };
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_3_2</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> { <span class="ident">numer</span>: <span class="number">3</span>, <span class="ident">denom</span>: <span class="number">2</span> };
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_NEG1_2</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
         <span class="ident">numer</span>: <span class="op">-</span><span class="number">1</span>,
         <span class="ident">denom</span>: <span class="number">2</span>,
@@ -3240,18 +3429,12 @@
         <span class="ident">numer</span>: <span class="op">-</span><span class="number">1</span>,
         <span class="ident">denom</span>: <span class="op">-</span><span class="number">2</span>,
     };
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_1_3</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
-        <span class="ident">numer</span>: <span class="number">1</span>,
-        <span class="ident">denom</span>: <span class="number">3</span>,
-    };
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_1_3</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> { <span class="ident">numer</span>: <span class="number">1</span>, <span class="ident">denom</span>: <span class="number">3</span> };
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_NEG1_3</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
         <span class="ident">numer</span>: <span class="op">-</span><span class="number">1</span>,
         <span class="ident">denom</span>: <span class="number">3</span>,
     };
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_2_3</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
-        <span class="ident">numer</span>: <span class="number">2</span>,
-        <span class="ident">denom</span>: <span class="number">3</span>,
-    };
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_2_3</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> { <span class="ident">numer</span>: <span class="number">2</span>, <span class="ident">denom</span>: <span class="number">3</span> };
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">_NEG2_3</span>: <span class="ident">Rational</span> <span class="op">=</span> <span class="ident">Ratio</span> {
         <span class="ident">numer</span>: <span class="op">-</span><span class="number">2</span>,
         <span class="ident">denom</span>: <span class="number">3</span>,
@@ -3259,13 +3442,17 @@
 
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;bigint&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_big</span>(<span class="ident">n</span>: <span class="ident">Rational</span>) <span class="op">-&gt;</span> <span class="ident">BigRational</span> {
-        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="ident">FromPrimitive</span>::<span class="ident">from_isize</span>(<span class="ident">n</span>.<span class="ident">numer</span>).<span class="ident">unwrap</span>(),
-                   <span class="ident">FromPrimitive</span>::<span class="ident">from_isize</span>(<span class="ident">n</span>.<span class="ident">denom</span>).<span class="ident">unwrap</span>())
+        <span class="ident">Ratio</span>::<span class="ident">new</span>(
+            <span class="ident">FromPrimitive</span>::<span class="ident">from_isize</span>(<span class="ident">n</span>.<span class="ident">numer</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">FromPrimitive</span>::<span class="ident">from_isize</span>(<span class="ident">n</span>.<span class="ident">denom</span>).<span class="ident">unwrap</span>(),
+        )
     }
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">not</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;bigint&quot;</span>))]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">to_big</span>(<span class="ident">n</span>: <span class="ident">Rational</span>) <span class="op">-&gt;</span> <span class="ident">Rational</span> {
-        <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="ident">FromPrimitive</span>::<span class="ident">from_isize</span>(<span class="ident">n</span>.<span class="ident">numer</span>).<span class="ident">unwrap</span>(),
-                   <span class="ident">FromPrimitive</span>::<span class="ident">from_isize</span>(<span class="ident">n</span>.<span class="ident">denom</span>).<span class="ident">unwrap</span>())
+        <span class="ident">Ratio</span>::<span class="ident">new</span>(
+            <span class="ident">FromPrimitive</span>::<span class="ident">from_isize</span>(<span class="ident">n</span>.<span class="ident">numer</span>).<span class="ident">unwrap</span>(),
+            <span class="ident">FromPrimitive</span>::<span class="ident">from_isize</span>(<span class="ident">n</span>.<span class="ident">denom</span>).<span class="ident">unwrap</span>(),
+        )
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -3306,8 +3493,14 @@
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="number">127.0f32</span>), <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">127i8</span>, <span class="number">1</span>)));
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="number">127.5f32</span>), <span class="prelude-val">None</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="op">-</span><span class="number">63.5f32</span>), <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="op">-</span><span class="number">127i8</span>, <span class="number">2</span>)));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="op">-</span><span class="number">126.5f32</span>), <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="op">-</span><span class="number">126i8</span>, <span class="number">1</span>)));
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="op">-</span><span class="number">127.0f32</span>), <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="op">-</span><span class="number">127i8</span>, <span class="number">1</span>)));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="op">-</span><span class="number">126.5f32</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="op">-</span><span class="number">126i8</span>, <span class="number">1</span>))
+        );
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="op">-</span><span class="number">127.0f32</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="op">-</span><span class="number">127i8</span>, <span class="number">1</span>))
+        );
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="op">-</span><span class="number">127.5f32</span>), <span class="prelude-val">None</span>);
 
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>::<span class="ident">from_f32</span>(<span class="op">-</span><span class="number">127f32</span>), <span class="prelude-val">None</span>);
@@ -3320,7 +3513,10 @@
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>::<span class="ident">from_f64</span>(<span class="ident">f64</span>::<span class="ident">INFINITY</span>), <span class="prelude-val">None</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>::<span class="ident">from_f64</span>(<span class="ident">f64</span>::<span class="ident">NEG_INFINITY</span>), <span class="prelude-val">None</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>::<span class="ident">from_f64</span>(<span class="ident">f64</span>::<span class="ident">NAN</span>), <span class="prelude-val">None</span>);
-        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>::<span class="ident">from_f64</span>(<span class="ident">f64</span>::<span class="ident">EPSILON</span>), <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">1</span>, <span class="number">4503599627370496</span>)));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(
+            <span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>::<span class="ident">from_f64</span>(<span class="ident">f64</span>::<span class="ident">EPSILON</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">1</span>, <span class="number">4503599627370496</span>))
+        );
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>::<span class="ident">from_f64</span>(<span class="number">0.0</span>), <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">0</span>, <span class="number">1</span>)));
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">Ratio</span>::<span class="op">&lt;</span><span class="ident">i64</span><span class="op">&gt;</span>::<span class="ident">from_f64</span>(<span class="op">-</span><span class="number">0.0</span>), <span class="prelude-val">Some</span>(<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">0</span>, <span class="number">1</span>)));
     }
@@ -3388,7 +3584,6 @@
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">_NEG1_2</span>.<span class="ident">to_integer</span>(), <span class="number">0</span>);
     }
 
-
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_numer</span>() {
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">_0</span>.<span class="ident">numer</span>(), <span class="kw-2">&amp;</span><span class="number">0</span>);
@@ -3407,7 +3602,6 @@
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">_3_2</span>.<span class="ident">denom</span>(), <span class="kw-2">&amp;</span><span class="number">2</span>);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">_NEG1_2</span>.<span class="ident">denom</span>(), <span class="kw-2">&amp;</span><span class="number">2</span>);
     }
-
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_is_integer</span>() {
@@ -3430,22 +3624,36 @@
     }
 
     <span class="kw">mod</span> <span class="ident">arith</span> {
-        <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">_0</span>, <span class="ident">_1</span>, <span class="ident">_2</span>, <span class="ident">_1_2</span>, <span class="ident">_3_2</span>, <span class="ident">_NEG1_2</span>, <span class="ident">to_big</span>};
         <span class="kw">use</span> <span class="kw">super</span>::<span class="kw">super</span>::{<span class="ident">Ratio</span>, <span class="ident">Rational</span>};
-        <span class="kw">use</span> <span class="ident">traits</span>::{<span class="ident">CheckedAdd</span>, <span class="ident">CheckedSub</span>, <span class="ident">CheckedMul</span>, <span class="ident">CheckedDiv</span>};
+        <span class="kw">use</span> <span class="kw">super</span>::{<span class="ident">to_big</span>, <span class="ident">_0</span>, <span class="ident">_1</span>, <span class="ident">_1_2</span>, <span class="ident">_2</span>, <span class="ident">_3_2</span>, <span class="ident">_NEG1_2</span>};
+        <span class="kw">use</span> <span class="ident">traits</span>::{<span class="ident">CheckedAdd</span>, <span class="ident">CheckedDiv</span>, <span class="ident">CheckedMul</span>, <span class="ident">CheckedSub</span>};
 
         <span class="attribute">#[<span class="ident">test</span>]</span>
         <span class="kw">fn</span> <span class="ident">test_add</span>() {
             <span class="kw">fn</span> <span class="ident">test</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">Rational</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">+=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">+=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>) <span class="op">+</span> <span class="ident">to_big</span>(<span class="ident">b</span>), <span class="ident">to_big</span>(<span class="ident">c</span>));
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span>.<span class="ident">checked_add</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>), <span class="prelude-val">Some</span>(<span class="ident">c</span>));
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>).<span class="ident">checked_add</span>(<span class="kw-2">&amp;</span><span class="ident">to_big</span>(<span class="ident">b</span>)), <span class="prelude-val">Some</span>(<span class="ident">to_big</span>(<span class="ident">c</span>)));
             }
-           <span class="kw">fn</span> <span class="ident">test_assign</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">isize</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
+            <span class="kw">fn</span> <span class="ident">test_assign</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">isize</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">+</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">+=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">+=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
             }
 
             <span class="ident">test</span>(<span class="ident">_1</span>, <span class="ident">_1_2</span>, <span class="ident">_3_2</span>);
@@ -3459,14 +3667,28 @@
         <span class="kw">fn</span> <span class="ident">test_sub</span>() {
             <span class="kw">fn</span> <span class="ident">test</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">Rational</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">-=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">-=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>) <span class="op">-</span> <span class="ident">to_big</span>(<span class="ident">b</span>), <span class="ident">to_big</span>(<span class="ident">c</span>));
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span>.<span class="ident">checked_sub</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>), <span class="prelude-val">Some</span>(<span class="ident">c</span>));
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>).<span class="ident">checked_sub</span>(<span class="kw-2">&amp;</span><span class="ident">to_big</span>(<span class="ident">b</span>)), <span class="prelude-val">Some</span>(<span class="ident">to_big</span>(<span class="ident">c</span>)));
             }
             <span class="kw">fn</span> <span class="ident">test_assign</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">isize</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">-</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">-=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">-=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
             }
 
             <span class="ident">test</span>(<span class="ident">_1</span>, <span class="ident">_1_2</span>, <span class="ident">_1_2</span>);
@@ -3479,14 +3701,28 @@
         <span class="kw">fn</span> <span class="ident">test_mul</span>() {
             <span class="kw">fn</span> <span class="ident">test</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">Rational</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">*=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">*=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>) <span class="op">*</span> <span class="ident">to_big</span>(<span class="ident">b</span>), <span class="ident">to_big</span>(<span class="ident">c</span>));
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span>.<span class="ident">checked_mul</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>), <span class="prelude-val">Some</span>(<span class="ident">c</span>));
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>).<span class="ident">checked_mul</span>(<span class="kw-2">&amp;</span><span class="ident">to_big</span>(<span class="ident">b</span>)), <span class="prelude-val">Some</span>(<span class="ident">to_big</span>(<span class="ident">c</span>)));
             }
             <span class="kw">fn</span> <span class="ident">test_assign</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">isize</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">*</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">*=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">*=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
             }
 
             <span class="ident">test</span>(<span class="ident">_1</span>, <span class="ident">_1_2</span>, <span class="ident">_1_2</span>);
@@ -3499,14 +3735,28 @@
         <span class="kw">fn</span> <span class="ident">test_div</span>() {
             <span class="kw">fn</span> <span class="ident">test</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">Rational</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">/</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">/=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">/=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>) <span class="op">/</span> <span class="ident">to_big</span>(<span class="ident">b</span>), <span class="ident">to_big</span>(<span class="ident">c</span>));
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span>.<span class="ident">checked_div</span>(<span class="kw-2">&amp;</span><span class="ident">b</span>), <span class="prelude-val">Some</span>(<span class="ident">c</span>));
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>).<span class="ident">checked_div</span>(<span class="kw-2">&amp;</span><span class="ident">to_big</span>(<span class="ident">b</span>)), <span class="prelude-val">Some</span>(<span class="ident">to_big</span>(<span class="ident">c</span>)));
             }
             <span class="kw">fn</span> <span class="ident">test_assign</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">isize</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">/</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">/=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">/=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
             }
 
             <span class="ident">test</span>(<span class="ident">_1</span>, <span class="ident">_1_2</span>, <span class="ident">_2</span>);
@@ -3519,12 +3769,26 @@
         <span class="kw">fn</span> <span class="ident">test_rem</span>() {
             <span class="kw">fn</span> <span class="ident">test</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">Rational</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">%</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">%=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">%=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">to_big</span>(<span class="ident">a</span>) <span class="op">%</span> <span class="ident">to_big</span>(<span class="ident">b</span>), <span class="ident">to_big</span>(<span class="ident">c</span>))
             }
             <span class="kw">fn</span> <span class="ident">test_assign</span>(<span class="ident">a</span>: <span class="ident">Rational</span>, <span class="ident">b</span>: <span class="ident">isize</span>, <span class="ident">c</span>: <span class="ident">Rational</span>) {
                 <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">a</span> <span class="op">%</span> <span class="ident">b</span>, <span class="ident">c</span>);
-                <span class="macro">assert_eq</span><span class="macro">!</span>({ <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>; <span class="ident">x</span> <span class="op">%=</span> <span class="ident">b</span>; <span class="ident">x</span>}, <span class="ident">c</span>);
+                <span class="macro">assert_eq</span><span class="macro">!</span>(
+                    {
+                        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">x</span> <span class="op">=</span> <span class="ident">a</span>;
+                        <span class="ident">x</span> <span class="op">%=</span> <span class="ident">b</span>;
+                        <span class="ident">x</span>
+                    },
+                    <span class="ident">c</span>
+                );
             }
 
             <span class="ident">test</span>(<span class="ident">_3_2</span>, <span class="ident">_1</span>, <span class="ident">_1_2</span>);
@@ -3712,17 +3976,23 @@
         <span class="kw">use</span> <span class="ident">traits</span>::<span class="ident">float</span>::<span class="ident">FloatCore</span>;
         <span class="kw">fn</span> <span class="ident">test</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">FloatCore</span><span class="op">&gt;</span>(<span class="ident">given</span>: <span class="ident">T</span>, (<span class="ident">numer</span>, <span class="ident">denom</span>): (<span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="kw-2">&amp;</span><span class="ident">str</span>)) {
             <span class="kw">let</span> <span class="ident">ratio</span>: <span class="ident">BigRational</span> <span class="op">=</span> <span class="ident">Ratio</span>::<span class="ident">from_float</span>(<span class="ident">given</span>).<span class="ident">unwrap</span>();
-            <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">ratio</span>,
-                       <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">numer</span>).<span class="ident">unwrap</span>(),
-                                  <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">denom</span>).<span class="ident">unwrap</span>()));
+            <span class="macro">assert_eq</span><span class="macro">!</span>(
+                <span class="ident">ratio</span>,
+                <span class="ident">Ratio</span>::<span class="ident">new</span>(
+                    <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">numer</span>).<span class="ident">unwrap</span>(),
+                    <span class="ident">FromStr</span>::<span class="ident">from_str</span>(<span class="ident">denom</span>).<span class="ident">unwrap</span>()
+                )
+            );
         }
 
         <span class="comment">// f32</span>
         <span class="ident">test</span>(<span class="number">3.14159265359f32</span>, (<span class="string">&quot;13176795&quot;</span>, <span class="string">&quot;4194304&quot;</span>));
         <span class="ident">test</span>(<span class="number">2f32</span>.<span class="ident">powf</span>(<span class="number">100.</span>), (<span class="string">&quot;1267650600228229401496703205376&quot;</span>, <span class="string">&quot;1&quot;</span>));
         <span class="ident">test</span>(<span class="op">-</span><span class="number">2f32</span>.<span class="ident">powf</span>(<span class="number">100.</span>), (<span class="string">&quot;-1267650600228229401496703205376&quot;</span>, <span class="string">&quot;1&quot;</span>));
-        <span class="ident">test</span>(<span class="number">1.0</span> <span class="op">/</span> <span class="number">2f32</span>.<span class="ident">powf</span>(<span class="number">100.</span>),
-             (<span class="string">&quot;1&quot;</span>, <span class="string">&quot;1267650600228229401496703205376&quot;</span>));
+        <span class="ident">test</span>(
+            <span class="number">1.0</span> <span class="op">/</span> <span class="number">2f32</span>.<span class="ident">powf</span>(<span class="number">100.</span>),
+            (<span class="string">&quot;1&quot;</span>, <span class="string">&quot;1267650600228229401496703205376&quot;</span>),
+        );
         <span class="ident">test</span>(<span class="number">684729.48391f32</span>, (<span class="string">&quot;1369459&quot;</span>, <span class="string">&quot;2&quot;</span>));
         <span class="ident">test</span>(<span class="op">-</span><span class="number">8573.5918555f32</span>, (<span class="string">&quot;-4389679&quot;</span>, <span class="string">&quot;512&quot;</span>));
 
@@ -3732,8 +4002,10 @@
         <span class="ident">test</span>(<span class="op">-</span><span class="number">2f64</span>.<span class="ident">powf</span>(<span class="number">100.</span>), (<span class="string">&quot;-1267650600228229401496703205376&quot;</span>, <span class="string">&quot;1&quot;</span>));
         <span class="ident">test</span>(<span class="number">684729.48391f64</span>, (<span class="string">&quot;367611342500051&quot;</span>, <span class="string">&quot;536870912&quot;</span>));
         <span class="ident">test</span>(<span class="op">-</span><span class="number">8573.5918555f64</span>, (<span class="string">&quot;-4713381968463931&quot;</span>, <span class="string">&quot;549755813888&quot;</span>));
-        <span class="ident">test</span>(<span class="number">1.0</span> <span class="op">/</span> <span class="number">2f64</span>.<span class="ident">powf</span>(<span class="number">100.</span>),
-             (<span class="string">&quot;1&quot;</span>, <span class="string">&quot;1267650600228229401496703205376&quot;</span>));
+        <span class="ident">test</span>(
+            <span class="number">1.0</span> <span class="op">/</span> <span class="number">2f64</span>.<span class="ident">powf</span>(<span class="number">100.</span>),
+            (<span class="string">&quot;1&quot;</span>, <span class="string">&quot;1267650600228229401496703205376&quot;</span>),
+        );
     }
 
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;bigint&quot;</span>)]</span>
@@ -3789,17 +4061,17 @@
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_into_pair</span>() {
-        <span class="macro">assert_eq</span><span class="macro">!</span> ((<span class="number">0</span>, <span class="number">1</span>), <span class="ident">_0</span>.<span class="ident">into</span>());
-        <span class="macro">assert_eq</span><span class="macro">!</span> ((<span class="op">-</span><span class="number">2</span>, <span class="number">1</span>), <span class="ident">_NEG2</span>.<span class="ident">into</span>());
-        <span class="macro">assert_eq</span><span class="macro">!</span> ((<span class="number">1</span>, <span class="op">-</span><span class="number">2</span>), <span class="ident">_1_NEG2</span>.<span class="ident">into</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>((<span class="number">0</span>, <span class="number">1</span>), <span class="ident">_0</span>.<span class="ident">into</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>((<span class="op">-</span><span class="number">2</span>, <span class="number">1</span>), <span class="ident">_NEG2</span>.<span class="ident">into</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>((<span class="number">1</span>, <span class="op">-</span><span class="number">2</span>), <span class="ident">_1_NEG2</span>.<span class="ident">into</span>());
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_from_pair</span>() {
-        <span class="macro">assert_eq</span><span class="macro">!</span> (<span class="ident">_0</span>, <span class="ident">Ratio</span>::<span class="ident">from</span> ((<span class="number">0</span>, <span class="number">1</span>)));
-        <span class="macro">assert_eq</span><span class="macro">!</span> (<span class="ident">_1</span>, <span class="ident">Ratio</span>::<span class="ident">from</span> ((<span class="number">1</span>, <span class="number">1</span>)));
-        <span class="macro">assert_eq</span><span class="macro">!</span> (<span class="ident">_NEG2</span>, <span class="ident">Ratio</span>::<span class="ident">from</span> ((<span class="op">-</span><span class="number">2</span>, <span class="number">1</span>)));
-        <span class="macro">assert_eq</span><span class="macro">!</span> (<span class="ident">_1_NEG2</span>, <span class="ident">Ratio</span>::<span class="ident">from</span> ((<span class="number">1</span>, <span class="op">-</span><span class="number">2</span>)));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">_0</span>, <span class="ident">Ratio</span>::<span class="ident">from</span>((<span class="number">0</span>, <span class="number">1</span>)));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">_1</span>, <span class="ident">Ratio</span>::<span class="ident">from</span>((<span class="number">1</span>, <span class="number">1</span>)));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">_NEG2</span>, <span class="ident">Ratio</span>::<span class="ident">from</span>((<span class="op">-</span><span class="number">2</span>, <span class="number">1</span>)));
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">_1_NEG2</span>, <span class="ident">Ratio</span>::<span class="ident">from</span>((<span class="number">1</span>, <span class="op">-</span><span class="number">2</span>)));
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -3811,14 +4083,10 @@
             <span class="kw">for</span> <span class="ident">ratio</span> <span class="kw">in</span> <span class="ident">slice</span> {
                 <span class="ident">manual_sum</span> <span class="op">=</span> <span class="ident">manual_sum</span> <span class="op">+</span> <span class="ident">ratio</span>;
             }
-            [
-                <span class="ident">manual_sum</span>,
-                <span class="ident">slice</span>.<span class="ident">iter</span>().<span class="ident">sum</span>(),
-                <span class="ident">slice</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">sum</span>()
-            ]
+            [<span class="ident">manual_sum</span>, <span class="ident">slice</span>.<span class="ident">iter</span>().<span class="ident">sum</span>(), <span class="ident">slice</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">sum</span>()]
         }
         <span class="comment">// collect into array so test works on no_std</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nums</span> <span class="op">=</span> [<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">0</span>,<span class="number">1</span>); <span class="number">1000</span>];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nums</span> <span class="op">=</span> [<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">0</span>, <span class="number">1</span>); <span class="number">1000</span>];
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">r</span>) <span class="kw">in</span> (<span class="number">0</span>..<span class="number">1000</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="ident">n</span>, <span class="number">500</span>)).<span class="ident">enumerate</span>() {
             <span class="ident">nums</span>[<span class="ident">i</span>] <span class="op">=</span> <span class="ident">r</span>;
         }
@@ -3839,18 +4107,44 @@
             [
                 <span class="ident">manual_prod</span>,
                 <span class="ident">slice</span>.<span class="ident">iter</span>().<span class="ident">product</span>(),
-                <span class="ident">slice</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">product</span>()
+                <span class="ident">slice</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">product</span>(),
             ]
         }
 
         <span class="comment">// collect into array so test works on no_std</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nums</span> <span class="op">=</span> [<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">0</span>,<span class="number">1</span>); <span class="number">1000</span>];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nums</span> <span class="op">=</span> [<span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="number">0</span>, <span class="number">1</span>); <span class="number">1000</span>];
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">r</span>) <span class="kw">in</span> (<span class="number">0</span>..<span class="number">1000</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">n</span><span class="op">|</span> <span class="ident">Ratio</span>::<span class="ident">new</span>(<span class="ident">n</span>, <span class="number">500</span>)).<span class="ident">enumerate</span>() {
             <span class="ident">nums</span>[<span class="ident">i</span>] <span class="op">=</span> <span class="ident">r</span>;
         }
         <span class="kw">let</span> <span class="ident">products</span> <span class="op">=</span> <span class="ident">iter_products</span>(<span class="kw-2">&amp;</span><span class="ident">nums</span>[..]);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">products</span>[<span class="number">0</span>], <span class="ident">products</span>[<span class="number">1</span>]);
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">products</span>[<span class="number">0</span>], <span class="ident">products</span>[<span class="number">2</span>]);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_num_zero</span>() {
+        <span class="kw">let</span> <span class="ident">zero</span> <span class="op">=</span> <span class="ident">Rational64</span>::<span class="ident">zero</span>();
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">zero</span>.<span class="ident">is_zero</span>());
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">Rational64</span>::<span class="ident">new</span>(<span class="number">123</span>, <span class="number">456</span>);
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">r</span>.<span class="ident">is_zero</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="ident">r</span> <span class="op">+</span> <span class="kw-2">&amp;</span><span class="ident">zero</span>, <span class="ident">r</span>);
+
+        <span class="ident">r</span>.<span class="ident">set_zero</span>();
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">r</span>.<span class="ident">is_zero</span>());
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_num_one</span>() {
+        <span class="kw">let</span> <span class="ident">one</span> <span class="op">=</span> <span class="ident">Rational64</span>::<span class="ident">one</span>();
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">one</span>.<span class="ident">is_one</span>());
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">r</span> <span class="op">=</span> <span class="ident">Rational64</span>::<span class="ident">new</span>(<span class="number">123</span>, <span class="number">456</span>);
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">r</span>.<span class="ident">is_one</span>());
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="ident">r</span> <span class="op">*</span> <span class="kw-2">&amp;</span><span class="ident">one</span>, <span class="ident">r</span>);
+
+        <span class="ident">r</span>.<span class="ident">set_one</span>();
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">r</span>.<span class="ident">is_one</span>());
     }
 }
 </pre></div>
