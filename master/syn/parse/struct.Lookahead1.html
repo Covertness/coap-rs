@@ -5,41 +5,41 @@ alternatives that get peeked. If you are producing your own error message,
 go ahead and use <code>ParseStream::peek</code> instead.</p>
 <p>Use <a href="struct.ParseBuffer.html#method.lookahead1"><code>ParseStream::lookahead1</code></a> to construct this object.</p>
 <h1 id="example" class="section-header"><a href="#example">Example</a></h1>
-<pre><code class="language-edition2018">use syn::{ConstParam, Ident, Lifetime, LifetimeDef, Result, Token, TypeParam};
-use syn::parse::{Parse, ParseStream};
+<div class='information'><div class='tooltip edition'>ⓘ<span class='tooltiptext'>This code runs with edition 2018</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered edition ">
+<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">ConstParam</span>, <span class="ident">Ident</span>, <span class="ident">Lifetime</span>, <span class="ident">LifetimeDef</span>, <span class="prelude-ty">Result</span>, <span class="ident">Token</span>, <span class="ident">TypeParam</span>};
+<span class="kw">use</span> <span class="ident">syn</span>::<span class="ident">parse</span>::{<span class="ident">Parse</span>, <span class="ident">ParseStream</span>};
 
-// A generic parameter, a single one of the comma-separated elements inside
-// angle brackets in:
-//
-//     fn f&lt;T: Clone, 'a, 'b: 'a, const N: usize&gt;() { ... }
-//
-// On invalid input, lookahead gives us a reasonable error message.
-//
-//     error: expected one of: identifier, lifetime, `const`
-//       |
-//     5 |     fn f&lt;!Sized&gt;() {}
-//       |          ^
-enum GenericParam {
-    Type(TypeParam),
-    Lifetime(LifetimeDef),
-    Const(ConstParam),
+<span class="comment">// A generic parameter, a single one of the comma-separated elements inside</span>
+<span class="comment">// angle brackets in:</span>
+<span class="comment">//</span>
+<span class="comment">//     fn f&lt;T: Clone, &#39;a, &#39;b: &#39;a, const N: usize&gt;() { ... }</span>
+<span class="comment">//</span>
+<span class="comment">// On invalid input, lookahead gives us a reasonable error message.</span>
+<span class="comment">//</span>
+<span class="comment">//     error: expected one of: identifier, lifetime, `const`</span>
+<span class="comment">//       |</span>
+<span class="comment">//     5 |     fn f&lt;!Sized&gt;() {}</span>
+<span class="comment">//       |          ^</span>
+<span class="kw">enum</span> <span class="ident">GenericParam</span> {
+    <span class="ident">Type</span>(<span class="ident">TypeParam</span>),
+    <span class="ident">Lifetime</span>(<span class="ident">LifetimeDef</span>),
+    <span class="ident">Const</span>(<span class="ident">ConstParam</span>),
 }
 
-impl Parse for GenericParam {
-    fn parse(input: ParseStream) -&gt; Result&lt;Self&gt; {
-        let lookahead = input.lookahead1();
-        if lookahead.peek(Ident) {
-            input.parse().map(GenericParam::Type)
-        } else if lookahead.peek(Lifetime) {
-            input.parse().map(GenericParam::Lifetime)
-        } else if lookahead.peek(Token![const]) {
-            input.parse().map(GenericParam::Const)
-        } else {
-            Err(lookahead.error())
+<span class="kw">impl</span> <span class="ident">Parse</span> <span class="kw">for</span> <span class="ident">GenericParam</span> {
+    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">ParseStream</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">lookahead</span> <span class="op">=</span> <span class="ident">input</span>.<span class="ident">lookahead1</span>();
+        <span class="kw">if</span> <span class="ident">lookahead</span>.<span class="ident">peek</span>(<span class="ident">Ident</span>) {
+            <span class="ident">input</span>.<span class="ident">parse</span>().<span class="ident">map</span>(<span class="ident">GenericParam</span>::<span class="ident">Type</span>)
+        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">lookahead</span>.<span class="ident">peek</span>(<span class="ident">Lifetime</span>) {
+            <span class="ident">input</span>.<span class="ident">parse</span>().<span class="ident">map</span>(<span class="ident">GenericParam</span>::<span class="ident">Lifetime</span>)
+        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">lookahead</span>.<span class="ident">peek</span>(<span class="macro">Token</span><span class="macro">!</span>[<span class="kw">const</span>]) {
+            <span class="ident">input</span>.<span class="ident">parse</span>().<span class="ident">map</span>(<span class="ident">GenericParam</span>::<span class="ident">Const</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">lookahead</span>.<span class="ident">error</span>())
         }
     }
-}
-</code></pre>
+}</pre></div>
 </div><h2 id='methods' class='small-section-header'>Methods<a href='#methods' class='anchor'></a></h2><h3 id='impl' class='impl'><code class='in-band'>impl&lt;'a&gt; <a class="struct" href="../../syn/parse/struct.Lookahead1.html" title="struct syn::parse::Lookahead1">Lookahead1</a>&lt;'a&gt;</code><a href='#impl' class='anchor'></a><a class='srclink' href='../../src/syn/lookahead.rs.html#87-136' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='method.peek' class="method"><code id='peek.v'>pub fn <a href='#method.peek' class='fnname'>peek</a>&lt;T:&nbsp;<a class="trait" href="../../syn/parse/trait.Peek.html" title="trait syn::parse::Peek">Peek</a>&gt;(&amp;self, token: T) -&gt; <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a></code><a class='srclink' href='../../src/syn/lookahead.rs.html#102-105' title='goto source code'>[src]</a></h4><div class='docblock'><p>Looks at the next token in the parse stream to determine whether it
 matches the requested type of token.</p>
 <h1 id="syntax" class="section-header"><a href="#syntax">Syntax</a></h1>
@@ -56,8 +56,8 @@ inside of parentheses.</p>
 </div><h4 id='method.error' class="method"><code id='error.v'>pub fn <a href='#method.error' class='fnname'>error</a>(self) -&gt; <a class="struct" href="../../syn/struct.Error.html" title="struct syn::Error">Error</a></code><a class='srclink' href='../../src/syn/lookahead.rs.html#111-135' title='goto source code'>[src]</a></h4><div class='docblock'><p>Triggers an error at the current position of the parse stream.</p>
 <p>The error message will identify all of the expected token types that
 have been peeked against this lookahead instance.</p>
-</div></div><h2 id='synthetic-implementations' class='small-section-header'>Auto Trait Implementations<a href='#synthetic-implementations' class='anchor'></a></h2><div id='synthetic-implementations-list'><h3 id='impl-Send' class='impl'><code class='in-band'>impl&lt;'a&gt; !<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> for <a class="struct" href="../../syn/parse/struct.Lookahead1.html" title="struct syn::parse::Lookahead1">Lookahead1</a>&lt;'a&gt;</code><a href='#impl-Send' class='anchor'></a></h3><div class='impl-items'></div><h3 id='impl-Sync' class='impl'><code class='in-band'>impl&lt;'a&gt; !<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> for <a class="struct" href="../../syn/parse/struct.Lookahead1.html" title="struct syn::parse::Lookahead1">Lookahead1</a>&lt;'a&gt;</code><a href='#impl-Sync' class='anchor'></a></h3><div class='impl-items'></div></div><h2 id='blanket-implementations' class='small-section-header'>Blanket Implementations<a href='#blanket-implementations' class='anchor'></a></h2><div id='blanket-implementations-list'><h3 id='impl-From%3CT%3E' class='impl'><code class='in-band'>impl&lt;T&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;T&gt; for T</code><a href='#impl-From%3CT%3E' class='anchor'></a><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#546-548' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='method.from' class="method hidden"><code id='from.v'>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html#tymethod.from' class='fnname'>from</a>(t: T) -&gt; T</code><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#547' title='goto source code'>[src]</a></h4><div class='docblock hidden'><p>Performs the conversion.</p>
-</div></div><h3 id='impl-Into%3CU%3E' class='impl'><code class='in-band'>impl&lt;T, U&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;U&gt; for T <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;U: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;T&gt;,&nbsp;</span></code><a href='#impl-Into%3CU%3E' class='anchor'></a><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#537-542' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='method.into' class="method hidden"><code id='into.v'>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html#tymethod.into' class='fnname'>into</a>(self) -&gt; U</code><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#539-541' title='goto source code'>[src]</a></h4><div class='docblock hidden'><p>Performs the conversion.</p>
+</div></div><h2 id='synthetic-implementations' class='small-section-header'>Auto Trait Implementations<a href='#synthetic-implementations' class='anchor'></a></h2><div id='synthetic-implementations-list'><h3 id='impl-Send' class='impl'><code class='in-band'>impl&lt;'a&gt; !<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> for <a class="struct" href="../../syn/parse/struct.Lookahead1.html" title="struct syn::parse::Lookahead1">Lookahead1</a>&lt;'a&gt;</code><a href='#impl-Send' class='anchor'></a></h3><div class='impl-items'></div><h3 id='impl-Sync' class='impl'><code class='in-band'>impl&lt;'a&gt; !<a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> for <a class="struct" href="../../syn/parse/struct.Lookahead1.html" title="struct syn::parse::Lookahead1">Lookahead1</a>&lt;'a&gt;</code><a href='#impl-Sync' class='anchor'></a></h3><div class='impl-items'></div></div><h2 id='blanket-implementations' class='small-section-header'>Blanket Implementations<a href='#blanket-implementations' class='anchor'></a></h2><div id='blanket-implementations-list'><h3 id='impl-Into%3CU%3E' class='impl'><code class='in-band'>impl&lt;T, U&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;U&gt; for T <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;U: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;T&gt;,&nbsp;</span></code><a href='#impl-Into%3CU%3E' class='anchor'></a><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#537-542' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='method.into' class="method hidden"><code id='into.v'>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.Into.html#tymethod.into' class='fnname'>into</a>(self) -&gt; U</code><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#539-541' title='goto source code'>[src]</a></h4><div class='docblock hidden'><p>Performs the conversion.</p>
+</div></div><h3 id='impl-From%3CT%3E' class='impl'><code class='in-band'>impl&lt;T&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.From.html" title="trait core::convert::From">From</a>&lt;T&gt; for T</code><a href='#impl-From%3CT%3E' class='anchor'></a><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#546-548' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='method.from' class="method hidden"><code id='from.v'>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.From.html#tymethod.from' class='fnname'>from</a>(t: T) -&gt; T</code><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#547' title='goto source code'>[src]</a></h4><div class='docblock hidden'><p>Performs the conversion.</p>
 </div></div><h3 id='impl-TryFrom%3CU%3E' class='impl'><code class='in-band'>impl&lt;T, U&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html" title="trait core::convert::TryFrom">TryFrom</a>&lt;U&gt; for T <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;U: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.Into.html" title="trait core::convert::Into">Into</a>&lt;T&gt;,&nbsp;</span></code><a href='#impl-TryFrom%3CU%3E' class='anchor'></a><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#565-571' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='associatedtype.Error' class="type"><code id='Error.t'>type <a href='https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html#associatedtype.Error' class="type">Error</a> = <a class="enum" href="https://doc.rust-lang.org/nightly/core/convert/enum.Infallible.html" title="enum core::convert::Infallible">Infallible</a></code></h4><div class='docblock'><p>The type returned in the event of a conversion error.</p>
 </div><h4 id='method.try_from' class="method hidden"><code id='try_from.v'>fn <a href='https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html#tymethod.try_from' class='fnname'>try_from</a>(value: U) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;T, &lt;T as <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html" title="trait core::convert::TryFrom">TryFrom</a>&lt;U&gt;&gt;::<a class="type" href="https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html#associatedtype.Error" title="type core::convert::TryFrom::Error">Error</a>&gt;</code><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#568-570' title='goto source code'>[src]</a></h4><div class='docblock hidden'><p>Performs the conversion.</p>
 </div></div><h3 id='impl-TryInto%3CU%3E' class='impl'><code class='in-band'>impl&lt;T, U&gt; <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.TryInto.html" title="trait core::convert::TryInto">TryInto</a>&lt;U&gt; for T <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;U: <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html" title="trait core::convert::TryFrom">TryFrom</a>&lt;T&gt;,&nbsp;</span></code><a href='#impl-TryInto%3CU%3E' class='anchor'></a><a class='srclink' href='https://doc.rust-lang.org/nightly/src/core/convert.rs.html#553-560' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='associatedtype.Error-1' class="type"><code id='Error.t-1'>type <a href='https://doc.rust-lang.org/nightly/core/convert/trait.TryInto.html#associatedtype.Error' class="type">Error</a> = &lt;U as <a class="trait" href="https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html" title="trait core::convert::TryFrom">TryFrom</a>&lt;T&gt;&gt;::<a class="type" href="https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html#associatedtype.Error" title="type core::convert::TryFrom::Error">Error</a></code></h4><div class='docblock'><p>The type returned in the event of a conversion error.</p>

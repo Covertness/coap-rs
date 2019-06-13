@@ -4,52 +4,46 @@ prefer to use the <a href="../macro.Token.html"><code>Token!</code></a> macro in
 expands to the token type of the given token.</p>
 <h1 id="example" class="section-header"><a href="#example">Example</a></h1>
 <p>The <a href="../struct.ItemStatic.html"><code>ItemStatic</code></a> syntax tree node is defined like this.</p>
-<pre><code class="language-edition2018"># use syn::{Attribute, Expr, Ident, Token, Type, Visibility};
-#
-pub struct ItemStatic {
-    pub attrs: Vec&lt;Attribute&gt;,
-    pub vis: Visibility,
-    pub static_token: Token![static],
-    pub mutability: Option&lt;Token![mut]&gt;,
-    pub ident: Ident,
-    pub colon_token: Token![:],
-    pub ty: Box&lt;Type&gt;,
-    pub eq_token: Token![=],
-    pub expr: Box&lt;Expr&gt;,
-    pub semi_token: Token![;],
-}
-</code></pre>
+
+<div class='information'><div class='tooltip edition'>ⓘ<span class='tooltiptext'>This code runs with edition 2018</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered edition ">
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ItemStatic</span> {
+    <span class="kw">pub</span> <span class="ident">attrs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Attribute</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">vis</span>: <span class="ident">Visibility</span>,
+    <span class="kw">pub</span> <span class="ident">static_token</span>: <span class="macro">Token</span><span class="macro">!</span>[<span class="kw">static</span>],
+    <span class="kw">pub</span> <span class="ident">mutability</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="macro">Token</span><span class="macro">!</span>[<span class="kw-2">mut</span>]<span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">ident</span>: <span class="ident">Ident</span>,
+    <span class="kw">pub</span> <span class="ident">colon_token</span>: <span class="macro">Token</span><span class="macro">!</span>[:],
+    <span class="kw">pub</span> <span class="ident">ty</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">eq_token</span>: <span class="macro">Token</span><span class="macro">!</span>[<span class="op">=</span>],
+    <span class="kw">pub</span> <span class="ident">expr</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Expr</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">semi_token</span>: <span class="macro">Token</span><span class="macro">!</span>[;],
+}</pre></div>
 <h1 id="parsing" class="section-header"><a href="#parsing">Parsing</a></h1>
 <p>Keywords and punctuation can be parsed through the <a href="../parse/struct.ParseBuffer.html#method.parse"><code>ParseStream::parse</code></a>
 method. Delimiter tokens are parsed using the <a href="../macro.parenthesized.html"><code>parenthesized!</code></a>,
 <a href="../macro.bracketed.html"><code>bracketed!</code></a> and <a href="../macro.braced.html"><code>braced!</code></a> macros.</p>
-<pre><code class="language-edition2018">use syn::{Attribute, Result};
-use syn::parse::{Parse, ParseStream};
-#
-# enum ItemStatic {}
 
-// Parse the ItemStatic struct shown above.
-impl Parse for ItemStatic {
-    fn parse(input: ParseStream) -&gt; Result&lt;Self&gt; {
-        # use syn::ItemStatic;
-        # fn parse(input: ParseStream) -&gt; Result&lt;ItemStatic&gt; {
-        Ok(ItemStatic {
-            attrs: input.call(Attribute::parse_outer)?,
-            vis: input.parse()?,
-            static_token: input.parse()?,
-            mutability: input.parse()?,
-            ident: input.parse()?,
-            colon_token: input.parse()?,
-            ty: input.parse()?,
-            eq_token: input.parse()?,
-            expr: input.parse()?,
-            semi_token: input.parse()?,
+<div class='information'><div class='tooltip edition'>ⓘ<span class='tooltiptext'>This code runs with edition 2018</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered edition ">
+<span class="kw">use</span> <span class="ident">syn</span>::{<span class="ident">Attribute</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">syn</span>::<span class="ident">parse</span>::{<span class="ident">Parse</span>, <span class="ident">ParseStream</span>};
+
+<span class="comment">// Parse the ItemStatic struct shown above.</span>
+<span class="kw">impl</span> <span class="ident">Parse</span> <span class="kw">for</span> <span class="ident">ItemStatic</span> {
+    <span class="kw">fn</span> <span class="ident">parse</span>(<span class="ident">input</span>: <span class="ident">ParseStream</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="ident">ItemStatic</span> {
+            <span class="ident">attrs</span>: <span class="ident">input</span>.<span class="ident">call</span>(<span class="ident">Attribute</span>::<span class="ident">parse_outer</span>)<span class="question-mark">?</span>,
+            <span class="ident">vis</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
+            <span class="ident">static_token</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
+            <span class="ident">mutability</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
+            <span class="ident">ident</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
+            <span class="ident">colon_token</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
+            <span class="ident">ty</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
+            <span class="ident">eq_token</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
+            <span class="ident">expr</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
+            <span class="ident">semi_token</span>: <span class="ident">input</span>.<span class="ident">parse</span>()<span class="question-mark">?</span>,
         })
-        # }
-        # unimplemented!()
     }
-}
-</code></pre>
+}</pre></div>
 <h1 id="other-operations" class="section-header"><a href="#other-operations">Other operations</a></h1>
 <p>Every keyword and punctuation token supports the following operations.</p>
 <ul>
