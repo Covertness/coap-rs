@@ -11,28 +11,35 @@ trait may be useful for implementing <code>ToTokens</code>.</p>
 <h1 id="example" class="section-header"><a href="#example">Example</a></h1>
 <p>Example implementation for a struct representing Rust paths like
 <code>std::cmp::PartialEq</code>:</p>
+<pre><code class="language-edition2018">use proc_macro2::{TokenTree, Spacing, Span, Punct, TokenStream};
+use quote::{TokenStreamExt, ToTokens};
 
-<div class='information'><div class='tooltip edition'>ⓘ<span class='tooltiptext'>This code runs with edition 2018</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered edition ">
-<span class="kw">use</span> <span class="ident">proc_macro2</span>::{<span class="ident">TokenTree</span>, <span class="ident">Spacing</span>, <span class="ident">Span</span>, <span class="ident">Punct</span>, <span class="ident">TokenStream</span>};
-<span class="kw">use</span> <span class="ident">quote</span>::{<span class="ident">TokenStreamExt</span>, <span class="ident">ToTokens</span>};
-
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Path</span> {
-    <span class="kw">pub</span> <span class="ident">global</span>: <span class="ident">bool</span>,
-    <span class="kw">pub</span> <span class="ident">segments</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">PathSegment</span><span class="op">&gt;</span>,
+pub struct Path {
+    pub global: bool,
+    pub segments: Vec&lt;PathSegment&gt;,
 }
 
-<span class="kw">impl</span> <span class="ident">ToTokens</span> <span class="kw">for</span> <span class="ident">Path</span> {
-    <span class="kw">fn</span> <span class="ident">to_tokens</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">TokenStream</span>) {
-        <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">segment</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">segments</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
-            <span class="kw">if</span> <span class="ident">i</span> <span class="op">&gt;</span> <span class="number">0</span> <span class="op">||</span> <span class="self">self</span>.<span class="ident">global</span> {
-                <span class="comment">// Double colon `::`</span>
-                <span class="ident">tokens</span>.<span class="ident">append</span>(<span class="ident">Punct</span>::<span class="ident">new</span>(<span class="string">&#39;:&#39;</span>, <span class="ident">Spacing</span>::<span class="ident">Joint</span>));
-                <span class="ident">tokens</span>.<span class="ident">append</span>(<span class="ident">Punct</span>::<span class="ident">new</span>(<span class="string">&#39;:&#39;</span>, <span class="ident">Spacing</span>::<span class="ident">Alone</span>));
+impl ToTokens for Path {
+    fn to_tokens(&amp;self, tokens: &amp;mut TokenStream) {
+        for (i, segment) in self.segments.iter().enumerate() {
+            if i &gt; 0 || self.global {
+                // Double colon `::`
+                tokens.append(Punct::new(':', Spacing::Joint));
+                tokens.append(Punct::new(':', Spacing::Alone));
             }
-            <span class="ident">segment</span>.<span class="ident">to_tokens</span>(<span class="ident">tokens</span>);
+            segment.to_tokens(tokens);
         }
     }
-}</pre></div>
+}
+#
+# pub struct PathSegment;
+#
+# impl ToTokens for PathSegment {
+#     fn to_tokens(&amp;self, tokens: &amp;mut TokenStream) {
+#         unimplemented!()
+#     }
+# }
+</code></pre>
 </div></div><span class='loading-content'>Loading content...</span>
             <h2 id='provided-methods' class='small-section-header'>Provided methods<a href='#provided-methods' class='anchor'></a></h2><div class='methods'><h3 id='method.into_token_stream' class='method'><code id='into_token_stream.v'>fn <a href='#method.into_token_stream' class='fnname'>into_token_stream</a>(self) -&gt; <a class="struct" href="../proc_macro2/struct.TokenStream.html" title="struct proc_macro2::TokenStream">TokenStream</a> <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;Self: <a class="trait" href="https://doc.rust-lang.org/nightly/core/marker/trait.Sized.html" title="trait core::marker::Sized">Sized</a>,&nbsp;</span></code></h3><div class='docblock'><p>Convert <code>self</code> directly into a <code>TokenStream</code> object.</p>
 <p>This method is implicitly implemented using <code>to_tokens</code>, and acts as a

@@ -27,28 +27,36 @@ syntax performs interpolation of runtime variables into the quoted tokens.
 Check out the documentation of the <a href="macro.quote.html"><code>quote!</code></a> macro for more detail about
 the syntax. See also the <a href="macro.quote_spanned.html"><code>quote_spanned!</code></a> macro which is important for
 implementing hygienic procedural macros.</p>
-
-<div class='information'><div class='tooltip edition'>ⓘ<span class='tooltiptext'>This code runs with edition 2018</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered edition ">
-<span class="kw">let</span> <span class="ident">tokens</span> <span class="op">=</span> <span class="macro">quote</span><span class="macro">!</span> {
-    <span class="kw">struct</span> <span class="ident">SerializeWith</span> #<span class="ident">generics</span> #<span class="ident">where_clause</span> {
-        <span class="ident">value</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> #<span class="ident">field_ty</span>,
-        <span class="ident">phantom</span>: <span class="ident">core</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span><span class="op">&lt;</span>#<span class="ident">item_ty</span><span class="op">&gt;</span>,
+<pre><code class="language-edition2018"># use quote::quote;
+#
+# let generics = &quot;&quot;;
+# let where_clause = &quot;&quot;;
+# let field_ty = &quot;&quot;;
+# let item_ty = &quot;&quot;;
+# let path = &quot;&quot;;
+# let value = &quot;&quot;;
+#
+let tokens = quote! {
+    struct SerializeWith #generics #where_clause {
+        value: &amp;'a #field_ty,
+        phantom: core::marker::PhantomData&lt;#item_ty&gt;,
     }
 
-    <span class="kw">impl</span> #<span class="ident">generics</span> <span class="ident">serde</span>::<span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">SerializeWith</span> #<span class="ident">generics</span> #<span class="ident">where_clause</span> {
-        <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S</span>::<span class="prelude-val">Ok</span>, <span class="ident">S</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-        <span class="kw">where</span>
-            <span class="ident">S</span>: <span class="ident">serde</span>::<span class="ident">Serializer</span>,
+    impl #generics serde::Serialize for SerializeWith #generics #where_clause {
+        fn serialize&lt;S&gt;(&amp;self, serializer: S) -&gt; Result&lt;S::Ok, S::Error&gt;
+        where
+            S: serde::Serializer,
         {
-            #<span class="ident">path</span>(<span class="self">self</span>.<span class="ident">value</span>, <span class="ident">serializer</span>)
+            #path(self.value, serializer)
         }
     }
 
-    <span class="ident">SerializeWith</span> {
-        <span class="ident">value</span>: #<span class="ident">value</span>,
-        <span class="ident">phantom</span>: <span class="ident">core</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span>::<span class="op">&lt;</span>#<span class="ident">item_ty</span><span class="op">&gt;</span>,
+    SerializeWith {
+        value: #value,
+        phantom: core::marker::PhantomData::&lt;#item_ty&gt;,
     }
-};</pre></div>
+};
+</code></pre>
 <h1 id="recursion-limit" class="section-header"><a href="#recursion-limit">Recursion limit</a></h1>
 <p>The <code>quote!</code> macro relies on deep recursion so some large invocations may
 fail with &quot;recursion limit reached&quot; when you compile. If it fails, bump up

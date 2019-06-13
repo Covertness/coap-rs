@@ -13,21 +13,28 @@ while serializing a type.</p>
 period.</p>
 <p>For example, a filesystem <a href="https://doc.rust-lang.org/std/path/struct.Path.html"><code>Path</code></a> may refuse to serialize
 itself if it contains invalid UTF-8 data.</p>
+<pre><code class="language-edition2018"># struct Path;
+#
+# impl Path {
+#     fn to_str(&amp;self) -&gt; Option&lt;&amp;str&gt; {
+#         unimplemented!()
+#     }
+# }
+#
+use serde::ser::{self, Serialize, Serializer};
 
-<div class='information'><div class='tooltip edition'>ⓘ<span class='tooltiptext'>This code runs with edition 2018</span></div></div><div class="example-wrap"><pre class="rust rust-example-rendered edition ">
-<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">ser</span>::{<span class="self">self</span>, <span class="ident">Serialize</span>, <span class="ident">Serializer</span>};
-
-<span class="kw">impl</span> <span class="ident">Serialize</span> <span class="kw">for</span> <span class="ident">Path</span> {
-    <span class="kw">fn</span> <span class="ident">serialize</span><span class="op">&lt;</span><span class="ident">S</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">serializer</span>: <span class="ident">S</span>) <span class="op">-&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">S</span>::<span class="prelude-val">Ok</span>, <span class="ident">S</span>::<span class="ident">Error</span><span class="op">&gt;</span>
-    <span class="kw">where</span>
-        <span class="ident">S</span>: <span class="ident">Serializer</span>,
+impl Serialize for Path {
+    fn serialize&lt;S&gt;(&amp;self, serializer: S) -&gt; Result&lt;S::Ok, S::Error&gt;
+    where
+        S: Serializer,
     {
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">to_str</span>() {
-            <span class="prelude-val">Some</span>(<span class="ident">s</span>) <span class="op">=&gt;</span> <span class="ident">serializer</span>.<span class="ident">serialize_str</span>(<span class="ident">s</span>),
-            <span class="prelude-val">None</span> <span class="op">=&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">ser</span>::<span class="ident">Error</span>::<span class="ident">custom</span>(<span class="string">&quot;path contains invalid UTF-8 characters&quot;</span>)),
+        match self.to_str() {
+            Some(s) =&gt; serializer.serialize_str(s),
+            None =&gt; Err(ser::Error::custom(&quot;path contains invalid UTF-8 characters&quot;)),
         }
     }
-}</pre></div>
+}
+</code></pre>
 </div></div><span class='loading-content'>Loading content...</span>
             <h2 id='implementors' class='small-section-header'>Implementors<a href='#implementors' class='anchor'></a></h2><div class='item-list' id='implementors-list'><h3 id='impl-Error' class='impl'><code class='in-band'>impl Error for <a class="struct" href="../../serde/de/value/struct.Error.html" title="struct serde::de::value::Error">Error</a></code><a href='#impl-Error' class='anchor'></a><a class='srclink' href='../../src/serde/de/value.rs.html#84-92' title='goto source code'>[src]</a></h3><div class='impl-items'><h4 id='method.custom' class="method hidden"><code id='custom.v-1'>fn <a href='#method.custom' class='fnname'>custom</a>&lt;T&gt;(msg: T) -&gt; Self <span class="where fmt-newline">where<br>&nbsp;&nbsp;&nbsp;&nbsp;T: <a class="trait" href="https://doc.rust-lang.org/nightly/core/fmt/trait.Display.html" title="trait core::fmt::Display">Display</a>,&nbsp;</span></code><a class='srclink' href='../../src/serde/de/value.rs.html#86-91' title='goto source code'>[src]</a></h4></div></div><span class='loading-content'>Loading content...</span><script type="text/javascript">window.inlined_types=new Set([]);</script><script type="text/javascript" async
                          src="../../implementors/serde/ser/trait.Error.js">
