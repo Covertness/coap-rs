@@ -12,6 +12,7 @@ A fast and stable [Constrained Application Protocol(CoAP)](https://tools.ietf.or
 Features:
 - CoAP core protocol [RFC 7252](https://tools.ietf.org/rfc/rfc7252.txt)
 - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
+- *Too Many Requests* Response Code [RFC 8516](https://tools.ietf.org/html/rfc8516)
 
 [Documentation](http://covertness.github.io/coap-rs/master/coap/index.html)
 

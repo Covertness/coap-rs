@@ -63,6 +63,7 @@ pub enum ResponseType {
     RequestEntityTooLarge,
     UnsupportedContentFormat,
     RequestEntityIncomplete,
+    TooManyRequests,
 
     // 500 Codes
     InternalServerError,
@@ -209,6 +210,7 @@ pub fn class_to_code(class: &MessageClass) -> u8 {
         MessageClass::Response(ResponseType::RequestEntityTooLarge) => 0x8D,
         MessageClass::Response(ResponseType::UnsupportedContentFormat) => 0x8F,
         MessageClass::Response(ResponseType::RequestEntityIncomplete) => 0x88,
+        MessageClass::Response(ResponseType::TooManyRequests) => 0x9d,
 
         MessageClass::Response(ResponseType::InternalServerError) => 0x90,
         MessageClass::Response(ResponseType::NotImplemented) => 0x91,
@@ -248,6 +250,7 @@ pub fn code_to_class(code: &u8) -> MessageClass {
         0x8D => MessageClass::Response(ResponseType::RequestEntityTooLarge),
         0x8F => MessageClass::Response(ResponseType::UnsupportedContentFormat),
         0x88 => MessageClass::Response(ResponseType::RequestEntityIncomplete),
+        0x9d => MessageClass::Response(ResponseType::TooManyRequests),
 
         0x90 => MessageClass::Response(ResponseType::InternalServerError),
         0x91 => MessageClass::Response(ResponseType::NotImplemented),
