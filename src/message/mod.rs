@@ -2,6 +2,7 @@ pub mod header;
 pub mod request;
 pub mod response;
 pub mod packet;
+pub mod options;
 
 use self::packet::Packet;
 use self::header::Header;
@@ -19,19 +20,19 @@ pub trait IsMessage {
     fn get_token(&self) -> &Vec<u8> {
         return self.get_message().get_token();
     }
-    fn set_option(&mut self, tp: packet::CoAPOption, value: LinkedList<Vec<u8>>) {
+    fn set_option(&mut self, tp: options::CoAPOption, value: LinkedList<Vec<u8>>) {
         self.get_mut_message().set_option(tp, value);
     }
     fn set_payload(&mut self, payload: Vec<u8>) {
         self.get_mut_message().set_payload(payload);
     }
-    fn add_option(&mut self, tp: packet::CoAPOption, value: Vec<u8>) {
+    fn add_option(&mut self, tp: options::CoAPOption, value: Vec<u8>) {
         self.get_mut_message().add_option(tp, value);
     }
-    fn get_option(&self, tp: packet::CoAPOption) -> Option<&LinkedList<Vec<u8>>> {
+    fn get_option(&self, tp: options::CoAPOption) -> Option<&LinkedList<Vec<u8>>> {
         return self.get_message().get_option(tp);
     }
-    fn clear_option(&mut self, tp: packet::CoAPOption) {
+    fn clear_option(&mut self, tp: options::CoAPOption) {
         self.get_mut_message().clear_option(tp);
     }
     fn set_observe(&mut self, value: Vec<u8>) {

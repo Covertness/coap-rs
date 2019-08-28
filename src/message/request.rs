@@ -1,6 +1,7 @@
 use super::IsMessage;
 use super::response::CoAPResponse;
-use super::packet::{CoAPOption, Packet};
+use super::packet::{Packet};
+use super::options::{CoAPOption};
 use super::header::{Header, MessageClass};
 use std::net::SocketAddr;
 use std::str;
@@ -92,7 +93,8 @@ impl IsMessage for CoAPRequest {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::packet::{CoAPOption, Packet};
+    use super::super::packet::{Packet};
+    use super::super::options::CoAPOption;
     use super::super::header::MessageType;
     use super::IsMessage;
     use std::net::SocketAddr;
