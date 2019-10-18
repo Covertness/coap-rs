@@ -2,7 +2,7 @@ use std::io::{Error, ErrorKind, Result};
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 use std::time::Duration;
 use std::thread;
-use std::sync::mpsc;
+use std::sync::{Arc, RwLock, mpsc};
 use url::Url;
 use num;
 use rand::{random, thread_rng, Rng};
@@ -25,6 +25,7 @@ pub struct CoAPClient {
     peer_addr: SocketAddr,
     observe_sender: Option<mpsc::Sender<ObserveMessage>>,
     observe_thread: Option<thread::JoinHandle<()>>,
+    message_id: Arc<RwLock<u16>>,
 }
 
 impl CoAPClient {
@@ -44,6 +45,7 @@ impl CoAPClient {
                                 peer_addr: paddr,
                                 observe_sender: None,
                                 observe_thread: None,
+                                message_id: Arc::new(RwLock::new(thread_rng().gen_range(0, num::pow(2u32, 16)) as u16)),
                             })
                         })
                 }),
@@ -86,10 +88,9 @@ impl CoAPClient {
     /// Observe a resource with the handler
     pub fn observe<H: FnMut(Packet) + Send + 'static>(&mut self, resource_path: &str, mut handler: H) -> Result<()> {
         // TODO: support observe multi resources at the same time
-        let mut message_id: u16 = 0;
         let mut register_packet = CoAPRequest::new();
         register_packet.set_observe(vec![ObserveOption::Register as u8]);
-        register_packet.set_message_id(Self::gen_message_id(&mut message_id));
+        register_packet.set_message_id(Self::gen_message_id(&self.message_id));
         register_packet.set_path(resource_path);
 
         self.send(&register_packet)?;
@@ -110,6 +111,7 @@ impl CoAPClient {
         let peer_addr = self.peer_addr.clone();
         let (observe_sender, observe_receiver) = mpsc::channel();
         let observe_path = String::from(resource_path);
+        let message_id = self.message_id.clone();
 
         let observe_thread = thread::spawn(move || loop {
             match Self::receive_from_socket(&socket) {
@@ -143,7 +145,7 @@ impl CoAPClient {
             match observe_receiver.try_recv() {
                 Ok(ObserveMessage::Terminate) => {
                     let mut deregister_packet = CoAPRequest::new();
-                    deregister_packet.set_message_id(Self::gen_message_id(&mut message_id));
+                    deregister_packet.set_message_id(Self::gen_message_id(&message_id));
                     deregister_packet.set_observe(vec![ObserveOption::Deregister as u8]);
                     deregister_packet.set_path(observe_path.as_str());
 
@@ -279,8 +281,9 @@ impl CoAPClient {
         return Ok((host.to_string(), port, path));
     }
 
-    fn gen_message_id(message_id: &mut u16) -> u16 {
-        (*message_id) += 1;
+    fn gen_message_id(message_id: &Arc<RwLock<u16>>) -> u16 {
+        let mut message_id = message_id.write().expect("Could not lock message id for increment. Fatal error.");
+        *message_id += 1;
         return *message_id;
     }
 }
