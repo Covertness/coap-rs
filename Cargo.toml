@@ -13,15 +13,15 @@ edition = "2018"
 [dependencies]
 bincode = "1.1.2"
 serde = { version= "1.0.88", features= [ "derive" ] }
-mio = "0.5"
 url = "1.7.2"
-num = "0.2.0"
 num-derive = "0.2.4"
 num-traits = "0.2.6"
-rand = "0.3"
 log = "0.4.6"
-threadpool = "1.7.1"
 regex = "1.1.0"
+tokio = "0.2.0-alpha.2"
+tokio-net = "0.2.0-alpha.2"
+futures-preview = { version = "=0.3.0-alpha.18", features = ["nightly", "async-await"] }
+bytes = "0.4.12"
 
 [dev-dependencies]
 quickcheck = "0.8.2"

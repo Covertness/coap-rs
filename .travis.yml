@@ -16,7 +16,6 @@ addons:
 rust:
   - nightly
   - beta
-  - stable
 
 # load travis-cargo
 before_script:
@@ -32,8 +31,6 @@ script:
 after_success:
 # measure code coverage and upload to coveralls.io
   - cargo coveralls
-# upload documentation to github.io (gh-pages branch)
-  - cargo doc-upload
 
 env:
   global:

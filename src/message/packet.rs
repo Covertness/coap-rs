@@ -1,6 +1,10 @@
 use bincode;
-use std::collections::BTreeMap;
-use std::collections::LinkedList;
+use std::{
+    self,
+    fmt,
+    collections::BTreeMap,
+    collections::LinkedList,
+};
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -68,12 +72,24 @@ pub enum PackageError {
     InvalidPacketLength,
 }
 
+impl fmt::Display for PackageError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 #[derive(Debug)]
 pub enum ParseError {
     InvalidHeader,
     InvalidTokenLength,
     InvalidOptionDelta,
     InvalidOptionLength,
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 #[derive(Clone, Debug)]

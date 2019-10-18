@@ -1,22 +1,27 @@
-use std;
-use std::io::{Error, ErrorKind};
-use std::thread;
-use std::net::{ToSocketAddrs, SocketAddr};
-use std::sync::mpsc;
-use mio::{EventLoop, PollOpt, EventSet, Handler, Sender, Token};
-use mio::udp::UdpSocket;
-use log::{warn, debug, error, info};
-use super::message::packet::Packet;
-use super::message::request::{CoAPRequest};
-use super::message::IsMessage;
-use super::message::response::CoAPResponse;
-use threadpool::ThreadPool;
+use std::{
+    self,
+    pin::Pin,
+    net::{self, SocketAddr, ToSocketAddrs},
+    task::Context,
+};
+use log::{debug, error};
+use futures::{Poll, SinkExt, Stream, StreamExt, select, stream::FusedStream};
+use tokio::{
+    io,
+    sync::mpsc,
+    net::{UdpFramed, UdpSocket},
+};
+use tokio_net::driver::Handle;
+use super::message::{
+    packet::Packet,
+    request::{CoAPRequest},
+    response::CoAPResponse,
+    Codec,
+};
 use super::observer::Observer;
 
-const DEFAULT_WORKER_NUM: usize = 4;
-
-pub type TxQueue = mpsc::Sender<QueuedMessage>;
-type RxQueue = mpsc::Receiver<QueuedMessage>;
+pub type MessageSender = mpsc::UnboundedSender<(Packet, SocketAddr)>;
+type MessageReceiver = mpsc::UnboundedReceiver<(Packet, SocketAddr)>;
 
 #[derive(Debug)]
 pub enum CoAPServerError {
@@ -32,360 +37,116 @@ pub struct QueuedMessage {
     pub message: Packet,
 }
 
-#[derive(Debug)]
-enum EventLoopNotifyType {
-    NewResponse,
-    Shutdown,
-    UpdateResource,
+pub enum Message {
+    NeedSend(Packet, SocketAddr),
+    Received(Packet, SocketAddr),
 }
 
-#[derive(Debug)]
-struct EventLoopNotify {
-    notify_type: EventLoopNotifyType,
-    request: Option<CoAPRequest>,
+pub struct Server<'a> {
+    server: CoAPServer,
+    observer: Observer,
+    handler: Option<Box<dyn FnMut(CoAPRequest) -> Option<CoAPResponse> + Send + 'a>>,
 }
 
-#[derive(Debug)]
-enum EventLoopTimer {
-    ObserveTimer,
-}
-
-#[derive(Debug)]
-enum ResponseError {
-    SocketUnwritable,
-    SocketError,
-    PacketInvalid,
-}
-
-pub trait CoAPHandler: Sync + Send + Copy {
-    fn handle(&self, request: CoAPRequest) -> Option<CoAPResponse>;
-}
-
-impl<F> CoAPHandler for F
-    where F: Fn(CoAPRequest) -> Option<CoAPResponse>,
-          F: Sync + Send + Copy
-{
-    fn handle(&self, request: CoAPRequest) -> Option<CoAPResponse> {
-        return self(request);
-    }
-}
-
-struct UdpHandler<H: CoAPHandler + 'static, N: Fn() + Send + 'static> {
-    socket: UdpSocket,
-    tx_sender: TxQueue,
-    rx_recv: RxQueue,
-    worker_pool: ThreadPool,
-    coap_handler: H,
-    observer: Observer<N>,
-}
-
-impl<H: CoAPHandler + 'static, N: Fn() + Send + 'static> UdpHandler<H, N> {
-    fn new(socket: UdpSocket,
-           tx_sender: TxQueue,
-           rx_recv: RxQueue,
-           worker_num: usize,
-           coap_handler: H,
-           response_notify: N)
-           -> UdpHandler<H, N> {
-        let response_q = tx_sender.clone();
-
-        UdpHandler {
-            socket: socket,
-            tx_sender: tx_sender,
-            rx_recv: rx_recv,
-            worker_pool: ThreadPool::new(worker_num),
-            coap_handler: coap_handler,
-            observer: Observer::new(response_q, response_notify),
-        }
-    }
-
-    fn request_handler(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>) {
-        match self.requset_recv() {
-            Some(rqst) => {
-                let filtered = !self.observer.request_handler(&rqst);
-                if filtered {
-                    return;
-                }
-
-                let src = rqst.source.unwrap();
-                let coap_handler = self.coap_handler;
-                let response_q = self.tx_sender.clone();
-                let event_sender = event_loop.channel();
-
-                self.worker_pool.execute(move || {
-                    match coap_handler.handle(rqst) {
-                        Some(response) => {
-                            debug!("Response: {:?}", response);
-
-                            response_q.send(QueuedMessage {
-                                address: src,
-                                message: response.message,
-                            }).unwrap();
-                            match event_sender.send(EventLoopNotify {
-                                notify_type: EventLoopNotifyType::NewResponse,
-                                request: None
-                            }) {
-                                Ok(()) => {}
-                                Err(error) => {
-                                    warn!("Notify NewResponse failed, {:?}", error);
-                                }
-                            }
-                        }
-                        None => {
-                            debug!("No response");
-                        }
-                    }
-                });
-            }
-            None => {}
-        }
-    }
-
-    fn response_handler(&self) -> bool {
-        loop {
-            match self.rx_recv.try_recv() {
-                Ok(q_res) => {
-                    match self.response_send(&q_res) {
-                        Ok(()) => {}
-                        Err(ResponseError::SocketUnwritable) => {
-                            self.tx_sender.send(q_res).unwrap();
-                            return false;
-                        }
-                        Err(_) => {}
-                    }
-                }
-                Err(mpsc::TryRecvError::Empty) => {
-                    return true;
-                }
-                Err(mpsc::TryRecvError::Disconnected) => {
-                    panic!("The RxQueue become disconnected");
-                }
-            }
-        }
-    }
-
-    fn requset_recv(&self) -> Option<CoAPRequest> {
-        let mut buf = [0; 1500];
-
-        match self.socket.recv_from(&mut buf) {
-            Ok(Some((nread, src))) => {
-                debug!("Handling request from {}", src);
-
-                match Packet::from_bytes(&buf[..nread]) {
-                    Ok(packet) => {
-                        return Some(CoAPRequest::from_packet(packet, &src));
-                    }
-                    Err(_) => {
-                        error!("Failed to parse request");
-                        return None;
-                    }
-                }
-            }
-            _ => {
-                error!("Failed to read from socket");
-                panic!("unexpected error");
-            }
-        }
-    }
-
-    fn response_send(&self, q_res: & QueuedMessage) -> Result<(), ResponseError> {
-        match q_res.message.to_bytes() {
-            Ok(bytes) => {
-                match self.socket.send_to(&bytes[..], &q_res.address) {
-                    // Look at https://github.com/carllerche/mio/issues/411 in detail
-                    Ok(None) => return Err(ResponseError::SocketUnwritable),
-                    Ok(_) => Ok(()),
-                    Err(error) => {
-                        error!("Failed to send response, {:?}", error);
-                        return Err(ResponseError::SocketError);
-                    }
-                }
-            }
-            Err(error) => {
-                error!("Failed to decode response, {:?}", error);
-                return Err(ResponseError::PacketInvalid);
-            }
-        }
-    }
-}
-
-impl<H: CoAPHandler + 'static, N: Fn() + Send + 'static> Handler for UdpHandler<H, N> {
-    type Timeout = EventLoopTimer;
-    type Message = EventLoopNotify;
-
-    fn ready(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>, _: Token, events: EventSet) {
-        if events.is_writable() {
-            // handle the response
-            match self.response_handler() {
-                true => {
-                    event_loop.reregister(&self.socket, Token(0), EventSet::readable(), PollOpt::level()).unwrap();
-                }
-                false => {
-                    event_loop.reregister(&self.socket, Token(0), EventSet::writable(), PollOpt::edge()).unwrap();
-                }
-            }
-        } else if events.is_readable() {
-            // handle the request
-            self.request_handler(event_loop);
-        } else {
-            warn!("Unknown Event, {:?}", events);
-        }
-    }
-
-    fn notify(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>, msg: EventLoopNotify) {
-        match msg.notify_type {
-            EventLoopNotifyType::NewResponse => {
-                event_loop.reregister(&self.socket, Token(0), EventSet::writable(), PollOpt::edge()).unwrap();
-            }
-            EventLoopNotifyType::Shutdown => {
-                info!("Shutting down request handler");
-                event_loop.shutdown();
-            }
-            EventLoopNotifyType::UpdateResource => {
-                self.observer.change_resource(&msg.request.unwrap());
-            }
-        }
-    }
-
-    fn timeout(&mut self, event_loop: &mut EventLoop<UdpHandler<H, N>>, token: EventLoopTimer) {
-        match token {
-            EventLoopTimer::ObserveTimer => {
-                self.observer.timer_handler();
-                event_loop.timeout_ms(EventLoopTimer::ObserveTimer, 1000).unwrap();
-            }
-        }
-    }
-}
-
-pub struct CoAPServer {
-    socket: UdpSocket,
-    event_sender: Option<Sender<EventLoopNotify>>,
-    event_thread: Option<thread::JoinHandle<()>>,
-    worker_num: usize,
-}
-
-impl CoAPServer {
+impl<'a> Server<'a> {
     /// Creates a CoAP server listening on the given address.
-    pub fn new<A: ToSocketAddrs>(addr: A) -> std::io::Result<CoAPServer> {
-        addr.to_socket_addrs().and_then(|mut iter| {
-            match iter.next() {
-                Some(ad) => {
-                    UdpSocket::bound(&ad).and_then(|s| {
-                        Ok(CoAPServer {
-                            socket: s,
-                            event_sender: None,
-                            event_thread: None,
-                            worker_num: DEFAULT_WORKER_NUM,
-                        })
-                    })
-                }
-                None => Err(Error::new(ErrorKind::Other, "no address")),
-            }
+    pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Server<'a>, io::Error> {
+        let (tx, rx) = mpsc::unbounded_channel();
+        Ok(Server {
+            server: CoAPServer::new(addr, rx)?,
+            observer: Observer::new(tx),
+            handler: None,
         })
     }
 
-    /// Starts handling requests with the handler
-    pub fn handle<H: CoAPHandler + 'static>(&mut self, handler: H) -> Result<(), CoAPServerError> {
-        let socket;
+    /// run the server.
+    pub async fn run<F: FnMut(CoAPRequest) -> Option<CoAPResponse> + Send + 'a>(&mut self, handler: F) -> Result<(), io::Error> {
+        self.handler = Some(Box::new(handler));
 
-        // Early return error checking
-        if let Some(_) = self.event_sender {
-            error!("Handler already running!");
-            return Err(CoAPServerError::AnotherHandlerIsRunning);
-        }
-        match self.socket.try_clone() {
-            Ok(good_socket) => socket = good_socket,
-            Err(_) => {
-                error!("Network Error!");
-                return Err(CoAPServerError::NetworkError);
-            }
-        }
-
-        // Create resources
-        let (tx, rx) = mpsc::channel();
-        let (tx_send, tx_recv): (TxQueue, RxQueue) = mpsc::channel();
-        let worker_num = self.worker_num;
-
-        // Setup and spawn event loop thread, which will spawn
-        //   children threads which handle incomining requests
-        let thread = thread::spawn(move || {
-            let mut event_loop = EventLoop::new().unwrap();
-            event_loop.register(&socket, Token(0), EventSet::readable(), PollOpt::level()).unwrap();
-
-            tx.send(event_loop.channel()).unwrap();
-
-            // setup observe timer
-            event_loop.timeout_ms(EventLoopTimer::ObserveTimer, 1000).unwrap();
-
-            let event_sender = event_loop.channel();
-            event_loop.run(&mut UdpHandler::new(socket, tx_send, tx_recv, worker_num, handler, move || {
-                match event_sender.send(EventLoopNotify {
-                                notify_type: EventLoopNotifyType::NewResponse,
-                                request: None
-                            }) {
-                    Ok(()) => {}
-                    Err(error) => {
-                        warn!("Notify NewResponse failed, {:?}", error);
+        loop {
+            select! {
+                message = self.server.select_next_some() => {
+                    match message {
+                        Ok(Message::NeedSend(packet, addr)) => {
+                            self.server.send((packet, addr)).await?;
+                        }
+                        Ok(Message::Received(packet, addr)) => {
+                            self.dispatch_msg(packet, addr).await?;
+                        }
+                        Err(e) => {
+                            error!("select error: {:?}", e);
+                        }
                     }
                 }
-            })).unwrap();
-        });
-
-        // Ensure threads started successfully
-        match rx.recv() {
-            Ok(event_sender) => {
-                self.event_sender = Some(event_sender);
-                self.event_thread = Some(thread);
-                Ok(())
-            }
-            Err(_) => Err(CoAPServerError::EventLoopError),
-        }
-    }
-
-    /// Stop the server.
-    pub fn stop(&mut self) {
-        let event_sender = self.event_sender.take();
-        match event_sender {
-            Some(ref sender) => {
-                sender.send(EventLoopNotify {
-                                notify_type: EventLoopNotifyType::Shutdown,
-                                request: None
-                            }).unwrap();
-                self.event_thread.take().map(|g| g.join().unwrap());
-            }
-            _ => {}
-        }
-    }
-
-    /// Set the number of threads for handling requests
-    pub fn set_worker_num(&mut self, worker_num: usize) {
-        self.worker_num = worker_num;
-    }
-
-    /// Update the resource asynchronously, like PUT method in client
-    pub fn update_resource(&mut self, path: &str, payload: Vec<u8>) -> Result<(), CoAPServerError> {
-        let mut request = CoAPRequest::new();
-        request.set_path(path);
-        request.set_payload(payload);
-
-        match self.event_sender {
-            Some(ref event_sender) => {
-                match event_sender.send(EventLoopNotify {
-                    notify_type: EventLoopNotifyType::UpdateResource,
-                    request: Some(request)
-                }) {
-                    Ok(_) => Ok(()),
-                    _ => Err(CoAPServerError::EventSendError),
+                _ = self.observer.select_next_some() => {
+                    self.observer.timer_handler().await;
                 }
-            },
-            _ => Err(CoAPServerError::EventSendError),
+                complete => break,
+            }
         }
+        Ok(())
     }
 
     /// Return the local address that the server is listening on. This can be useful when starting
     /// a server on a random port as part of unit testing.
     pub fn socket_addr(&self) -> std::io::Result<SocketAddr> {
-        self.socket.local_addr()
+        self.server.socket_addr()
+    }
+
+    async fn dispatch_msg(&mut self, packet: Packet, addr: SocketAddr) -> Result<(), io::Error> {
+        let request = CoAPRequest::from_packet(packet, &addr);
+        let filtered = !self.observer.request_handler(&request).await;
+        if filtered {
+            return Ok(());
+        }
+
+        if let Some(ref mut handler) = self.handler {
+            match handler(request) {
+                Some(response) => {
+                    debug!("Response: {:?}", response);
+                    self.server.send((response.message, addr)).await?;
+                }
+                None => {
+                    debug!("No response");
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+pub struct CoAPServer {
+    receiver: MessageReceiver,
+    is_terminated: bool,
+    socket: UdpFramed<Codec>,
+}
+
+impl CoAPServer {
+    /// Creates a CoAP server listening on the given address.
+    pub fn new<A: ToSocketAddrs>(addr: A, receiver: MessageReceiver) -> Result<CoAPServer, io::Error> {
+        let socket = UdpSocket::from_std(net::UdpSocket::bind(addr)?, &Handle::default())?;
+
+        Ok(CoAPServer {
+            receiver: receiver,
+            is_terminated: false,
+            socket: UdpFramed::new(socket, Codec::new()),
+        })
+    }
+
+    /// Stop the server.
+    pub fn stop(&mut self) {
+        self.is_terminated = true;
+    }
+
+    /// send the packet to the specific address.
+    pub async fn send(&mut self, frame: (Packet, SocketAddr)) -> Result<(), io::Error> {
+        self.socket.send(frame).await
+    }
+
+    /// Return the local address that the server is listening on. This can be useful when starting
+    /// a server on a random port as part of unit testing.
+    pub fn socket_addr(&self) -> std::io::Result<SocketAddr> {
+        self.socket.get_ref().local_addr()
     }
 }
 
@@ -396,10 +157,41 @@ impl Drop for CoAPServer {
     }
 }
 
+impl Stream for CoAPServer {
+    type Item = Result<Message, io::Error>;
+
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if let Poll::Ready(Some((p, a))) = self.receiver.poll_next_unpin(cx) {
+            return Poll::Ready(Some(Ok(Message::NeedSend(p, a))));
+        }
+
+        let result: Option<_> = futures::ready!(self.socket.poll_next_unpin(cx));
+
+        Poll::Ready(match result {
+            Some(Ok(message)) => {
+                let (my_packet, addr) = message;
+                Some(Ok(Message::Received(my_packet, addr)))
+            }
+            Some(Err(e)) => Some(Err(e)),
+            None => None,
+        })
+    }
+}
+
+impl FusedStream for CoAPServer {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
 
 #[cfg(test)]
 mod test {
-    use std::time::Duration;
+    use std::{
+        thread,
+        time::Duration,
+        sync::mpsc,
+    };
+    use tokio::runtime::current_thread::Runtime;
     use super::super::*;
     use super::*;
 
@@ -418,10 +210,15 @@ mod test {
 
     #[test]
     fn test_echo_server() {
-        let mut server = CoAPServer::new("127.0.0.1:5683").unwrap();
-        server.handle(request_handler).unwrap();
+        let mut server = Server::new("127.0.0.1:0").unwrap();
+        let server_port = server.socket_addr().unwrap().port();
+        thread::spawn(move || {
+            Runtime::new().unwrap().block_on(async move {
+                server.run(request_handler).await.unwrap();
+            })
+        });
 
-        let client = CoAPClient::new("127.0.0.1:5683").unwrap();
+        let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let mut request = CoAPRequest::new();
         request.set_version(1);
         request.set_type(MessageType::Confirmable);
@@ -437,10 +234,15 @@ mod test {
 
     #[test]
     fn test_echo_server_no_token() {
-        let mut server = CoAPServer::new("127.0.0.1:5685").unwrap();
-        server.handle(request_handler).unwrap();
+        let mut server = Server::new("127.0.0.1:0").unwrap();
+        let server_port = server.socket_addr().unwrap().port();
+        thread::spawn(move || {
+            Runtime::new().unwrap().block_on(async move {
+                server.run(request_handler).await.unwrap();
+            })
+        });
 
-        let client = CoAPClient::new("127.0.0.1:5685").unwrap();
+        let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let mut packet = CoAPRequest::new();
         packet.set_version(1);
         packet.set_type(MessageType::Confirmable);
@@ -462,10 +264,15 @@ mod test {
         let (tx2, rx2) = mpsc::channel();
         let mut step = 1;
 
-        let mut server = CoAPServer::new("127.0.0.1:5690").unwrap();
-        server.handle(request_handler).unwrap();
+        let mut server = Server::new("127.0.0.1:0").unwrap();
+        let server_port = server.socket_addr().unwrap().port();
+        thread::spawn(move || {
+            Runtime::new().unwrap().block_on(async move {
+                server.run(request_handler).await.unwrap();
+            })
+        });
 
-        let mut client = CoAPClient::new("127.0.0.1:5690").unwrap();
+        let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
 
         tx.send(step).unwrap();
         let mut request = CoAPRequest::new();
@@ -496,38 +303,10 @@ mod test {
 
         step = 2;
         tx.send(step).unwrap();
-        server.update_resource(path, payload2.clone()).unwrap();
+        request.set_payload(payload2.clone());
+        let client2 = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
+        client2.send(&request).unwrap();
+        client2.receive().unwrap();
         assert_eq!(rx2.recv_timeout(Duration::new(5, 0)).unwrap(), ());
-    }
-
-    #[test]
-    fn test_server_socket_addr() {
-        let socket_addr = "127.0.0.1:5690".to_socket_addrs().unwrap().next().unwrap();
-        let server = CoAPServer::new(socket_addr).unwrap();
-        assert_eq!(server.socket_addr().unwrap(), socket_addr);
-    }
-
-    #[test]
-    fn test_random_server_port() {
-        // A port of ZERO should assign a random available port.
-        let mut server = CoAPServer::new("127.0.0.1:0").unwrap();
-        server.handle(request_handler).unwrap();
-
-        let server_port = server.socket_addr().unwrap().port();
-        assert_ne!(server_port, 0); // Ensure a reasonable port number was assigned.
-
-        let client_addr = SocketAddr::from(([127, 0, 0, 1], server_port));
-        let client = CoAPClient::new(client_addr).unwrap();
-        let mut request = CoAPRequest::new();
-        request.set_version(1);
-        request.set_type(MessageType::Confirmable);
-        request.set_code("0.01");
-        request.set_message_id(1);
-        request.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
-        request.add_option(CoAPOption::UriPath, b"test-echo".to_vec());
-        client.send(&request).unwrap();
-
-        let recv_packet = client.receive().unwrap();
-        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 }
