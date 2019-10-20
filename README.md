@@ -14,7 +14,7 @@ Features:
 - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
 - *Too Many Requests* Response Code [RFC 8516](https://tools.ietf.org/html/rfc8516)
 
-[Documentation](https://docs.rs/coap/0.7.5/coap/)
+[Documentation](https://docs.rs/coap/)
 
 ## Installation
 
@@ -84,6 +84,5 @@ fn main() {
 
 ## Benchmark
 ```bash
-$ cargo run --example server
 $ cargo bench
 ```
