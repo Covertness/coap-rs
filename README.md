@@ -41,14 +41,14 @@ use coap::{Server, IsMessage, Method};
 use tokio::runtime::current_thread::Runtime;
 
 fn main() {
-    let addr = "127.0.0.1:5683";
+	let addr = "127.0.0.1:5683";
 	let mut server = Server::new(addr).unwrap();
 
 	println!("Server up on {}", addr);
 
 	Runtime::new().unwrap().block_on(async move {
 		server.run(move |request| {
-            match request.get_method() {
+			match request.get_method() {
 				&Method::Get => println!("request by get {}", request.get_path()),
 				&Method::Post => println!("request by post {}", String::from_utf8(request.message.payload).unwrap()),
 				&Method::Put => println!("request by put {}", String::from_utf8(request.message.payload).unwrap()),
@@ -62,7 +62,7 @@ fn main() {
 				},
 				_ => None
 			};
-    	}).await.unwrap();
+		}).await.unwrap();
 	});
 }
 ```
@@ -74,11 +74,11 @@ extern crate coap;
 use coap::{CoAPClient, CoAPResponse};
 
 fn main() {
-    let url = "coap://127.0.0.1:5683/Rust";
-    println!("Client request: {}", url);
+	let url = "coap://127.0.0.1:5683/Rust";
+	println!("Client request: {}", url);
 
-    let response = CoAPClient::get(url).unwrap();
-    println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
+	let response = CoAPClient::get(url).unwrap();
+	println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 }
 ```
 
