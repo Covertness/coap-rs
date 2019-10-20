@@ -15,7 +15,6 @@ addons:
 # run builds for both all the trains
 rust:
   - nightly
-  - beta
 
 # load travis-cargo
 before_script:
