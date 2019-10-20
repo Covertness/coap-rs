@@ -1,26 +1,30 @@
-use std::collections::{HashMap, HashSet};
-use std::collections::hash_map::Entry;
-use std::net::SocketAddr;
+use std::{
+    net::SocketAddr,
+    collections::{HashMap, HashSet, hash_map::Entry},
+    time::{Duration, Instant},
+};
 use log::{debug, warn};
 use bincode;
+use futures::{SinkExt, StreamExt, stream::{Fuse, SelectNextSome}};
+use tokio::timer::Interval;
 
 use super::message::request::{CoAPRequest, Method};
 use super::message::response::Status;
 use super::message::packet::{ObserveOption, Packet};
 use super::message::IsMessage;
 use super::message::header::{MessageClass, MessageType, ResponseType};
-use super::server::{QueuedMessage, TxQueue};
+use super::server::MessageSender;
 
 const DEFAULT_UNACKNOWLEDGE_MESSAGE_TRY_TIMES: usize = 10;
 
-pub struct Observer<N: Fn() + Send + 'static> {
+pub struct Observer {
     registers: HashMap<String, RegisterItem>,
     resources: HashMap<String, ResourceItem>,
     register_resources: HashMap<String, RegisterResourceItem>,
     unacknowledge_messages: HashMap<u16, UnacknowledgeMessageItem>,
-    tx_sender: TxQueue,
-    response_notify: N,
+    tx_sender: MessageSender,
     current_message_id: u16,
+    timer: Fuse<Interval>,
 }
 
 #[derive(Debug)]
@@ -49,20 +53,27 @@ struct UnacknowledgeMessageItem {
     try_times: usize,
 }
 
-impl<N: Fn() + Send + 'static> Observer<N> {
-    pub fn new(tx_sender: TxQueue, response_notify: N) -> Observer<N> {
+impl Observer {
+    /// Creates an observer with channel to send message.
+    pub fn new(tx_sender: MessageSender) -> Observer {
         Observer {
             registers: HashMap::new(),
             resources: HashMap::new(),
             register_resources: HashMap::new(),
             unacknowledge_messages: HashMap::new(),
             tx_sender: tx_sender,
-            response_notify: response_notify,
             current_message_id: 0,
+            timer: Interval::new(Instant::now(), Duration::from_secs(1)).fuse(),
         }
     }
 
-    pub fn request_handler(&mut self, request: &CoAPRequest) -> bool {
+    /// poll the observer's timer.
+    pub fn select_next_some(&mut self) -> SelectNextSome<Fuse<Interval>> {
+        self.timer.select_next_some()
+    }
+
+    /// filter the requests belong to the observer.
+    pub async fn request_handler(&mut self, request: &CoAPRequest) -> bool {
         if request.get_type() == MessageType::Acknowledgement {
             self.acknowledge(request);
             return false;
@@ -71,7 +82,7 @@ impl<N: Fn() + Send + 'static> Observer<N> {
         match (request.get_method(), request.get_observe()) {
             (&Method::Get, Some(observe_option)) => match observe_option[0] {
                 x if x == ObserveOption::Register as u8 => {
-                    self.register(request);
+                    self.register(request).await;
                     return false;
                 }
                 x if x == ObserveOption::Deregister as u8 => {
@@ -81,14 +92,15 @@ impl<N: Fn() + Send + 'static> Observer<N> {
                 _ => return true,
             },
             (&Method::Put, _) => {
-                self.resource_changed(request);
+                self.resource_changed(request).await;
                 return true;
             }
             _ => return true,
         }
     }
 
-    pub fn timer_handler(&mut self) {
+    /// trigger send the unacknowledge messages.
+    pub async fn timer_handler(&mut self) {
         let register_resource_keys: Vec<String>;
         {
             register_resource_keys = self.unacknowledge_messages
@@ -99,16 +111,12 @@ impl<N: Fn() + Send + 'static> Observer<N> {
 
         for register_resource_key in register_resource_keys {
             if self.try_unacknowledge_message(&register_resource_key) {
-                self.notify_register_with_newest_resource(&register_resource_key);
+                self.notify_register_with_newest_resource(&register_resource_key).await;
             }
         }
     }
 
-    pub fn change_resource(&mut self, request: &CoAPRequest) {
-        self.resource_changed(request);
-    }
-
-    fn register(&mut self, request: &CoAPRequest) {
+    async fn register(&mut self, request: &CoAPRequest) {
         let register_address = request.source.unwrap();
         let resource_path = request.get_path();
 
@@ -119,7 +127,7 @@ impl<N: Fn() + Send + 'static> Observer<N> {
             if let Some(ref response) = request.response {
                 let mut response2 = response.clone();
                 response2.set_status(Status::NotFound);
-                self.send_message(&register_address, &response2.message);
+                self.send_message(&register_address, &response2.message).await;
             }
             return;
         }
@@ -132,7 +140,7 @@ impl<N: Fn() + Send + 'static> Observer<N> {
             let mut response2 = response.clone();
             response2.set_payload(resource.payload.clone());
             response2.set_observe(vec![ObserveOption::Register as u8]);
-            self.send_message(&register_address, &response2.message);
+            self.send_message(&register_address, &response2.message).await;
         }
     }
 
@@ -145,7 +153,7 @@ impl<N: Fn() + Send + 'static> Observer<N> {
         self.remove_register_resource(&register_address, &resource_path, &request.get_token());
     }
 
-    fn resource_changed(&mut self, request: &CoAPRequest) {
+    async fn resource_changed(&mut self, request: &CoAPRequest) {
         let resource_path = request.get_path();
         let ref resource_payload = request.message.payload;
 
@@ -163,7 +171,7 @@ impl<N: Fn() + Send + 'static> Observer<N> {
 
         for register_resource_key in register_resource_keys {
             self.gen_message_id();
-            self.notify_register_with_newest_resource(&register_resource_key);
+            self.notify_register_with_newest_resource(&register_resource_key).await;
             self.record_unacknowledge_message(&register_resource_key);
         }
     }
@@ -336,7 +344,7 @@ impl<N: Fn() + Send + 'static> Observer<N> {
         self.unacknowledge_messages.remove(message_id);
     }
 
-    fn notify_register_with_newest_resource(&self, register_resource_key: &String) {
+    async fn notify_register_with_newest_resource(&mut self, register_resource_key: &String) {
         let message_id = self.current_message_id;
 
         debug!("notify {} {}", register_resource_key, message_id);
@@ -363,18 +371,12 @@ impl<N: Fn() + Send + 'static> Observer<N> {
             address = register_resource.register.parse().unwrap();
         }
 
-        self.send_message(&address, &message);
+        self.send_message(&address, &message).await;
     }
 
-    fn send_message(&self, address: &SocketAddr, message: &Packet) {
+    async fn send_message(&mut self, address: &SocketAddr, message: &Packet) {
         debug!("send_message {:?} {:?}", address, message);
-        self.tx_sender
-            .send(QueuedMessage {
-                address: *address,
-                message: message.clone(),
-            })
-            .unwrap();
-        (self.response_notify)();
+        self.tx_sender.send((message.clone(), *address)).await.unwrap();
     }
 
     fn gen_message_id(&mut self) -> u16 {
@@ -394,9 +396,13 @@ impl<N: Fn() + Send + 'static> Observer<N> {
 
 #[cfg(test)]
 mod test {
-    use std::io::ErrorKind;
-    use std::sync::mpsc;
-    use std::time::Duration;
+    use std::{
+        io::ErrorKind,
+        thread,
+        time::Duration,
+        sync::mpsc,
+    };
+    use tokio::runtime::current_thread::Runtime;
     use super::*;
     use super::super::*;
 
@@ -428,10 +434,16 @@ mod test {
         let (tx2, rx2) = mpsc::channel();
         let mut step = 1;
 
-        let mut server = CoAPServer::new("127.0.0.1:5687").unwrap();
-        server.handle(request_handler).unwrap();
+        let mut server = Server::new("127.0.0.1:0").unwrap();
+        let server_port = server.socket_addr().unwrap().port();
+        thread::spawn(move || {
+            Runtime::new().unwrap().block_on(async move {
+                server.run(request_handler).await.unwrap();
+            })
+        });
+        let server_address = &format!("127.0.0.1:{}", server_port);
 
-        let mut client = CoAPClient::new("127.0.0.1:5687").unwrap();
+        let mut client = CoAPClient::new(server_address).unwrap();
 
         tx.send(step).unwrap();
         let mut request = CoAPRequest::new();
@@ -466,7 +478,7 @@ mod test {
 
         request.set_payload(payload2.clone());
 
-        let client2 = CoAPClient::new("127.0.0.1:5687").unwrap();
+        let client2 = CoAPClient::new(server_address).unwrap();
         client2.send(&request).unwrap();
         client2.receive().unwrap();
         assert_eq!(rx2.recv_timeout(Duration::new(5, 0)).unwrap(), ());
@@ -478,10 +490,16 @@ mod test {
         let payload1 = b"data1".to_vec();
         let payload2 = b"data2".to_vec();
 
-        let mut server = CoAPServer::new("127.0.0.1:5689").unwrap();
-        server.handle(request_handler).unwrap();
+        let mut server = Server::new("127.0.0.1:0").unwrap();
+        let server_port = server.socket_addr().unwrap().port();
+        thread::spawn(move || {
+            Runtime::new().unwrap().block_on(async move {
+                server.run(request_handler).await.unwrap();
+            })
+        });
+        let server_address = &format!("127.0.0.1:{}", server_port);
 
-        let mut client = CoAPClient::new("127.0.0.1:5689").unwrap();
+        let mut client = CoAPClient::new(server_address).unwrap();
 
         let mut request = CoAPRequest::new();
         request.set_method(Method::Put);
@@ -499,7 +517,7 @@ mod test {
 
         request.set_payload(payload2.clone());
 
-        let client3 = CoAPClient::new("127.0.0.1:5689").unwrap();
+        let client3 = CoAPClient::new(server_address).unwrap();
         client3.send(&request).unwrap();
         client3.receive().unwrap();
     }
@@ -507,10 +525,15 @@ mod test {
     #[test]
     fn test_observe_without_resource() {
         let path = "/test";
-        let mut server = CoAPServer::new("127.0.0.1:5691").unwrap();
-        server.handle(request_handler).unwrap();
+        let mut server = Server::new("127.0.0.1:0").unwrap();
+        let server_port = server.socket_addr().unwrap().port();
+        thread::spawn(move || {
+            Runtime::new().unwrap().block_on(async move {
+                server.run(request_handler).await.unwrap();
+            })
+        });
 
-        let mut client = CoAPClient::new("127.0.0.1:5691").unwrap();
+        let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let error = client.observe(path, |_msg| {}).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotFound);
     }

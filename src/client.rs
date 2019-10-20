@@ -4,13 +4,10 @@ use std::time::Duration;
 use std::thread;
 use std::sync::mpsc;
 use url::Url;
-use num;
-use rand::{random, thread_rng, Rng};
 use log::*;
 use super::message::packet::{Packet, ObserveOption};
-use super::message::header::MessageType;
 use super::message::response::{CoAPResponse, Status};
-use super::message::request::{CoAPRequest, Method};
+use super::message::request::CoAPRequest;
 use super::message::IsMessage;
 use regex::Regex;
 
@@ -172,50 +169,6 @@ impl CoAPClient {
         }
     }
 
-    /// Execute a request with the coap url and a specific timeout. Default timeout is 5s.
-    #[deprecated(since = "0.6.0", note = "please use `get_with_timeout` instead")]
-    pub fn request_with_timeout(url: &str, timeout: Option<Duration>) -> Result<CoAPResponse> {
-        let (domain, port, path) = Self::parse_coap_url(url)?;
-
-        let mut packet = CoAPRequest::new();
-        packet.set_version(1);
-        packet.set_type(MessageType::Confirmable);
-        packet.set_method(Method::Get);
-
-        let message_id = thread_rng().gen_range(0, num::pow(2u32, 16)) as u16;
-        packet.set_message_id(message_id);
-
-        let mut token: Vec<u8> = vec![1, 1, 1, 1];
-        for x in token.iter_mut() {
-            *x = random()
-        }
-        packet.set_token(token.clone());
-        packet.set_path(path.as_str());
-
-        let client = r#try!(Self::new((domain.as_str(), port)));
-        r#try!(client.send(&packet));
-
-        r#try!(client.set_receive_timeout(timeout));
-        match client.receive() {
-            Ok(receive_packet) => {
-                if receive_packet.get_message_id() == message_id
-                    && *receive_packet.get_token() == token
-                {
-                    return Ok(receive_packet);
-                } else {
-                    return Err(Error::new(ErrorKind::Other, "receive invalid data"));
-                }
-            }
-            Err(e) => Err(e),
-        }
-    }
-
-    /// Execute a request with the coap url.
-    #[deprecated(since = "0.6.0", note = "please use `get` instead")]
-    pub fn request(url: &str) -> Result<CoAPResponse> {
-        Self::get_with_timeout(url, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
-    }
-
     /// Execute a request.
     pub fn send(&self, request: &CoAPRequest) -> Result<()> {
         Self::send_with_socket(&self.socket, &self.peer_addr, &request.message)
@@ -235,7 +188,7 @@ impl CoAPClient {
     fn send_with_socket(socket: &UdpSocket, peer_addr: &SocketAddr, message: &Packet) -> Result<()> {
         match message.to_bytes() {
             Ok(bytes) => {
-                let size = r#try!(socket.send_to(&bytes[..], peer_addr));
+                let size = socket.send_to(&bytes[..], peer_addr)?;
                 if size == bytes.len() {
                     Ok(())
                 } else {
@@ -249,7 +202,7 @@ impl CoAPClient {
     fn receive_from_socket(socket: &UdpSocket) -> Result<Packet> {
         let mut buf = [0; 1500];
 
-        let (nread, _src) = r#try!(socket.recv_from(&mut buf));
+        let (nread, _src) = socket.recv_from(&mut buf)?;
         match Packet::from_bytes(&buf[..nread]) {
             Ok(packet) => Ok(packet),
             Err(_) => Err(Error::new(ErrorKind::InvalidInput, "packet error")),
@@ -294,11 +247,10 @@ impl Drop for CoAPClient {
 #[cfg(test)]
 mod test {
     use super::*;
+    use super::super::*;
     use std::time::Duration;
     use std::io::ErrorKind;
-    use super::super::message::request::CoAPRequest;
-    use super::super::message::response::CoAPResponse;
-    use super::super::server::CoAPServer;
+    use tokio::runtime::current_thread::Runtime;
 
     #[test]
     fn test_parse_coap_url_good_url() {
@@ -324,10 +276,15 @@ mod test {
 
     #[test]
     fn test_get() {
-        let mut server = CoAPServer::new("127.0.0.1:5686").unwrap();  // may fail if port happens to be in use!
-        server.handle(request_handler).unwrap();
+        let mut server = Server::new("127.0.0.1:0").unwrap();
+        let server_port = server.socket_addr().unwrap().port();
+        thread::spawn(move || {
+            Runtime::new().unwrap().block_on(async move {
+                server.run(request_handler).await.unwrap();
+            })
+        });
 
-        let error = CoAPClient::get("coap://127.0.0.1:5686/Rust")
+        let error = CoAPClient::get(&format!("coap://127.0.0.1:{}/Rust", server_port))
             .unwrap_err();
         if cfg!(windows) {
             assert_eq!(error.kind(), ErrorKind::TimedOut);
@@ -338,10 +295,15 @@ mod test {
 
     #[test]
     fn test_get_timeout() {
-        let mut server = CoAPServer::new("127.0.0.1:5684").unwrap();  // may fail if port happens to be in use!
-        server.handle(request_handler).unwrap();
+        let mut server = Server::new("127.0.0.1:0").unwrap();
+        let server_port = server.socket_addr().unwrap().port();
+        thread::spawn(move || {
+            Runtime::new().unwrap().block_on(async move {
+                server.run(request_handler).await.unwrap();
+            })
+        });
 
-        let error = CoAPClient::get_with_timeout("coap://127.0.0.1:5684/Rust", Duration::new(1, 0))
+        let error = CoAPClient::get_with_timeout(&format!("coap://127.0.0.1:{}/Rust", server_port), Duration::new(1, 0))
             .unwrap_err();
         if cfg!(windows) {
             assert_eq!(error.kind(), ErrorKind::TimedOut);
