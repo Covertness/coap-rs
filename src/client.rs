@@ -276,21 +276,9 @@ mod test {
 
     #[test]
     fn test_get() {
-        let mut server = Server::new("127.0.0.1:0").unwrap();
-        let server_port = server.socket_addr().unwrap().port();
-        thread::spawn(move || {
-            Runtime::new().unwrap().block_on(async move {
-                server.run(request_handler).await.unwrap();
-            })
-        });
-
-        let error = CoAPClient::get(&format!("coap://127.0.0.1:{}/Rust", server_port))
-            .unwrap_err();
-        if cfg!(windows) {
-            assert_eq!(error.kind(), ErrorKind::TimedOut);
-        } else {
-            assert_eq!(error.kind(), ErrorKind::WouldBlock);
-        }
+        let resp = CoAPClient::get("coap://coap.me:5683/hello")
+            .unwrap();
+        assert_eq!(resp.message.payload, b"world".to_vec());
     }
 
     #[test]
