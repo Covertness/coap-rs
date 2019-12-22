@@ -5,10 +5,9 @@ pub mod packet;
 
 use std::collections::LinkedList;
 use bytes::BytesMut;
-use tokio::{
-    io,
-    codec::{Decoder, Encoder},
-};
+use tokio::{io};
+
+use tokio_util::codec::{Decoder, Encoder};
 
 use self::packet::Packet;
 use self::header::Header;

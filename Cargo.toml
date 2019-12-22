@@ -18,10 +18,10 @@ num-derive = "0.2.4"
 num-traits = "0.2.6"
 log = "0.4.6"
 regex = "1.1.0"
-tokio = "0.2.0-alpha.2"
-tokio-net = "0.2.0-alpha.2"
-futures-preview = { version = "=0.3.0-alpha.18", features = ["nightly", "async-await"] }
-bytes = "0.4.12"
+tokio =  {version = "0.2", features = ["full"]}
+tokio-util = {version = "0.2", features = ["codec", "udp"]}
+futures = "0.3"
+bytes = "0.5"
 
 [dev-dependencies]
 quickcheck = "0.8.2"
