@@ -34,28 +34,28 @@
 
 //! fn main() {
 //!     let addr = "127.0.0.1:5683";
-//! 	let mut server = Server::new(addr).unwrap();
-
-//! 	println!("Server up on {}", addr);
 
 //! 	Runtime::new().unwrap().block_on(async move {
-//! 		server.run(move |request| {
+//!         let mut server = Server::new(addr).unwrap();
+//!         println!("Server up on {}", addr);
+//! 
+//!         server.run(move |request| {
 //!             match request.get_method() {
-//! 				&Method::Get => println!("request by get {}", request.get_path()),
-//! 				&Method::Post => println!("request by post {}", String::from_utf8(request.message.payload).unwrap()),
-//! 				&Method::Put => println!("request by put {}", String::from_utf8(request.message.payload).unwrap()),
-//! 				_ => println!("request by other method"),
-//! 			};
-			
-//! 			return match request.response {
-//! 				Some(mut message) => {
-//! 					message.set_payload(b"OK".to_vec());
-//! 					Some(message)
-//! 				},
-//! 				_ => None
-//! 			};
-//!     	}).await.unwrap();
-//! 	});
+//!                 &Method::Get => println!("request by get {}", request.get_path()),
+//!                 &Method::Post => println!("request by post {}", String::from_utf8(request.message.payload).unwrap()),
+//!                 &Method::Put => println!("request by put {}", String::from_utf8(request.message.payload).unwrap()),
+//!                 _ => println!("request by other method"),
+//!             };
+            
+//!             return match request.response {
+//!                 Some(mut message) => {
+//!                     message.set_payload(b"OK".to_vec());
+//!                     Some(message)
+//!                 },
+//!                 _ => None
+//!             };
+//!         }).await.unwrap();
+//!     });
 //! }
 //! ```
 //!
@@ -66,11 +66,11 @@
 //! use coap::{CoAPClient, CoAPResponse};
 //!
 //! fn main() {
-//! 	let url = "coap://127.0.0.1:5683/Rust";
-//! 	println!("Client request: {}", url);
+//!     let url = "coap://127.0.0.1:5683/Rust";
+//!     println!("Client request: {}", url);
 //!
-//! 	let response = CoAPClient::get(url).unwrap();
-//! 	println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
+//!     let response = CoAPClient::get(url).unwrap();
+//!     println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 //! }
 //! ```
 
