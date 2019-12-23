@@ -188,11 +188,9 @@ impl FusedStream for CoAPServer {
 #[cfg(test)]
 pub mod test {
     use std::{
-        thread,
         time::Duration,
         sync::mpsc,
     };
-    use tokio::runtime::Runtime;
     use super::super::*;
     use super::*;
 
@@ -203,7 +201,7 @@ pub mod test {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
                 let mut server = server::Server::new("127.0.0.1:0").unwrap();
 
-                tx.send(server.socket_addr().unwrap().port());
+                tx.send(server.socket_addr().unwrap().port()).unwrap();
                 
                 server.run(request_handler).await.unwrap();
             })

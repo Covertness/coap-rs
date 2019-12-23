@@ -398,11 +398,9 @@ impl Observer {
 mod test {
     use std::{
         io::ErrorKind,
-        thread,
         time::Duration,
         sync::mpsc,
     };
-    use tokio::runtime::Runtime;
     use super::*;
     use super::super::*;
 

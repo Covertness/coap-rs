@@ -4,15 +4,14 @@ extern crate test;
 
 use std::thread;
 use coap::{Server, CoAPClient, CoAPRequest, IsMessage, MessageType, CoAPOption};
-use tokio::runtime::current_thread::Runtime;
+use tokio::runtime::Runtime;
 
 #[bench]
 fn bench_server_with_request(b: &mut test::Bencher) {
-    let mut server = Server::new("127.0.0.1:0").unwrap();
-    let server_port = server.socket_addr().unwrap().port();
-
     thread::spawn(move || {
 		Runtime::new().unwrap().block_on(async move {
+            let mut server = Server::new("127.0.0.1:5683").unwrap();
+
 			server.run(move |request| {
                 let uri_path = request.get_path().to_string();
 
@@ -27,7 +26,7 @@ fn bench_server_with_request(b: &mut test::Bencher) {
 		});
 	});
 
-    let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
+    let client = CoAPClient::new("127.0.0.1:5683").unwrap();
 
     let mut request = CoAPRequest::new();
 	request.set_version(1);

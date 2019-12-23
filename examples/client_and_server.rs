@@ -6,10 +6,10 @@ use coap::IsMessage;
 use tokio::runtime::Runtime;
 
 fn main() {
-    let mut server = Server::new("127.0.0.1:5683").unwrap();
-
     thread::spawn(move || {
 		Runtime::new().unwrap().block_on(async move {
+            let mut server = Server::new("127.0.0.1:5683").unwrap();
+            
 			server.run(move |request| {
                 let uri_path = request.get_path().to_string();
 

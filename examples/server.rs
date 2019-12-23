@@ -5,11 +5,12 @@ use tokio::runtime::Runtime;
 
 fn main() {
     let addr = "127.0.0.1:5683";
-	let mut server = Server::new(addr).unwrap();
 
 	println!("Server up on {}", addr);
 
 	Runtime::new().unwrap().block_on(async move {
+		let mut server = Server::new(addr).unwrap();
+		
 		server.run(move |request| {
             match request.get_method() {
 				&Method::Get => println!("request by get {}", request.get_path()),

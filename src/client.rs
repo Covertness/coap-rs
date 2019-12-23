@@ -250,7 +250,6 @@ mod test {
     use super::super::*;
     use std::time::Duration;
     use std::io::ErrorKind;
-    use tokio::runtime::Runtime;
 
     #[test]
     fn test_parse_coap_url_good_url() {
