@@ -1,12 +1,12 @@
 use std::{
     net::SocketAddr,
     collections::{HashMap, HashSet, hash_map::Entry},
-    time::{Duration, Instant},
+    time::{Duration},
 };
 use log::{debug, warn};
 use bincode;
-use futures::{SinkExt, StreamExt, stream::{Fuse, SelectNextSome}};
-use tokio::timer::Interval;
+use futures::{StreamExt, stream::{Fuse, SelectNextSome}};
+use tokio::time::{Interval, interval};
 
 use super::message::request::{CoAPRequest, Method};
 use super::message::response::Status;
@@ -63,7 +63,7 @@ impl Observer {
             unacknowledge_messages: HashMap::new(),
             tx_sender: tx_sender,
             current_message_id: 0,
-            timer: Interval::new(Instant::now(), Duration::from_secs(1)).fuse(),
+            timer: interval(Duration::from_secs(1)).fuse()
         }
     }
 
@@ -376,7 +376,7 @@ impl Observer {
 
     async fn send_message(&mut self, address: &SocketAddr, message: &Packet) {
         debug!("send_message {:?} {:?}", address, message);
-        self.tx_sender.send((message.clone(), *address)).await.unwrap();
+        self.tx_sender.send((message.clone(), *address)).unwrap();
     }
 
     fn gen_message_id(&mut self) -> u16 {
@@ -402,7 +402,7 @@ mod test {
         time::Duration,
         sync::mpsc,
     };
-    use tokio::runtime::current_thread::Runtime;
+    use tokio::runtime::Runtime;
     use super::*;
     use super::super::*;
 
@@ -434,13 +434,8 @@ mod test {
         let (tx2, rx2) = mpsc::channel();
         let mut step = 1;
 
-        let mut server = Server::new("127.0.0.1:0").unwrap();
-        let server_port = server.socket_addr().unwrap().port();
-        thread::spawn(move || {
-            Runtime::new().unwrap().block_on(async move {
-                server.run(request_handler).await.unwrap();
-            })
-        });
+        let server_port = server::test::spawn_server(request_handler).recv().unwrap();
+
         let server_address = &format!("127.0.0.1:{}", server_port);
 
         let mut client = CoAPClient::new(server_address).unwrap();
@@ -490,13 +485,8 @@ mod test {
         let payload1 = b"data1".to_vec();
         let payload2 = b"data2".to_vec();
 
-        let mut server = Server::new("127.0.0.1:0").unwrap();
-        let server_port = server.socket_addr().unwrap().port();
-        thread::spawn(move || {
-            Runtime::new().unwrap().block_on(async move {
-                server.run(request_handler).await.unwrap();
-            })
-        });
+        let server_port = server::test::spawn_server(request_handler).recv().unwrap();
+
         let server_address = &format!("127.0.0.1:{}", server_port);
 
         let mut client = CoAPClient::new(server_address).unwrap();
@@ -525,13 +515,8 @@ mod test {
     #[test]
     fn test_observe_without_resource() {
         let path = "/test";
-        let mut server = Server::new("127.0.0.1:0").unwrap();
-        let server_port = server.socket_addr().unwrap().port();
-        thread::spawn(move || {
-            Runtime::new().unwrap().block_on(async move {
-                server.run(request_handler).await.unwrap();
-            })
-        });
+
+        let server_port = server::test::spawn_server(request_handler).recv().unwrap();
 
         let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let error = client.observe(path, |_msg| {}).unwrap_err();

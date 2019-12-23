@@ -250,7 +250,7 @@ mod test {
     use super::super::*;
     use std::time::Duration;
     use std::io::ErrorKind;
-    use tokio::runtime::current_thread::Runtime;
+    use tokio::runtime::Runtime;
 
     #[test]
     fn test_parse_coap_url_good_url() {
@@ -280,16 +280,10 @@ mod test {
             .unwrap();
         assert_eq!(resp.message.payload, b"world".to_vec());
     }
-
+ 
     #[test]
     fn test_get_timeout() {
-        let mut server = Server::new("127.0.0.1:0").unwrap();
-        let server_port = server.socket_addr().unwrap().port();
-        thread::spawn(move || {
-            Runtime::new().unwrap().block_on(async move {
-                server.run(request_handler).await.unwrap();
-            })
-        });
+        let server_port = server::test::spawn_server(request_handler).recv().unwrap();
 
         let error = CoAPClient::get_with_timeout(&format!("coap://127.0.0.1:{}/Rust", server_port), Duration::new(1, 0))
             .unwrap_err();

@@ -5,13 +5,14 @@ use std::{
     task::Context,
 };
 use log::{debug, error};
-use futures::{Poll, SinkExt, Stream, StreamExt, select, stream::FusedStream};
+use futures::{SinkExt, Stream, StreamExt, select, stream::FusedStream, task::Poll};
 use tokio::{
     io,
     sync::mpsc,
-    net::{UdpFramed, UdpSocket},
+    net::UdpSocket
 };
-use tokio_net::driver::Handle;
+use tokio_util::udp::{UdpFramed};
+
 use super::message::{
     packet::Packet,
     request::{CoAPRequest},
@@ -124,7 +125,7 @@ pub struct CoAPServer {
 impl CoAPServer {
     /// Creates a CoAP server listening on the given address.
     pub fn new<A: ToSocketAddrs>(addr: A, receiver: MessageReceiver) -> Result<CoAPServer, io::Error> {
-        let socket = UdpSocket::from_std(net::UdpSocket::bind(addr)?, &Handle::default())?;
+        let socket = UdpSocket::from_std(net::UdpSocket::bind(addr).unwrap())?;
 
         Ok(CoAPServer {
             receiver: receiver,
@@ -185,16 +186,32 @@ impl FusedStream for CoAPServer {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use std::{
         thread,
         time::Duration,
         sync::mpsc,
     };
-    use tokio::runtime::current_thread::Runtime;
+    use tokio::runtime::Runtime;
     use super::super::*;
     use super::*;
 
+    pub fn spawn_server<F: FnMut(CoAPRequest) -> Option<CoAPResponse> + Send + 'static>(request_handler: F) -> mpsc::Receiver<u16> {
+        let (tx, rx) = mpsc::channel();
+
+        std::thread::Builder::new().name(String::from("server")).spawn(move || {
+            tokio::runtime::Runtime::new().unwrap().block_on(async move {
+                let mut server = server::Server::new("127.0.0.1:0").unwrap();
+
+                tx.send(server.socket_addr().unwrap().port());
+                
+                server.run(request_handler).await.unwrap();
+            })
+        }).unwrap();
+        
+        rx
+    }
+    
     fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
         let uri_path_list = req.get_option(CoAPOption::UriPath).unwrap().clone();
         assert!(uri_path_list.len() == 1);
@@ -210,13 +227,7 @@ mod test {
 
     #[test]
     fn test_echo_server() {
-        let mut server = Server::new("127.0.0.1:0").unwrap();
-        let server_port = server.socket_addr().unwrap().port();
-        thread::spawn(move || {
-            Runtime::new().unwrap().block_on(async move {
-                server.run(request_handler).await.unwrap();
-            })
-        });
+        let server_port = spawn_server(request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let mut request = CoAPRequest::new();
@@ -234,13 +245,7 @@ mod test {
 
     #[test]
     fn test_echo_server_no_token() {
-        let mut server = Server::new("127.0.0.1:0").unwrap();
-        let server_port = server.socket_addr().unwrap().port();
-        thread::spawn(move || {
-            Runtime::new().unwrap().block_on(async move {
-                server.run(request_handler).await.unwrap();
-            })
-        });
+        let server_port = spawn_server(request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let mut packet = CoAPRequest::new();
@@ -264,13 +269,7 @@ mod test {
         let (tx2, rx2) = mpsc::channel();
         let mut step = 1;
 
-        let mut server = Server::new("127.0.0.1:0").unwrap();
-        let server_port = server.socket_addr().unwrap().port();
-        thread::spawn(move || {
-            Runtime::new().unwrap().block_on(async move {
-                server.run(request_handler).await.unwrap();
-            })
-        });
+        let server_port = spawn_server(request_handler).recv().unwrap();
 
         let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
 

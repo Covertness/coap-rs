@@ -3,7 +3,7 @@ extern crate coap;
 use std::thread;
 use coap::{Server, CoAPClient};
 use coap::IsMessage;
-use tokio::runtime::current_thread::Runtime;
+use tokio::runtime::Runtime;
 
 fn main() {
     let mut server = Server::new("127.0.0.1:5683").unwrap();

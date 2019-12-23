@@ -30,7 +30,7 @@
 //! extern crate coap;
 //!
 //! use coap::{Server, IsMessage, Method};
-//! use tokio::runtime::current_thread::Runtime;
+//! use tokio::runtime::Runtime;
 
 //! fn main() {
 //!     let addr = "127.0.0.1:5683";
