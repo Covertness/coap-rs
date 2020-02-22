@@ -3,6 +3,7 @@ use std::{
     pin::Pin,
     net::{self, SocketAddr, ToSocketAddrs},
     task::Context,
+    future::Future,
 };
 use log::{debug, error};
 use futures::{SinkExt, Stream, StreamExt, select, stream::FusedStream, task::Poll};
@@ -43,15 +44,15 @@ pub enum Message {
     Received(Packet, SocketAddr),
 }
 
-pub struct Server<'a> {
+pub struct Server<'a, HandlerRet> where HandlerRet: Future<Output=Option<CoAPResponse>> {
     server: CoAPServer,
     observer: Observer,
-    handler: Option<Box<dyn FnMut(CoAPRequest) -> Option<CoAPResponse> + Send + 'a>>,
+    handler: Option<Box<dyn FnMut(CoAPRequest) -> HandlerRet + Send + 'a>>,
 }
 
-impl<'a> Server<'a> {
+impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Option<CoAPResponse>> {
     /// Creates a CoAP server listening on the given address.
-    pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Server<'a>, io::Error> {
+    pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Server<'a, HandlerRet>, io::Error> {
         let (tx, rx) = mpsc::unbounded_channel();
         Ok(Server {
             server: CoAPServer::new(addr, rx)?,
@@ -61,7 +62,7 @@ impl<'a> Server<'a> {
     }
 
     /// run the server.
-    pub async fn run<F: FnMut(CoAPRequest) -> Option<CoAPResponse> + Send + 'a>(&mut self, handler: F) -> Result<(), io::Error> {
+    pub async fn run<F: FnMut(CoAPRequest) -> HandlerRet + Send + 'a>(&mut self, handler: F) -> Result<(), io::Error> {
         self.handler = Some(Box::new(handler));
 
         loop {
@@ -102,7 +103,7 @@ impl<'a> Server<'a> {
         }
 
         if let Some(ref mut handler) = self.handler {
-            match handler(request) {
+            match handler(request).await {
                 Some(response) => {
                     debug!("Response: {:?}", response);
                     self.server.send((response.message, addr)).await?;
@@ -128,7 +129,7 @@ impl CoAPServer {
         let socket = UdpSocket::from_std(net::UdpSocket::bind(addr).unwrap())?;
 
         Ok(CoAPServer {
-            receiver: receiver,
+            receiver,
             is_terminated: false,
             socket: UdpFramed::new(socket, Codec::new()),
         })
@@ -194,7 +195,7 @@ pub mod test {
     use super::super::*;
     use super::*;
 
-    pub fn spawn_server<F: FnMut(CoAPRequest) -> Option<CoAPResponse> + Send + 'static>(request_handler: F) -> mpsc::Receiver<u16> {
+    pub fn spawn_server<F: FnMut(CoAPRequest) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoAPResponse>> {
         let (tx, rx) = mpsc::channel();
 
         std::thread::Builder::new().name(String::from("server")).spawn(move || {
@@ -210,9 +211,9 @@ pub mod test {
         rx
     }
     
-    fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
+    async fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
         let uri_path_list = req.get_option(CoAPOption::UriPath).unwrap().clone();
-        assert!(uri_path_list.len() == 1);
+        assert_eq!(uri_path_list.len(), 1);
 
         match req.response {
             Some(mut response) => {

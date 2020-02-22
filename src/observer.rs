@@ -404,7 +404,7 @@ mod test {
     use super::*;
     use super::super::*;
 
-    fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
+    async fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
         match req.get_method() {
             &Method::Get => {
                 let observe_option = req.get_observe().unwrap();

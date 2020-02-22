@@ -1,3 +1,5 @@
+#![feature(async_closure)]
+
 extern crate coap;
 
 use std::thread;
@@ -10,7 +12,7 @@ fn main() {
 		Runtime::new().unwrap().block_on(async move {
             let mut server = Server::new("127.0.0.1:5683").unwrap();
             
-			server.run(move |request| {
+			server.run(async move |request| {
                 let uri_path = request.get_path().to_string();
 
                 return match request.response {

@@ -1,4 +1,4 @@
-#![feature(test)]
+#![feature(test, async_closure)]
 
 extern crate test;
 
@@ -19,7 +19,7 @@ fn bench_server_with_request(b: &mut test::Bencher) {
 
             tx.send(server.socket_addr().unwrap().port()).unwrap();
 
-            server.run(move |request| {
+            server.run(async move |request| {
                 let uri_path = request.get_path().to_string();
 
                 return match request.response {

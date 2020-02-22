@@ -269,7 +269,7 @@ mod test {
         assert!(CoAPClient::parse_coap_url("127.0.0.1").is_err());
     }
 
-    fn request_handler(_: CoAPRequest) -> Option<CoAPResponse> {
+    async fn request_handler(_: CoAPRequest) -> Option<CoAPResponse> {
         None
     }
 
