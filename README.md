@@ -25,19 +25,11 @@ First add this to your `Cargo.toml`:
 coap = "0.8"
 ```
 
-Then, add this to your crate root:
-
-```rust
-extern crate coap;
-```
-
 ## Example
 
 ### Server:
 ```rust
 #![feature(async_closure)]
-
-extern crate coap;
 
 use coap::{Server, IsMessage, Method};
 use tokio::runtime::Runtime;
@@ -71,8 +63,6 @@ fn main() {
 
 ### Client:
 ```rust
-extern crate coap;
-
 use coap::{CoAPClient, CoAPResponse};
 
 fn main() {
