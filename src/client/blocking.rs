@@ -227,8 +227,8 @@ impl Drop for CoAPClient {
 
 #[cfg(test)]
 mod test {
+    use crate::*;
     use super::*;
-    use super::super::*;
     use std::time::Duration;
     use std::io::ErrorKind;
 

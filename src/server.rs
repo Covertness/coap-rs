@@ -192,7 +192,7 @@ pub mod test {
         time::Duration,
         sync::mpsc,
     };
-    use super::super::*;
+    use crate::*;
     use super::*;
 
     pub fn spawn_server<F: FnMut(CoAPRequest) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoAPResponse>> {
