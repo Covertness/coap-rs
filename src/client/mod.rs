@@ -8,7 +8,7 @@ pub use blocking::CoAPClient;
 
 
 mod nonblocking;
-pub use nonblocking::CoAPClientAsync;
+pub use nonblocking::{CoAPClientAsync, CoAPObserverAsync};
 
 
 fn parse_coap_url(url: &str) -> Result<(String, u16, String)> {

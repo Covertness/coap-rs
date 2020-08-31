@@ -1,5 +1,4 @@
 use std::io::{Error, ErrorKind, Result};
-use std::net::{SocketAddr};
 use std::marker::PhantomData;
 use std::sync::{Arc};
 use std::collections::HashMap;
@@ -21,7 +20,6 @@ use crate::message::IsMessage;
 
 
 pub struct CoAPClientAsync<Transport> {
-    peer: SocketAddr,
     tx: SendHalf,
     message_id: u16,
     _listener: task::JoinHandle<Result<()>>,
@@ -41,16 +39,9 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
         A: tokio::net::ToSocketAddrs,
         B: tokio::net::ToSocketAddrs,
     {
-        // Lookup peer socket address
-        let mut peer_addrs = peer_addr.to_socket_addrs().await?;
-        // TODO: could look for viable addresses, rather than just the first one
-        let peer = match peer_addrs.next() {
-            Some(v) => v,
-            None => return Err(Error::new(ErrorKind::NotFound, "no peer address found")),
-        };
-
         // Bind to local socket
         let transport = UdpSocket::bind(bind_addr).await?;
+        transport.connect(peer_addr).await?;
 
         // TODO: we _could_ connect here to filter responses
 
@@ -97,7 +88,7 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
         });
 
         Ok(Self {
-            peer, tx,
+            tx,
             message_id: 0,
             _listener,
             _transport: PhantomData,
@@ -121,7 +112,7 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
         let mut rx = rx.timeout(timeout);
 
         // Send request
-        let _n = self.tx.send_to(&b, &self.peer).await?;
+        let _n = self.tx.send(&b).await?;
 
         // Await response
         // TODO: timeout could be builtin here?
@@ -171,7 +162,7 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
 
 
     // Start observation on a topic
-    pub async fn observe(&mut self, url: &str) -> Result<CoAPObserver> {
+    pub async fn observe(&mut self, url: &str) -> Result<CoAPObserverAsync> {
         // Setup response channel
         let (tx, rx) = channel(0);
 
@@ -193,13 +184,13 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
         // Store response channel
         self.rx_handles.lock().await.insert(token, (SenderKind::Observer, tx));
 
-        Ok(CoAPObserver{
+        Ok(CoAPObserverAsync{
             topic: url.to_string(),
             token, rx
         })
     }
 
-    pub async fn unobserve(&mut self, observer: CoAPObserver) -> Result<()> {
+    pub async fn unobserve(&mut self, observer: CoAPObserverAsync) -> Result<()> {
         
         // Send deregister packet
         let mut deregister_req = CoAPRequest::new();
@@ -236,14 +227,14 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
     }
 }
 
-/// CoAPObserver object can be polled for subscriptions
-pub struct CoAPObserver {
+/// CoAPObserverAsync object can be polled for subscriptions
+pub struct CoAPObserverAsync {
     topic: String,
     token: u32,
     rx: Receiver<CoAPResponse>,
 }
 
-impl tokio::stream::Stream for CoAPObserver {
+impl tokio::stream::Stream for CoAPObserverAsync {
     type Item = CoAPResponse;
 
     fn poll_next(mut self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Option<Self::Item>> {
