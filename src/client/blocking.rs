@@ -1,21 +1,25 @@
+
+
 use std::io::{Error, ErrorKind, Result};
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 use std::time::Duration;
 use std::thread;
 use std::sync::mpsc;
-use url::Url;
+
 use log::*;
-use super::message::packet::{Packet, ObserveOption};
-use super::message::response::{CoAPResponse, Status};
-use super::message::request::CoAPRequest;
-use super::message::IsMessage;
-use regex::Regex;
+
+use crate::message::packet::{Packet, ObserveOption};
+use crate::message::response::{CoAPResponse, Status};
+use crate::message::request::CoAPRequest;
+use crate::message::IsMessage;
+
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
 
 enum ObserveMessage {
     Terminate,
 }
+
 
 pub struct CoAPClient {
     socket: UdpSocket,
@@ -65,7 +69,7 @@ impl CoAPClient {
 
     /// Execute a get request with the coap url and a specific timeout.
     pub fn get_with_timeout(url: &str, timeout: Duration) -> Result<CoAPResponse> {
-        let (domain, port, path) = Self::parse_coap_url(url)?;
+        let (domain, port, path) = super::parse_coap_url(url)?;
 
         let mut packet = CoAPRequest::new();
         packet.set_path(path.as_str());
@@ -209,29 +213,6 @@ impl CoAPClient {
         }
     }
 
-    fn parse_coap_url(url: &str) -> Result<(String, u16, String)> {
-        let url_params = match Url::parse(url) {
-            Ok(url_params) => url_params,
-            Err(_) => return Err(Error::new(ErrorKind::InvalidInput, "url error")),
-        };
-
-        let host = match url_params.host_str() {
-            Some("") => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
-            Some(h) => h,
-            None => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
-        };
-        let host = Regex::new(r"^\[(.*?)]$").unwrap().replace(&host, "$1").to_string();
-
-        let port = match url_params.port() {
-            Some(p) => p,
-            None => 5683,
-        };
-
-        let path = url_params.path().to_string();
-
-        return Ok((host.to_string(), port, path));
-    }
-
     fn gen_message_id(message_id: &mut u16) -> u16 {
         (*message_id) += 1;
         return *message_id;
@@ -250,24 +231,6 @@ mod test {
     use super::super::*;
     use std::time::Duration;
     use std::io::ErrorKind;
-
-    #[test]
-    fn test_parse_coap_url_good_url() {
-        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1").is_ok());
-        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1:5683").is_ok());
-        assert!(CoAPClient::parse_coap_url("coap://[::1]").is_ok());
-        assert!(CoAPClient::parse_coap_url("coap://[::1]:5683").is_ok());
-        assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]").is_ok());
-        assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]:5683").is_ok());
-    }
-
-    #[test]
-    fn test_parse_coap_url_bad_url() {
-        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1:65536").is_err());
-        assert!(CoAPClient::parse_coap_url("coap://").is_err());
-        assert!(CoAPClient::parse_coap_url("coap://:5683").is_err());
-        assert!(CoAPClient::parse_coap_url("127.0.0.1").is_err());
-    }
 
     async fn request_handler(_: CoAPRequest) -> Option<CoAPResponse> {
         None
