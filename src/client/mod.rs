@@ -63,9 +63,6 @@ pub fn parse_coap_url(url: &str) -> Result<(String, String, u16, String)> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use super::super::*;
-    use std::time::Duration;
-    use std::io::ErrorKind;
 
     #[test]
     fn test_parse_coap_url_good_url() {

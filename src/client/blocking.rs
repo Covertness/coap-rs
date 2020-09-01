@@ -85,7 +85,7 @@ impl CoAPClient {
     }
 
     /// Observe a resource with the handler
-    pub fn observe<H: FnMut(Packet) + Send + 'static>(&mut self, resource_path: &str, mut handler: H) -> Result<()> {
+    pub fn observe<H: FnMut(Packet) -> Option<Packet> + Send + 'static>(&mut self, resource_path: &str, mut handler: H) -> Result<()> {
         // TODO: support observe multi resources at the same time
         let mut message_id: u16 = 0;
         let mut register_packet = CoAPRequest::new();
@@ -117,15 +117,9 @@ impl CoAPClient {
                 Ok(packet) => {
                     let receive_packet = CoAPRequest::from_packet(packet, &peer_addr);
 
-                    handler(receive_packet.message);
-
-                    if let Some(response) = receive_packet.response {
-                        let mut packet = Packet::new();
-                        packet.header.set_type(response.message.header.get_type());
-                        packet.header.set_message_id(response.message.header.get_message_id());
-                        packet.set_token(response.message.get_token().clone());
-
-                        match Self::send_with_socket(&socket, &peer_addr, &packet) {
+                    // Call handler, send response if provided
+                    if let Some(response) = handler(receive_packet.message) {
+                        match Self::send_with_socket(&socket, &peer_addr, &response) {
                             Ok(_) => (),
                             Err(e) => {
                                 warn!("reply ack failed {}", e)

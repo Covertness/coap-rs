@@ -297,6 +297,7 @@ pub mod test {
                 }
                 _ => panic!("unexpected step"),
             }
+            None
         }).unwrap();
 
         step = 2;

@@ -2,7 +2,6 @@ use std::io::{Error, ErrorKind, Result};
 use std::marker::PhantomData;
 use std::sync::{Arc};
 use std::collections::HashMap;
-use std::time::Duration;
 use std::task::{Poll, Context};
 use std::pin::Pin;
 use std::net::SocketAddr;
@@ -292,8 +291,11 @@ impl tokio::stream::Stream for CoAPObserverAsync {
 
 #[cfg(test)]
 mod test {
+    use std::time::Duration;
+    
     use crate::*;
     use super::*;
+
 
     #[tokio::test]
     async fn test_get() {
@@ -326,7 +328,7 @@ mod test {
         let server_port = server::test::spawn_server(request_handler).recv().unwrap();
 
         // Setup client
-        let mut client = CoAPClientAsync::new_udp((("0.0.0.0", server_port))).await.unwrap();
+        let mut client = CoAPClientAsync::new_udp(("0.0.0.0", server_port)).await.unwrap();
 
         // Put initial data
         client.put("test", b"hello world 1", &opts).await.unwrap();

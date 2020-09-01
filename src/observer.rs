@@ -464,6 +464,7 @@ mod test {
                 }
                 _ => panic!("unexpected step"),
             }
+            None
         }).unwrap();
 
         step = 2;
@@ -499,6 +500,7 @@ mod test {
         let payload1_clone = payload1.clone();
         client.observe(path, move |msg| {
             assert_eq!(msg.payload, payload1_clone);
+            None
         }).unwrap();
 
         client.unobserve();
@@ -517,7 +519,7 @@ mod test {
         let server_port = server::test::spawn_server(request_handler).recv().unwrap();
 
         let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
-        let error = client.observe(path, |_msg| {}).unwrap_err();
+        let error = client.observe(path, |_msg| None ).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotFound);
     }
 }

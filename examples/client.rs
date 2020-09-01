@@ -98,6 +98,7 @@ fn example_observe() {
     let mut client = CoAPClient::new("127.0.0.1:5683").unwrap();
     client.observe("/hello/put", |msg| {
         println!("resource changed {}", String::from_utf8(msg.payload).unwrap());
+        None
     }).unwrap();
 
     println!("Press any key to stop...");
