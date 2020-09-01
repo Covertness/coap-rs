@@ -21,6 +21,7 @@ use crate::message::response::{CoAPResponse, Status};
 use crate::message::request::CoAPRequest;
 use crate::message::IsMessage;
 
+use super::RequestOptions;
 
 pub const COAP_MTU: usize = 1600;
 
@@ -38,21 +39,7 @@ enum SenderKind {
     Observer,
 }
 
-/// RequestOptions for configuring requests
-#[derive(Debug, Clone, PartialEq)]
-pub struct RequestOptions {
-    pub retries: usize,
-    pub timeout: Duration,
-}
 
-impl Default for RequestOptions {
-    fn default() -> Self {
-        Self {
-            retries: 3,
-            timeout: Duration::from_secs(2),
-        }
-    }
-}
 
 impl CoAPClientAsync<tokio::net::UdpSocket> {
     pub async fn new_udp<A>(peer_addr: A) -> Result<Self> 
@@ -178,6 +165,7 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
 
     // Execute a CoAP request and return a response
     pub async fn request(&mut self, request: &CoAPRequest, options: &RequestOptions) -> Result<CoAPResponse> {
+        debug!("Request resource: {:?} from {:?}", request.get_path(), self.peer_addr);
 
         // Fetch token from message
         let token = Self::token_from_slice(request.get_token());
@@ -194,6 +182,8 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
 
     // Start observation on a topic
     pub async fn observe(&mut self, url: &str, options: &RequestOptions) -> Result<CoAPObserverAsync> {
+
+        debug!("Observe resource: {:?} on {:?}", url, self.peer_addr);
 
         // Setup registration message
         let mut regester_req = CoAPRequest::new();
@@ -230,6 +220,8 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
 
     pub async fn unobserve(&mut self, observer: CoAPObserverAsync) -> Result<()> {
         
+        debug!("Unobserve resource: {:?}", observer.topic);
+
         // Send deregister packet
         let mut deregister_req = CoAPRequest::new();
         deregister_req.set_message_id(self.message_id());

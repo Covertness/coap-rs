@@ -16,14 +16,18 @@ Features:
 
 [Documentation](https://docs.rs/coap/)
 
-## Installation
 
-First add this to your `Cargo.toml`:
+## Usage
+
+To use the library, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 coap = "0.8"
 ```
+
+Install the CLI with `cargo install coap --features=util`
+
 
 ## Example
 
@@ -73,6 +77,8 @@ fn main() {
     println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 }
 ```
+
+See [src/util/main.rs](src/util/main.rs) for async coap client use.
 
 ## Benchmark
 ```bash

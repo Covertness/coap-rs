@@ -69,7 +69,7 @@ impl CoAPClient {
 
     /// Execute a get request with the coap url and a specific timeout.
     pub fn get_with_timeout(url: &str, timeout: Duration) -> Result<CoAPResponse> {
-        let (domain, port, path) = super::parse_coap_url(url)?;
+        let (_scheme, domain, port, path) = super::parse_coap_url(url)?;
 
         let mut packet = CoAPRequest::new();
         packet.set_path(path.as_str());

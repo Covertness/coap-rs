@@ -1,4 +1,6 @@
 use std::io::{Error, ErrorKind, Result};
+use std::time::Duration;
+
 use url::Url;
 use regex::Regex;
 
@@ -6,16 +8,40 @@ use regex::Regex;
 mod blocking;
 pub use blocking::CoAPClient;
 
-
 mod nonblocking;
-pub use nonblocking::{CoAPClientAsync, CoAPObserverAsync, RequestOptions};
+pub use nonblocking::{CoAPClientAsync, CoAPObserverAsync};
 
 
-fn parse_coap_url(url: &str) -> Result<(String, u16, String)> {
+/// RequestOptions for configuring CoAP client requests
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "structopt", derive(structopt::StructOpt))]
+pub struct RequestOptions {
+    #[cfg_attr(feature = "structopt", structopt(long, default_value = "3"))]
+    /// Number of request retries
+    pub retries: usize,
+
+    #[cfg_attr(feature = "structopt", structopt(long, default_value = "3s", parse(try_from_str = humantime::parse_duration)))]
+    /// Timeout for request retries (in ms)
+    pub timeout: Duration,
+}
+
+impl Default for RequestOptions {
+    fn default() -> Self {
+        Self {
+            retries: 3,
+            timeout: Duration::from_secs(2),
+        }
+    }
+}
+
+
+pub fn parse_coap_url(url: &str) -> Result<(String, String, u16, String)> {
     let url_params = match Url::parse(url) {
         Ok(url_params) => url_params,
         Err(_) => return Err(Error::new(ErrorKind::InvalidInput, "url error")),
     };
+
+    let scheme = url_params.scheme().to_string();
 
     let host = match url_params.host_str() {
         Some("") => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
@@ -31,7 +57,7 @@ fn parse_coap_url(url: &str) -> Result<(String, u16, String)> {
 
     let path = url_params.path().to_string();
 
-    return Ok((host.to_string(), port, path));
+    return Ok((scheme, host.to_string(), port, path));
 }
 
 #[cfg(test)]
