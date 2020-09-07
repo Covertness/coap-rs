@@ -23,6 +23,10 @@ pub struct RequestOptions {
     #[cfg_attr(feature = "structopt", structopt(long, default_value = "3s", parse(try_from_str = humantime::parse_duration)))]
     /// Timeout for request retries (in ms)
     pub timeout: Duration,
+
+    #[cfg_attr(feature = "structopt", structopt(skip))]
+    /// Token for CoAP request
+    pub token: Vec<u8>,
 }
 
 impl Default for RequestOptions {
@@ -30,6 +34,7 @@ impl Default for RequestOptions {
         Self {
             retries: 3,
             timeout: Duration::from_secs(2),
+            token: token(),
         }
     }
 }
@@ -59,6 +64,12 @@ pub fn parse_coap_url(url: &str) -> Result<(String, String, u16, String)> {
 
     return Ok((scheme, host.to_string(), port, path));
 }
+
+fn token() -> Vec<u8> {
+    let t = rand::random::<u32>();
+    t.to_be_bytes().to_vec()
+}
+
 
 #[cfg(test)]
 mod test {

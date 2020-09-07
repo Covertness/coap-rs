@@ -81,7 +81,13 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
 
             loop {
                 // Receive from socket
-                let (n, a) = udp_rx.recv_from(&mut buff).await?;
+                let (n, a) = match udp_rx.recv_from(&mut buff).await {
+                    Ok(v) => v,
+                    Err(e) => {
+                        error!("Socket error: {:?}", e);
+                        return Err(e);
+                    }
+                };
 
                 trace!("Received data: {:?} from {:?}", &buff[..n], a);
 
@@ -132,39 +138,46 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
 
     // Convenience method to perform a Get request
     pub async fn get(&mut self, resource: &str, options: &RequestOptions) -> Result<CoAPResponse> {
-        let mut request = CoAPRequest::new();
-        request.set_method(Method::Get);
-        request.set_token(Self::token());
-        request.set_path(resource);
+        let request = self.new_request(Method::Post, resource, None, options);
 
         self.request(&request, options).await
     }
 
     // Convenience method to perform a Put request
     pub async fn put(&mut self, resource: &str, data: &[u8], options: &RequestOptions) -> Result<CoAPResponse> {
-        let mut request = CoAPRequest::new();
-        request.set_method(Method::Put);
-        request.set_token(Self::token());
-        request.set_path(resource);
-        request.set_payload(data.to_vec());
+        let request = self.new_request(Method::Put, resource, Some(data), options);
 
         self.request(&request, options).await
     }
 
     // Convenience method to perform a Post request
     pub async fn post(&mut self, resource: &str, data: &[u8], options: &RequestOptions) -> Result<CoAPResponse> {
-        let mut request = CoAPRequest::new();
-        request.set_method(Method::Post);
-        request.set_token(Self::token());
-        request.set_path(resource);
-        request.set_payload(data.to_vec());
+        let request = self.new_request(Method::Post, resource, Some(data), options);
 
         self.request(&request, options).await
     }
 
+    pub fn new_request(&mut self, method: Method, resource: &str, data: Option<&[u8]>, options: &RequestOptions) -> CoAPRequest {
+        let message_id = self.message_id;
+        self.message_id += 1;
+        
+        let mut request = CoAPRequest::new();
+        request.set_message_id(message_id);
+        request.set_method(method);
+        request.set_path(resource);
+        
+        if let Some(d) = data {
+            request.set_payload(d.to_vec());
+        }
+
+        request.set_token(options.token.clone());
+
+        request
+    }
+
     // Execute a CoAP request and return a response
     pub async fn request(&mut self, request: &CoAPRequest, options: &RequestOptions) -> Result<CoAPResponse> {
-        debug!("Request resource: {:?} from {:?}", request.get_path(), self.peer_addr);
+        debug!("{:?} resource: {:?} at {:?}", request.get_method(), request.get_path(), self.peer_addr);
 
         // Fetch token from message
         let token = Self::token_from_slice(request.get_token());
@@ -180,20 +193,18 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
     }
 
     // Start observation on a topic
-    pub async fn observe(&mut self, url: &str, options: &RequestOptions) -> Result<CoAPObserverAsync> {
+    pub async fn observe(&mut self, resource: &str, options: &RequestOptions) -> Result<CoAPObserverAsync> {
 
-        debug!("Observe resource: {:?} on {:?}", url, self.peer_addr);
+        debug!("Observe resource: {:?} on {:?}", resource, self.peer_addr);
 
         // Setup registration message
-        let mut regester_req = CoAPRequest::new();
-        regester_req.set_observe(vec![ObserveOption::Register as u8]);
-        regester_req.set_token(Self::token());
-        regester_req.set_path(url);
+        let mut register_req = self.new_request(Method::Get, resource, None, options);
+        register_req.set_observe(vec![ObserveOption::Register as u8]);
 
-        let token = Self::token_from_slice(regester_req.get_token());
+        let token = Self::token_from_slice(register_req.get_token());
 
         // Encode message
-        let b = regester_req.message.to_bytes().map_err(|_e| Error::new(ErrorKind::InvalidInput, "packet error"))?;
+        let b = register_req.message.to_bytes().map_err(|_e| Error::new(ErrorKind::InvalidInput, "packet error"))?;
 
         // Setup response channel
         let (tx, mut rx) = channel(10);
@@ -212,7 +223,7 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
         tx1.send(register_resp).await.unwrap();
 
         Ok(CoAPObserverAsync{
-            topic: url.to_string(),
+            topic: resource.to_string(),
             token, rx
         })
     }
@@ -253,12 +264,6 @@ impl CoAPClientAsync<tokio::net::UdpSocket> {
         Err(Error::new(ErrorKind::TimedOut, "no response"))
     }
 
-    
-    fn token() -> Vec<u8> {
-        let t = rand::random::<u32>();
-        t.to_be_bytes().to_vec()
-    }
-
     fn token_from_slice(v: &[u8]) -> u32 {
         let mut token_raw = [0u8; 4];
 
@@ -279,6 +284,16 @@ pub struct CoAPObserverAsync {
     topic: String,
     token: u32,
     rx: Receiver<CoAPResponse>,
+}
+
+impl CoAPObserverAsync {
+    pub fn topic(&self) -> &str {
+        &self.topic
+    }
+
+    pub fn token(&self) -> u32 {
+        self.token
+    }
 }
 
 impl tokio::stream::Stream for CoAPObserverAsync {
