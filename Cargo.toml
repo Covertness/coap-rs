@@ -16,6 +16,7 @@ serde = { version= "1.0.88", features= [ "derive" ] }
 url = "1.7.2"
 num-derive = "0.2.4"
 num-traits = "0.2.6"
+openssl = "0.10"
 log = "0.4.6"
 regex = "1.1.0"
 tokio =  {version = "0.2", features = ["full"]}
