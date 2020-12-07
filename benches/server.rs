@@ -6,7 +6,8 @@ use std::{
     thread,
     sync::mpsc,
 };
-use coap::{Server, CoAPClient, CoAPRequest, IsMessage, MessageType, CoAPOption};
+use coap_lite::{CoapRequest, MessageType, CoapOption};
+use coap::{Server, CoAPClient};
 use tokio::runtime::Runtime;
 
 #[bench]
@@ -24,7 +25,7 @@ fn bench_server_with_request(b: &mut test::Bencher) {
 
                 return match request.response {
                     Some(mut response) => {
-                        response.set_payload(uri_path.as_bytes().to_vec());
+                        response.message.payload = uri_path.as_bytes().to_vec();
                         Some(response)
                     }
                     _ => None,
@@ -36,13 +37,13 @@ fn bench_server_with_request(b: &mut test::Bencher) {
     let server_port = rx.recv().unwrap();
     let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
 
-    let mut request = CoAPRequest::new();
-    request.set_version(1);
-    request.set_type(MessageType::Confirmable);
-    request.set_code("0.01");
-    request.set_message_id(1);
-    request.set_token(vec!(0x51, 0x55, 0x77, 0xE8));
-    request.add_option(CoAPOption::UriPath, "test".to_string().into_bytes());
+    let mut request = CoapRequest::new();
+    request.message.header.set_version(1);
+    request.message.header.set_type(MessageType::Confirmable);
+    request.message.header.set_code("0.01");
+    request.message.header.message_id = 1;
+    request.message.set_token(vec!(0x51, 0x55, 0x77, 0xE8));
+    request.message.add_option(CoapOption::UriPath, "test".to_string().into_bytes());
 
     b.iter(|| {
         client.send(&request).unwrap();

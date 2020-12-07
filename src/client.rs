@@ -5,11 +5,12 @@ use std::thread;
 use std::sync::mpsc;
 use url::Url;
 use log::*;
-use super::message::packet::{Packet, ObserveOption};
-use super::message::response::{CoAPResponse, Status};
-use super::message::request::CoAPRequest;
-use super::message::IsMessage;
 use regex::Regex;
+use coap_lite::{
+    ObserveOption,
+    ResponseType as Status,
+    Packet, CoapRequest, CoapResponse
+};
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
 
@@ -59,15 +60,15 @@ impl CoAPClient {
     }
 
     /// Execute a get request
-    pub fn get(url: &str) -> Result<CoAPResponse> {
+    pub fn get(url: &str) -> Result<CoapResponse> {
         Self::get_with_timeout(url, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
     }
 
     /// Execute a get request with the coap url and a specific timeout.
-    pub fn get_with_timeout(url: &str, timeout: Duration) -> Result<CoAPResponse> {
+    pub fn get_with_timeout(url: &str, timeout: Duration) -> Result<CoapResponse> {
         let (domain, port, path) = Self::parse_coap_url(url)?;
 
-        let mut packet = CoAPRequest::new();
+        let mut packet = CoapRequest::new();
         packet.set_path(path.as_str());
 
         let client = Self::new((domain.as_str(), port))?;
@@ -84,9 +85,9 @@ impl CoAPClient {
     pub fn observe<H: FnMut(Packet) + Send + 'static>(&mut self, resource_path: &str, mut handler: H) -> Result<()> {
         // TODO: support observe multi resources at the same time
         let mut message_id: u16 = 0;
-        let mut register_packet = CoAPRequest::new();
-        register_packet.set_observe(vec![ObserveOption::Register as u8]);
-        register_packet.set_message_id(Self::gen_message_id(&mut message_id));
+        let mut register_packet = CoapRequest::new();
+        register_packet.message.set_observe(vec![ObserveOption::Register as u8]);
+        register_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
         register_packet.set_path(resource_path);
 
         self.send(&register_packet)?;
@@ -111,14 +112,14 @@ impl CoAPClient {
         let observe_thread = thread::spawn(move || loop {
             match Self::receive_from_socket(&socket) {
                 Ok(packet) => {
-                    let receive_packet = CoAPRequest::from_packet(packet, &peer_addr);
+                    let receive_packet = CoapRequest::from_packet(packet, &peer_addr);
 
                     handler(receive_packet.message);
 
                     if let Some(response) = receive_packet.response {
                         let mut packet = Packet::new();
                         packet.header.set_type(response.message.header.get_type());
-                        packet.header.set_message_id(response.message.header.get_message_id());
+                        packet.header.message_id = response.message.header.message_id;
                         packet.set_token(response.message.get_token().clone());
 
                         match Self::send_with_socket(&socket, &peer_addr, &packet) {
@@ -139,9 +140,9 @@ impl CoAPClient {
 
             match observe_receiver.try_recv() {
                 Ok(ObserveMessage::Terminate) => {
-                    let mut deregister_packet = CoAPRequest::new();
-                    deregister_packet.set_message_id(Self::gen_message_id(&mut message_id));
-                    deregister_packet.set_observe(vec![ObserveOption::Deregister as u8]);
+                    let mut deregister_packet = CoapRequest::<SocketAddr>::new();
+                    deregister_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
+                    deregister_packet.message.set_observe(vec![ObserveOption::Deregister as u8]);
                     deregister_packet.set_path(observe_path.as_str());
 
                     Self::send_with_socket(&socket, &peer_addr, &deregister_packet.message).unwrap();
@@ -170,14 +171,14 @@ impl CoAPClient {
     }
 
     /// Execute a request.
-    pub fn send(&self, request: &CoAPRequest) -> Result<()> {
+    pub fn send(&self, request: &CoapRequest<SocketAddr>) -> Result<()> {
         Self::send_with_socket(&self.socket, &self.peer_addr, &request.message)
     }
 
     /// Receive a response.
-    pub fn receive(&self) -> Result<CoAPResponse> {
+    pub fn receive(&self) -> Result<CoapResponse> {
         let packet = Self::receive_from_socket(&self.socket)?;
-        Ok(CoAPResponse { message: packet })
+        Ok(CoapResponse { message: packet })
     }
 
     /// Set the receive timeout.
@@ -269,7 +270,7 @@ mod test {
         assert!(CoAPClient::parse_coap_url("127.0.0.1").is_err());
     }
 
-    async fn request_handler(_: CoAPRequest) -> Option<CoAPResponse> {
+    async fn request_handler(_: CoapRequest<SocketAddr>) -> Option<CoapResponse> {
         None
     }
 
