@@ -14,7 +14,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! coap = "0.8"
+//! coap = "0.9"
 //! ```
 //!
 //! Then, add this to your crate root:
@@ -31,7 +31,8 @@
 //!
 //! extern crate coap;
 //!
-//! use coap::{Server, IsMessage, Method};
+//! use coap_lite::{RequestType as Method};
+//! use coap::Server;
 //! use tokio::runtime::Runtime;
 
 //! fn main() {
@@ -51,7 +52,7 @@
             
 //!             return match request.response {
 //!                 Some(mut message) => {
-//!                     message.set_payload(b"OK".to_vec());
+//!                     message.message.payload = b"OK".to_vec();
 //!                     Some(message)
 //!                 },
 //!                 _ => None
@@ -65,7 +66,8 @@
 //! ```no_run
 //! extern crate coap;
 //!
-//! use coap::{CoAPClient, CoAPResponse};
+//! use coap_lite::{RequestType as Method, CoapRequest};
+//! use coap::{CoAPClient};
 //!
 //! fn main() {
 //!     let url = "coap://127.0.0.1:5683/Rust";
@@ -80,13 +82,6 @@
 extern crate quickcheck;
 
 pub use self::client::CoAPClient;
-pub use self::message::header::MessageType;
-pub use self::message::IsMessage;
-pub use self::message::packet::CoAPOption;
-pub use self::message::request::CoAPRequest;
-pub use self::message::request::Method;
-pub use self::message::response::CoAPResponse;
-pub use self::message::response::Status;
 pub use self::observer::Observer;
 pub use self::server::{Server, CoAPServer};
 pub mod message;

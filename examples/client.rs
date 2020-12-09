@@ -2,7 +2,8 @@ extern crate coap;
 
 use std::io;
 use std::io::ErrorKind;
-use coap::{CoAPClient, CoAPRequest, IsMessage, Method};
+use coap_lite::{RequestType as Method, CoapRequest};
+use coap::CoAPClient;
 
 fn main() {
     println!("Request by GET:");
@@ -42,10 +43,10 @@ fn example_post() {
     let addr = "127.0.0.1:5683";
     let path = "/hello/post";
 
-    let mut request = CoAPRequest::new();
+    let mut request = CoapRequest::new();
     request.set_method(Method::Post);
     request.set_path(path);
-    request.set_payload(b"data".to_vec());
+    request.message.payload = b"data".to_vec();
 
     let client = CoAPClient::new(addr).unwrap();
     client.send(&request).unwrap();
@@ -70,10 +71,10 @@ fn example_put() {
     let addr = "127.0.0.1:5683";
     let path = "/hello/put";
 
-    let mut request = CoAPRequest::new();
+    let mut request = CoapRequest::new();
     request.set_method(Method::Put);
     request.set_path(path);
-    request.set_payload(b"data".to_vec());
+    request.message.payload = b"data".to_vec();
 
     let client = CoAPClient::new(addr).unwrap();
     client.send(&request).unwrap();

@@ -13,13 +13,11 @@ use tokio::{
     net::UdpSocket
 };
 use tokio_util::udp::{UdpFramed};
-
-use super::message::{
-    packet::Packet,
-    request::{CoAPRequest},
-    response::CoAPResponse,
-    Codec,
+use coap_lite::{
+    Packet, CoapRequest, CoapResponse,
 };
+
+use super::message::Codec;
 use super::observer::Observer;
 
 pub type MessageSender = mpsc::UnboundedSender<(Packet, SocketAddr)>;
@@ -44,13 +42,13 @@ pub enum Message {
     Received(Packet, SocketAddr),
 }
 
-pub struct Server<'a, HandlerRet> where HandlerRet: Future<Output=Option<CoAPResponse>> {
+pub struct Server<'a, HandlerRet> where HandlerRet: Future<Output=Option<CoapResponse>> {
     server: CoAPServer,
     observer: Observer,
-    handler: Option<Box<dyn FnMut(CoAPRequest) -> HandlerRet + Send + 'a>>,
+    handler: Option<Box<dyn FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'a>>,
 }
 
-impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Option<CoAPResponse>> {
+impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Option<CoapResponse>> {
     /// Creates a CoAP server listening on the given address.
     pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Server<'a, HandlerRet>, io::Error> {
         let (tx, rx) = mpsc::unbounded_channel();
@@ -62,7 +60,7 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
     }
 
     /// run the server.
-    pub async fn run<F: FnMut(CoAPRequest) -> HandlerRet + Send + 'a>(&mut self, handler: F) -> Result<(), io::Error> {
+    pub async fn run<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'a>(&mut self, handler: F) -> Result<(), io::Error> {
         self.handler = Some(Box::new(handler));
 
         loop {
@@ -96,7 +94,7 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
     }
 
     async fn dispatch_msg(&mut self, packet: Packet, addr: SocketAddr) -> Result<(), io::Error> {
-        let request = CoAPRequest::from_packet(packet, &addr);
+        let request = CoapRequest::from_packet(packet, addr);
         let filtered = !self.observer.request_handler(&request).await;
         if filtered {
             return Ok(());
@@ -192,10 +190,11 @@ pub mod test {
         time::Duration,
         sync::mpsc,
     };
+    use coap_lite::CoapOption;
     use super::super::*;
     use super::*;
 
-    pub fn spawn_server<F: FnMut(CoAPRequest) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoAPResponse>> {
+    pub fn spawn_server<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
         let (tx, rx) = mpsc::channel();
 
         std::thread::Builder::new().name(String::from("server")).spawn(move || {
@@ -211,13 +210,13 @@ pub mod test {
         rx
     }
     
-    async fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
-        let uri_path_list = req.get_option(CoAPOption::UriPath).unwrap().clone();
+    async fn request_handler(req: CoapRequest<SocketAddr>) -> Option<CoapResponse> {
+        let uri_path_list = req.message.get_option(CoapOption::UriPath).unwrap().clone();
         assert_eq!(uri_path_list.len(), 1);
 
         match req.response {
             Some(mut response) => {
-                response.set_payload(uri_path_list.front().unwrap().clone());
+                response.message.payload = uri_path_list.front().unwrap().clone();
                 Some(response)
             }
             _ => None,
@@ -229,13 +228,13 @@ pub mod test {
         let server_port = spawn_server(request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
-        let mut request = CoAPRequest::new();
-        request.set_version(1);
-        request.set_type(MessageType::Confirmable);
-        request.set_code("0.01");
-        request.set_message_id(1);
-        request.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
-        request.add_option(CoAPOption::UriPath, b"test-echo".to_vec());
+        let mut request = CoapRequest::new();
+        request.message.header.set_version(1);
+        request.message.header.set_type(coap_lite::MessageType::Confirmable);
+        request.message.header.set_code("0.01");
+        request.message.header.message_id = 1;
+        request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
+        request.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send(&request).unwrap();
 
         let recv_packet = client.receive().unwrap();
@@ -247,12 +246,12 @@ pub mod test {
         let server_port = spawn_server(request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
-        let mut packet = CoAPRequest::new();
-        packet.set_version(1);
-        packet.set_type(MessageType::Confirmable);
-        packet.set_code("0.01");
-        packet.set_message_id(1);
-        packet.add_option(CoAPOption::UriPath, b"test-echo".to_vec());
+        let mut packet = CoapRequest::new();
+        packet.message.header.set_version(1);
+        packet.message.header.set_type(coap_lite::MessageType::Confirmable);
+        packet.message.header.set_code("0.01");
+        packet.message.header.message_id = 1;
+        packet.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send(&packet).unwrap();
 
         let recv_packet = client.receive().unwrap();
@@ -273,10 +272,10 @@ pub mod test {
         let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
 
         tx.send(step).unwrap();
-        let mut request = CoAPRequest::new();
-        request.set_method(Method::Put);
+        let mut request = CoapRequest::new();
+        request.set_method(coap_lite::RequestType::Put);
         request.set_path(path);
-        request.set_payload(payload1.clone());
+        request.message.payload = payload1.clone();
         client.send(&request).unwrap();
         client.receive().unwrap();
 
@@ -301,7 +300,7 @@ pub mod test {
 
         step = 2;
         tx.send(step).unwrap();
-        request.set_payload(payload2.clone());
+        request.message.payload = payload2.clone();
         let client2 = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         client2.send(&request).unwrap();
         client2.receive().unwrap();

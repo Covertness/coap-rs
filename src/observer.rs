@@ -4,15 +4,13 @@ use std::{
     time::{Duration},
 };
 use log::{debug, warn};
-use bincode;
 use futures::{StreamExt, stream::{Fuse, SelectNextSome}};
 use tokio::time::{Interval, interval};
+use coap_lite::{
+    MessageClass, MessageType, RequestType as Method, ResponseType as Status, ObserveOption,
+    Packet, CoapRequest,
+};
 
-use super::message::request::{CoAPRequest, Method};
-use super::message::response::Status;
-use super::message::packet::{ObserveOption, Packet};
-use super::message::IsMessage;
-use super::message::header::{MessageClass, MessageType, ResponseType};
 use super::server::MessageSender;
 
 const DEFAULT_UNACKNOWLEDGE_MESSAGE_TRY_TIMES: usize = 10;
@@ -73,13 +71,13 @@ impl Observer {
     }
 
     /// filter the requests belong to the observer.
-    pub async fn request_handler(&mut self, request: &CoAPRequest) -> bool {
-        if request.get_type() == MessageType::Acknowledgement {
+    pub async fn request_handler(&mut self, request: &CoapRequest<SocketAddr>) -> bool {
+        if request.message.header.get_type() == MessageType::Acknowledgement {
             self.acknowledge(request);
             return false;
         }
 
-        match (request.get_method(), request.get_observe()) {
+        match (request.get_method(), request.message.get_observe()) {
             (&Method::Get, Some(observe_option)) => match observe_option[0] {
                 x if x == ObserveOption::Register as u8 => {
                     self.register(request).await;
@@ -116,7 +114,7 @@ impl Observer {
         }
     }
 
-    async fn register(&mut self, request: &CoAPRequest) {
+    async fn register(&mut self, request: &CoapRequest<SocketAddr>) {
         let register_address = request.source.unwrap();
         let resource_path = request.get_path();
 
@@ -132,28 +130,28 @@ impl Observer {
             return;
         }
 
-        self.record_register_resource(&register_address, &resource_path, &request.get_token());
+        self.record_register_resource(&register_address, &resource_path, &request.message.get_token());
 
         let resource = self.resources.get(&resource_path).unwrap();
 
         if let Some(ref response) = request.response {
             let mut response2 = response.clone();
-            response2.set_payload(resource.payload.clone());
-            response2.set_observe(vec![ObserveOption::Register as u8]);
+            response2.message.payload = resource.payload.clone();
+            response2.message.set_observe(vec![ObserveOption::Register as u8]);
             self.send_message(&register_address, &response2.message).await;
         }
     }
 
-    fn deregister(&mut self, request: &CoAPRequest) {
+    fn deregister(&mut self, request: &CoapRequest<SocketAddr>) {
         let register_address = request.source.unwrap();
         let resource_path = request.get_path();
 
         debug!("deregister {} {}", register_address, resource_path);
 
-        self.remove_register_resource(&register_address, &resource_path, &request.get_token());
+        self.remove_register_resource(&register_address, &resource_path, &request.message.get_token());
     }
 
-    async fn resource_changed(&mut self, request: &CoAPRequest) {
+    async fn resource_changed(&mut self, request: &CoapRequest<SocketAddr>) {
         let resource_path = request.get_path();
         let ref resource_payload = request.message.payload;
 
@@ -176,8 +174,8 @@ impl Observer {
         }
     }
 
-    fn acknowledge(&mut self, request: &CoAPRequest) {
-        self.remove_unacknowledge_message(&request.get_message_id(), &request.get_token());
+    fn acknowledge(&mut self, request: &CoapRequest<SocketAddr>) {
+        self.remove_unacknowledge_message(&request.message.header.message_id, &request.message.get_token());
     }
 
     fn record_register_resource(&mut self, address: &SocketAddr, path: &String, token: &Vec<u8>) {
@@ -351,21 +349,16 @@ impl Observer {
 
         let ref mut message = Packet::new();
         message.header.set_type(MessageType::Confirmable);
-        message.header.code = MessageClass::Response(ResponseType::Content);
+        message.header.code = MessageClass::Response(Status::Content);
 
         let address: SocketAddr;
         {
             let register_resource = self.register_resources.get(register_resource_key).unwrap();
             let resource = self.resources.get(&register_resource.resource).unwrap();
 
-            let mut sequence_bin =
-                bincode::config().big_endian().serialize(&resource.sequence).unwrap();
-            let index = sequence_bin.iter().position(|&x| x > 0).unwrap();
-            sequence_bin.drain(0..index);
-
             message.set_token(register_resource.token.clone());
-            message.set_observe(sequence_bin);
-            message.header.set_message_id(message_id);
+            message.set_observe(resource.sequence.to_be_bytes().to_vec());
+            message.header.message_id = message_id;
             message.payload = resource.payload.clone();
 
             address = register_resource.register.parse().unwrap();
@@ -401,22 +394,23 @@ mod test {
         time::Duration,
         sync::mpsc,
     };
+    use coap_lite::CoapResponse;
     use super::*;
     use super::super::*;
 
-    async fn request_handler(req: CoAPRequest) -> Option<CoAPResponse> {
+    async fn request_handler(req: CoapRequest<SocketAddr>) -> Option<CoapResponse> {
         match req.get_method() {
-            &Method::Get => {
-                let observe_option = req.get_observe().unwrap();
+            &coap_lite::RequestType::Get => {
+                let observe_option = req.message.get_observe().unwrap();
                 assert_eq!(observe_option[0], ObserveOption::Deregister as u8);
             }
-            &Method::Put => {}
+            &coap_lite::RequestType::Put => {}
             _ => panic!("unexpected request"),
         }
 
         match req.response {
             Some(mut response) => {
-                response.set_payload(b"OK".to_vec());
+                response.message.payload = b"OK".to_vec();
                 Some(response)
             }
             _ => None,
@@ -439,10 +433,10 @@ mod test {
         let mut client = CoAPClient::new(server_address).unwrap();
 
         tx.send(step).unwrap();
-        let mut request = CoAPRequest::new();
-        request.set_method(Method::Put);
+        let mut request = CoapRequest::new();
+        request.set_method(coap_lite::RequestType::Put);
         request.set_path(path);
-        request.set_payload(payload1.clone());
+        request.message.payload =payload1.clone();
         client.send(&request).unwrap();
         client.receive().unwrap();
 
@@ -469,7 +463,7 @@ mod test {
         step = 2;
         tx.send(step).unwrap();
 
-        request.set_payload(payload2.clone());
+        request.message.payload = payload2.clone();
 
         let client2 = CoAPClient::new(server_address).unwrap();
         client2.send(&request).unwrap();
@@ -489,10 +483,10 @@ mod test {
 
         let mut client = CoAPClient::new(server_address).unwrap();
 
-        let mut request = CoAPRequest::new();
-        request.set_method(Method::Put);
+        let mut request = CoapRequest::new();
+        request.set_method(coap_lite::RequestType::Put);
         request.set_path(path);
-        request.set_payload(payload1.clone());
+        request.message.payload = payload1.clone();
         client.send(&request).unwrap();
         client.receive().unwrap();
 
@@ -503,7 +497,7 @@ mod test {
 
         client.unobserve();
 
-        request.set_payload(payload2.clone());
+        request.message.payload = payload2.clone();
 
         let client3 = CoAPClient::new(server_address).unwrap();
         client3.send(&request).unwrap();

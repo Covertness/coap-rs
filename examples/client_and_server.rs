@@ -4,7 +4,6 @@ extern crate coap;
 
 use std::thread;
 use coap::{Server, CoAPClient};
-use coap::IsMessage;
 use tokio::runtime::Runtime;
 
 fn main() {
@@ -17,7 +16,7 @@ fn main() {
 
                 return match request.response {
                     Some(mut response) => {
-                        response.set_payload(uri_path.as_bytes().to_vec());
+                        response.message.payload = uri_path.as_bytes().to_vec();
                         Some(response)
                     }
                     _ => None,

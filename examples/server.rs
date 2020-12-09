@@ -2,7 +2,8 @@
 
 extern crate coap;
 
-use coap::{Server, IsMessage, Method};
+use coap_lite::{RequestType as Method};
+use coap::Server;
 use tokio::runtime::Runtime;
 
 fn main() {
@@ -22,7 +23,7 @@ fn main() {
 			
 			return match request.response {
 				Some(mut message) => {
-					message.set_payload(b"OK".to_vec());
+					message.message.payload = b"OK".to_vec();
 					Some(message)
 				},
 				_ => None
