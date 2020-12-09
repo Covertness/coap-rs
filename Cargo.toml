@@ -11,7 +11,6 @@ keywords = ["CoAP"]
 edition = "2018"
 
 [dependencies]
-bincode = "1.1.2"
 serde = { version= "1.0.88", features= [ "derive" ] }
 url = "1.7.2"
 num-derive = "0.2.4"
