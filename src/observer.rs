@@ -357,7 +357,10 @@ impl Observer {
             let resource = self.resources.get(&register_resource.resource).unwrap();
 
             message.set_token(register_resource.token.clone());
-            message.set_observe(resource.sequence.to_be_bytes().to_vec());
+            let mut sequence_bin = resource.sequence.to_be_bytes().to_vec();
+            let index = sequence_bin.iter().position(|&x| x > 0).unwrap();
+            sequence_bin.drain(0..index);
+            message.set_observe(sequence_bin);
             message.header.message_id = message_id;
             message.payload = resource.payload.clone();
 
