@@ -311,7 +311,6 @@ pub mod test {
             _ => None,
         }
     }
-}
 
     #[test]
     fn test_echo_server() {
@@ -396,3 +395,4 @@ pub mod test {
         client2.receive().unwrap();
         assert_eq!(rx2.recv_timeout(Duration::new(5, 0)).unwrap(), ());
     }
+}
