@@ -8,6 +8,7 @@ use log::*;
 use regex::Regex;
 use coap_lite::{
     ObserveOption,
+    RequestType as Method,
     ResponseType as Status,
     Packet, CoapRequest, CoapResponse
 };
@@ -59,12 +60,12 @@ impl CoAPClient {
             })
     }
 
-    /// Execute a get request
+    /// Execute a single get request with a coap url
     pub fn get(url: &str) -> Result<CoapResponse> {
         Self::get_with_timeout(url, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
     }
 
-    /// Execute a get request with the coap url and a specific timeout.
+    /// Execute a single get request with a coap url and a specific timeout.
     pub fn get_with_timeout(url: &str, timeout: Duration) -> Result<CoapResponse> {
         let (domain, port, path) = Self::parse_coap_url(url)?;
 
@@ -79,6 +80,71 @@ impl CoAPClient {
             Ok(receive_packet) => Ok(receive_packet),
             Err(e) => Err(e),
         }
+    }
+
+    /// Execute a single post request with a coap url
+    pub fn post(url: &str, data: Vec<u8>) -> Result<CoapResponse> {
+        Self::request(url, Method::Post, Some(data))
+    }
+
+    /// Execute a single post request with a coap url
+    pub fn post_with_timeout(url: &str, data: Vec<u8>, timeout: Duration) -> Result<CoapResponse> {
+        Self::request_with_timeout(url, Method::Post, Some(data), timeout)
+    }
+
+    /// Execute a put request with a coap url
+    pub fn put(url: &str, data: Vec<u8>) -> Result<CoapResponse> {
+        Self::request(url, Method::Put, Some(data))
+    }
+
+    /// Execute a single put request with a coap url
+    pub fn put_with_timeout(url: &str, data: Vec<u8>, timeout: Duration) -> Result<CoapResponse> {
+        Self::request_with_timeout(url, Method::Put, Some(data), timeout)
+    }
+
+    /// Execute a single delete request with a coap url
+    pub fn delete(url: &str) -> Result<CoapResponse> {
+        Self::request(url, Method::Delete, None)
+    }
+
+    /// Execute a single delete request with a coap url
+    pub fn delete_with_timeout(url: &str, timeout: Duration) -> Result<CoapResponse> {
+        Self::request_with_timeout(url, Method::Delete, None, timeout)
+    }
+
+    /// Execute a single request (GET, POST, PUT, DELETE) with a coap url
+    pub fn request(url: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
+        let (domain, port, path) = Self::parse_coap_url(url)?;
+        let client = Self::new((domain, port))?;
+        client.request_path(&path, method, data)
+    }
+
+    /// Execute a single request (GET, POST, PUT, DELETE) with a coap url and a specfic timeout
+    fn request_with_timeout(url: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
+        let (domain, port, path) = Self::parse_coap_url(url)?;
+        let client = Self::new((domain, port))?;
+        client.request_path_with_timeout(&path, method, data, timeout)
+    }
+
+    /// Execute a request (GET, POST, PUT, DELETE)
+    fn request_path(&self, path: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
+        self.request_path_with_timeout(path, method, data, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
+    }
+
+    /// Execute a request (GET, POST, PUT, DELETE) with a specfic timeout
+    fn request_path_with_timeout(&self, path: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
+        let mut request = CoapRequest::new();
+        request.set_method(method);
+        request.set_path(path);
+    
+        match data {
+            Some(data) => request.message.payload = data,
+            None => (),
+        }
+
+        self.set_receive_timeout(Some(timeout))?;
+        self.send(&request).unwrap();
+        self.receive()
     }
 
     /// Observe a resource with the handler
@@ -275,14 +341,14 @@ mod test {
     }
 
     #[test]
-    fn test_get() {
+    fn test_get_url() {
         let resp = CoAPClient::get("coap://coap.me:5683/hello")
             .unwrap();
         assert_eq!(resp.message.payload, b"world".to_vec());
     }
  
     #[test]
-    fn test_get_timeout() {
+    fn test_get_url_timeout() {
         let server_port = server::test::spawn_server(request_handler).recv().unwrap();
 
         let error = CoAPClient::get_with_timeout(&format!("coap://127.0.0.1:{}/Rust", server_port), Duration::new(1, 0))
