@@ -147,6 +147,10 @@ impl CoAPClient {
         self.receive()
     }
 
+    pub fn set_broadcast(&self, value: bool) -> Result<()> {
+        self.socket.set_broadcast(value)
+    }
+
     /// Observe a resource with the handler
     pub fn observe<H: FnMut(Packet) + Send + 'static>(&mut self, resource_path: &str, mut handler: H) -> Result<()> {
         // TODO: support observe multi resources at the same time
@@ -409,5 +413,15 @@ mod test {
         let client = CoAPClient::new(("coap.me", 5683)).unwrap();
         let resp = client.request_path("/validate", Method::Delete, None).unwrap();
         assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
+    }
+
+    #[test]
+    fn test_set_broadcast() {
+        let client = CoAPClient::new(("127.0.0.1", 5683)).unwrap();
+        assert!(client.set_broadcast(true).is_ok());
+        assert!(client.set_broadcast(false).is_ok());
+        let client = CoAPClient::new(("::1", 5683)).unwrap();
+        assert!(client.set_broadcast(true).is_ok());
+        assert!(client.set_broadcast(false).is_ok());
     }
 }
