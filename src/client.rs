@@ -359,4 +359,55 @@ mod test {
             assert_eq!(error.kind(), ErrorKind::WouldBlock);
         }
     }
+
+    #[test]
+    fn test_get() {
+        let client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let resp = client.request_path("/hello", Method::Get, None).unwrap();
+        assert_eq!(resp.message.payload, b"world".to_vec());
+    }
+    #[test]
+    fn test_post_url() {
+        let resp = CoAPClient::post("coap://coap.me:5683/validate", b"world".to_vec()).unwrap();
+        assert_eq!(resp.message.payload, b"POST OK".to_vec());
+        let resp = CoAPClient::post("coap://coap.me:5683/validate", b"test".to_vec()).unwrap();
+        assert_eq!(resp.message.payload, b"POST OK".to_vec());
+    }
+ 
+    #[test]
+    fn test_post() {
+        let client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let resp = client.request_path("/validate", Method::Post, Some(b"world".to_vec())).unwrap();
+        assert_eq!(resp.message.payload, b"POST OK".to_vec());
+    }
+ 
+    #[test]
+    fn test_put_url() {
+        let resp = CoAPClient::put("coap://coap.me:5683/create1", b"world".to_vec()).unwrap();
+        assert_eq!(resp.message.payload, b"Created".to_vec());
+        let resp = CoAPClient::put("coap://coap.me:5683/create1", b"test".to_vec()).unwrap();
+        assert_eq!(resp.message.payload, b"Created".to_vec());
+    }
+ 
+    #[test]
+    fn test_put() {
+        let client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let resp = client.request_path("/create1", Method::Put, Some(b"world".to_vec())).unwrap();
+        assert_eq!(resp.message.payload, b"Created".to_vec());
+    }
+ 
+    #[test]
+    fn test_delete_url() {
+        let resp = CoAPClient::delete("coap://coap.me:5683/validate").unwrap();
+        assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
+        let resp = CoAPClient::delete("coap://coap.me:5683/validate").unwrap();
+        assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
+    }
+ 
+    #[test]
+    fn test_delete() {
+        let client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let resp = client.request_path("/validate", Method::Delete, None).unwrap();
+        assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
+    }
 }
