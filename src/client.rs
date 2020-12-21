@@ -120,19 +120,19 @@ impl CoAPClient {
     }
 
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url and a specfic timeout
-    fn request_with_timeout(url: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
+    pub fn request_with_timeout(url: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
         let (domain, port, path) = Self::parse_coap_url(url)?;
         let client = Self::new((domain, port))?;
         client.request_path_with_timeout(&path, method, data, timeout)
     }
 
     /// Execute a request (GET, POST, PUT, DELETE)
-    fn request_path(&self, path: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
+    pub fn request_path(&self, path: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
         self.request_path_with_timeout(path, method, data, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
     }
 
     /// Execute a request (GET, POST, PUT, DELETE) with a specfic timeout
-    fn request_path_with_timeout(&self, path: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
+    pub fn request_path_with_timeout(&self, path: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
         let mut request = CoapRequest::new();
         request.set_method(method);
         request.set_path(path);
