@@ -1,5 +1,5 @@
 use std::io::{Error, ErrorKind, Result};
-use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
+use std::net::{SocketAddr, ToSocketAddrs, UdpSocket, IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time::Duration;
 use std::thread;
 use std::sync::mpsc;
@@ -245,6 +245,36 @@ impl CoAPClient {
         Self::send_with_socket(&self.socket, &self.peer_addr, &request.message)
     }
 
+    /// Send a request to all CoAP devices.
+    /// - IPv4 AllCoAP multicast address is '224.0.1.187'
+    /// - IPv6 AllCoAp multicast addresses are 'ff0?::fd'
+    /// Parameter segment is used with IPv6 to determine the first octet. 
+    /// It's value can be between 0x0 and 0xf. To address multiple segments,
+    /// you have to call send_all_coap for each of the segments.
+    pub fn send_all_coap(&self, request: &CoapRequest<SocketAddr>, segment: u8) -> Result<()> {
+        assert!(segment <= 0xf);
+        let addr = match self.peer_addr {
+            SocketAddr::V4(val) => {
+                SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 0, 1, 187)), val.port())
+            },
+            SocketAddr::V6(val) => {
+                SocketAddr::new(IpAddr::V6(Ipv6Addr::new(0xff00 + segment as u16, 0, 0, 0, 0, 0, 0, 0xfd)), val.port())
+            },
+        };
+
+        match request.message.to_bytes() {
+            Ok(bytes) => {
+                let size = self.socket.send_to(&bytes[..], addr)?;
+                if size == bytes.len() {
+                    Ok(())
+                } else {
+                    Err(Error::new(ErrorKind::Other, "send length error"))
+                }
+            }
+            Err(_) => Err(Error::new(ErrorKind::InvalidInput, "packet error")),
+        }
+    }
+
     /// Receive a response.
     pub fn receive(&self) -> Result<CoapResponse> {
         let packet = Self::receive_from_socket(&self.socket)?;
@@ -423,5 +453,20 @@ mod test {
         let client = CoAPClient::new(("::1", 5683)).unwrap();
         assert!(client.set_broadcast(true).is_ok());
         assert!(client.set_broadcast(false).is_ok());
+    }
+
+    #[test]
+    fn test_send_all_coap() {
+        // prepare the Non-confirmable request with the broadcast message
+        let mut request: CoapRequest<SocketAddr> = CoapRequest::new();
+        request.set_method(Method::Get);
+        request.set_path("/");
+        request.message.header.set_type(coap_lite::MessageType::NonConfirmable);
+        request.message.payload = b"Discovery".to_vec();
+
+        let client = CoAPClient::new(("127.0.0.1", 5683)).unwrap();
+        assert!(client.send_all_coap(&request, 0).is_ok());
+        let client = CoAPClient::new(("::1", 5683)).unwrap();
+        assert!(client.send_all_coap(&request, 0x1).is_ok());
     }
 }
