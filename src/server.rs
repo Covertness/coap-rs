@@ -114,13 +114,14 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
         Ok(())
     }
 
-    /// enable discovery - starts a multicast listener in addition to the unicast listener
+    /// enable AllCoAP multicasts - adds the AllCoap addresses to the unicast listener 
     /// - IPv4 AllCoAP multicast address is '224.0.1.187'
     /// - IPv6 AllCoAp multicast addresses are 'ff0?::fd'
+    /// 
     /// Parameter segment is used with IPv6 to determine the first octet. 
-    /// It's value can be between 0x0 and 0xf. To join multiple segments,
-    /// you have to call enable_discovery for each of the segments.
-    pub fn enable_discovery(&mut self, segment: u8) {
+    /// - It's value can be between 0x0 and 0xf. 
+    /// - To join multiple segments, you have to call enable_discovery for each of the segments.
+    pub fn enable_all_coap(&mut self, segment: u8) {
         assert!(segment <= 0xf);
         let socket = self.server.socket.get_mut();
         // determine wether IPv4 or IPv6 and 
@@ -174,7 +175,6 @@ impl CoAPServer {
         self.socket.get_ref().local_addr()
     }
 }
-
 
 impl Drop for CoAPServer {
     fn drop(&mut self) {
@@ -248,13 +248,13 @@ pub mod test {
         }
     }
 
-    pub fn spawn_v4_server_with_discovery<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
+    pub fn spawn_v4_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
         let (tx, rx) = mpsc::channel();
 
         std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
                 let mut server = server::Server::new(("0.0.0.0", 0)).unwrap();
-                server.enable_discovery(0x0);
+                server.enable_all_coap(0x0);
 
                 tx.send(server.socket_addr().unwrap().port()).unwrap();
                 
@@ -265,28 +265,13 @@ pub mod test {
         rx
     }
 
-    pub fn spawn_v6_server_with_discovery<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
+    pub fn spawn_v6_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
         let (tx, rx) = mpsc::channel();
 
         std::thread::Builder::new().name(String::from("v6-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
                 let mut server = server::Server::new(("::0", 0)).unwrap();
-                server.enable_discovery(0x0);
-                server.enable_discovery(0x1);
-                server.enable_discovery(0x2);
-                server.enable_discovery(0x3);
-                server.enable_discovery(0x4);
-                server.enable_discovery(0x5);
-                server.enable_discovery(0x6);
-                server.enable_discovery(0x7);
-                server.enable_discovery(0x8);
-                server.enable_discovery(0x9);
-                server.enable_discovery(0xa);
-                server.enable_discovery(0xb);
-                server.enable_discovery(0xc);
-                server.enable_discovery(0xd);
-                server.enable_discovery(0xe);
-                server.enable_discovery(0xf);
+                server.enable_all_coap(0x0);
 
                 tx.send(server.socket_addr().unwrap().port()).unwrap();
                 
@@ -382,8 +367,8 @@ pub mod test {
     }
 
     #[test]
-    fn test_server_discovery_v4() {
-        let server_port = spawn_v4_server_with_discovery(request_handler).recv().unwrap();
+    fn test_server_all_coap_v4() {
+        let server_port = spawn_v4_server_with_all_coap(request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
@@ -413,8 +398,9 @@ pub mod test {
     }
 
     #[test]
-    fn test_server_discovery_v6() {
-        let server_port = spawn_v6_server_with_discovery(request_handler).recv().unwrap();
+    #[ignore]
+    fn test_server_all_coap_v6() {
+        let server_port = spawn_v6_server_with_all_coap(request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("::1:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
@@ -429,7 +415,7 @@ pub mod test {
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
-        let client = CoAPClient::new(format!("::0:{}", server_port)).unwrap();
+        let client = CoAPClient::new(format!("::1:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
         request.message.header.set_version(1);
         request.message.header.set_type(coap_lite::MessageType::NonConfirmable);
@@ -442,5 +428,4 @@ pub mod test {
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
-
 }
