@@ -1,7 +1,7 @@
 use std::{
     self,
     pin::Pin,
-    net::{self, SocketAddr, ToSocketAddrs, Ipv4Addr, Ipv6Addr},
+    net::{self, SocketAddr, ToSocketAddrs, Ipv4Addr, Ipv6Addr, IpAddr},
     task::Context,
     future::Future,
 };
@@ -121,21 +121,86 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
     /// Parameter segment is used with IPv6 to determine the first octet. 
     /// - It's value can be between 0x0 and 0xf. 
     /// - To join multiple segments, you have to call enable_discovery for each of the segments.
+    /// 
+    /// For further details see method join_multicast
     pub fn enable_all_coap(&mut self, segment: u8) {
+        let socket = self.server.socket.get_mut();
+        let m = match socket.local_addr().unwrap() {
+            SocketAddr::V4(_val) => {
+                IpAddr::V4(Ipv4Addr::new(224, 0, 1, 187))
+            },
+            SocketAddr::V6(_val) => {
+                IpAddr::V6(Ipv6Addr::new(0xff00 + segment as u16,0,0,0,0,0,0,0xfd))
+            },
+        };
+        self.join_multicast(m, segment);
+    }
+
+    /// join multicast - adds the multicast addresses to the unicast listener 
+    /// - IPv4 multicast address range is '224.0.0.0/4'
+    /// - IPv6 AllCoAp multicast addresses are 'ff00::/8'
+    /// 
+    /// Parameter segment is used with IPv6 to determine the first octet. 
+    /// - It's value can be between 0x0 and 0xf. 
+    /// - To join multiple segments, you have to call enable_discovery for each of the segments.
+    ///
+    /// Multicast address scope
+    /// IPv6        IPv4 equivalent[16]	        Scope	            Purpose
+    /// ff00::/16                               Reserved
+    /// ff0f::/16		                        Reserved
+    /// ffx1::/16	127.0.0.0/8	                Interface-local	    Packets with this destination address may not be sent over any network link, but must remain within the current node; this is the multicast equivalent of the unicast loopback address.
+    /// ffx2::/16	224.0.0.0/24	            Link-local	        Packets with this destination address may not be routed anywhere.
+    /// ffx3::/16	239.255.0.0/16	            IPv4 local scope
+    /// ffx4::/16	            	            Admin-local	        The smallest scope that must be administratively configured.
+    /// ffx5::/16		                        Site-local	        Restricted to the local physical network.
+    /// ffx8::/16	239.192.0.0/14	            Organization-local	Restricted to networks used by the organization administering the local network. (For example, these addresses might be used over VPNs; when packets for this group are routed over the public internet (where these addresses are not valid), they would have to be encapsulated in some other protocol.)
+    /// ffxe::/16	224.0.1.0-238.255.255.255	Global scope	    Eligible to be routed over the public internet.
+    /// 
+    /// Notable addresses:
+    /// ff02::1	    All nodes on the local network segment
+    /// ff02::2	    All routers on the local network segment
+    /// ff02::5	    OSPFv3 All SPF routers
+    /// ff02::6	    OSPFv3 All DR routers
+    /// ff02::8	    IS-IS for IPv6 routers
+    /// ff02::9	    RIP routers
+    /// ff02::a	    EIGRP routers
+    /// ff02::d	    PIM routers
+    /// ff02::16	MLDv2 reports (defined in RFC 3810)
+    /// ff02::1:2	All DHCPv6 servers and relay agents on the local network segment (defined in RFC 3315)
+    /// ff02::1:3	All LLMNR hosts on the local network segment (defined in RFC 4795)
+    /// ff05::1:3	All DHCP servers on the local network site (defined in RFC 3315)
+    /// ff0x::c	    Simple Service Discovery Protocol
+    /// ff0x::fb	Multicast DNS
+    /// ff0x::101	Network Time Protocol
+    /// ff0x::108	Network Information Service
+    /// ff0x::181	Precision Time Protocol (PTP) version 2 messages (Sync, Announce, etc.) except peer delay measurement
+    /// ff02::6b	Precision Time Protocol (PTP) version 2 peer delay measurement messages
+    /// ff0x::114	Used for experiments
+
+    pub fn join_multicast(&mut self, addr: IpAddr, segment: u8) {
+        assert!(addr.is_multicast());
         assert!(segment <= 0xf);
         let socket = self.server.socket.get_mut();
         // determine wether IPv4 or IPv6 and 
-        // join the appropriate AllCoAP multicast address
+        // join the appropriate multicast address
         match socket.local_addr().unwrap() {
             SocketAddr::V4(val) => {
-                let m = Ipv4Addr::new(224, 0, 1, 187);
-                let i = val.ip().clone();
-                socket.join_multicast_v4(m, i).unwrap();
+                match addr {
+                    IpAddr::V4(ipv4) => { 
+                        let i = val.ip().clone();
+                        socket.join_multicast_v4(ipv4, i).unwrap();
+                    }
+                    IpAddr::V6(_ipv6) => { /* handle IPv6 */ }
+                }
             },
             SocketAddr::V6(_val) => {
-                let m = Ipv6Addr::new(0xff00 + segment as u16,0,0,0,0,0,0,0xfd);
-                socket.join_multicast_v6(&m, 0).unwrap();
-                //socket.set_only_v6(true)?;
+                match addr {
+                    IpAddr::V4(_ipv4) => { /* handle IPv4 */ }
+                    IpAddr::V6(ipv6) => { 
+                        socket.join_multicast_v6(&ipv6, 0).unwrap();
+                        //socket.set_only_v6(true)?;
+                    }
+                }
             },
         }
     }
@@ -253,6 +318,7 @@ pub mod test {
 
         std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
+                // multicast needs a sevr on a real interface
                 let mut server = server::Server::new(("0.0.0.0", 0)).unwrap();
                 server.enable_all_coap(0x0);
 
@@ -270,6 +336,7 @@ pub mod test {
 
         std::thread::Builder::new().name(String::from("v6-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
+                // multicast needs a sevr on a real interface
                 let mut server = server::Server::new(("::0", 0)).unwrap();
                 server.enable_all_coap(0x0);
 
@@ -391,14 +458,14 @@ pub mod test {
         request.message.header.message_id = 2;
         request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
         request.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_all_coap(&request, 0).unwrap();
+        client.send_all_coap(&request, 0x2).unwrap();
 
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
     #[test]
-    #[ignore]
+    #[ignore]  // This test does not work, not clear why. With a separate test client things seem to work.
     fn test_server_all_coap_v6() {
         let server_port = spawn_v6_server_with_all_coap(request_handler).recv().unwrap();
 
@@ -415,7 +482,8 @@ pub mod test {
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
-        let client = CoAPClient::new(format!("::1:{}", server_port)).unwrap();
+        // use 0xff02 to keep it within this network
+        let client = CoAPClient::new(format!("ff02::fd:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
         request.message.header.set_version(1);
         request.message.header.set_type(coap_lite::MessageType::NonConfirmable);
@@ -423,7 +491,9 @@ pub mod test {
         request.message.header.message_id = 2;
         request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
         request.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_all_coap(&request, 0x0).unwrap();
+        // use segment 0x02 to keep it within this network
+        client.send_all_coap(&request, 0x3).unwrap();
+        //client.send(&request).unwrap();
 
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
