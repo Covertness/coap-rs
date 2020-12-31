@@ -114,7 +114,7 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
         Ok(())
     }
 
-    /// enable AllCoAP multicasts - adds the AllCoap addresses to the unicast listener 
+    /// enable AllCoAP multicasts - adds the AllCoap addresses to the listener 
     /// - IPv4 AllCoAP multicast address is '224.0.1.187'
     /// - IPv6 AllCoAp multicast addresses are 'ff0?::fd'
     /// 
@@ -128,10 +128,14 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
         let socket = self.server.socket.get_mut();
         let m = match socket.local_addr().unwrap() {
             SocketAddr::V4(_val) => {
-                IpAddr::V4(Ipv4Addr::new(224, 0, 1, 187))
+                let addr = IpAddr::V4(Ipv4Addr::new(224, 0, 1, 187));
+                self.server.multicast_addresses.push(addr.clone());
+                addr
             },
             SocketAddr::V6(_val) => {
-                IpAddr::V6(Ipv6Addr::new(0xff00 + segment as u16,0,0,0,0,0,0,0xfd))
+                let addr = IpAddr::V6(Ipv6Addr::new(0xff00 + segment as u16,0,0,0,0,0,0,0xfd));
+                self.server.multicast_addresses.push(addr.clone());
+                addr
             },
         };
         self.join_multicast(m);
@@ -205,6 +209,8 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
             },
         }
     }
+
+    /// leave multicast - remove the multicast address from the listener 
     pub fn leave_multicast(&mut self, addr: IpAddr) {
         assert!(addr.is_multicast());
         let socket = self.server.socket.get_mut();
@@ -368,7 +374,7 @@ pub mod test {
 
         std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
-                // multicast needs a sevr on a real interface
+                // multicast needs a server on a real interface
                 let mut server = server::Server::new(("0.0.0.0", 0)).unwrap();
                 server.enable_all_coap(0x0);
 
@@ -386,7 +392,7 @@ pub mod test {
 
         std::thread::Builder::new().name(String::from("v6-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
-                // multicast needs a sevr on a real interface
+                // multicast needs a server on a real interface
                 let mut server = server::Server::new(("::0", 0)).unwrap();
                 server.enable_all_coap(0x0);
 
@@ -547,5 +553,33 @@ pub mod test {
 
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
+    }
+    #[test]
+    fn test_join_leave() {
+        std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {
+            tokio::runtime::Runtime::new().unwrap().block_on(async move {
+                // multicast needs a server on a real interface
+                let mut server = server::Server::new(("0.0.0.0", 0)).unwrap();
+                server.join_multicast(IpAddr::V4(Ipv4Addr::new(224, 0, 1, 1)));
+                server.join_multicast(IpAddr::V4(Ipv4Addr::new(224, 1, 1, 1)));
+                server.leave_multicast(IpAddr::V4(Ipv4Addr::new(224, 0, 1, 1)));
+                server.leave_multicast(IpAddr::V4(Ipv4Addr::new(224, 1, 1, 1)));
+                server.run(request_handler).await.unwrap();
+            })
+        }).unwrap();
+
+        std::thread::Builder::new().name(String::from("v6-server")).spawn(move || {
+            tokio::runtime::Runtime::new().unwrap().block_on(async move {
+                // multicast needs a server on a real interface
+                let mut server = server::Server::new(("::0", 0)).unwrap();
+                server.join_multicast(IpAddr::V6(Ipv6Addr::new(0xff02,0,0,0,0,0,1,0x1)));
+                server.join_multicast(IpAddr::V6(Ipv6Addr::new(0xff02,0,0,0,0,1,0,0x2)));
+                server.leave_multicast(IpAddr::V6(Ipv6Addr::new(0xff02,0,0,0,0,0,1,0x1)));
+                server.join_multicast(IpAddr::V6(Ipv6Addr::new(0xff02,0,0,0,0,1,0,0x2)));
+                server.run(request_handler).await.unwrap();
+            })
+        }).unwrap();
+
+        std::thread::sleep(std::time::Duration::from_secs(1));
     }
 }
