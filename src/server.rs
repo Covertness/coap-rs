@@ -124,6 +124,7 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
     /// 
     /// For further details see method join_multicast
     pub fn enable_all_coap(&mut self, segment: u8) {
+        assert!(segment <= 0xf);
         let socket = self.server.socket.get_mut();
         let m = match socket.local_addr().unwrap() {
             SocketAddr::V4(_val) => {
@@ -133,7 +134,7 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
                 IpAddr::V6(Ipv6Addr::new(0xff00 + segment as u16,0,0,0,0,0,0,0xfd))
             },
         };
-        self.join_multicast(m, segment);
+        self.join_multicast(m);
     }
 
     /// join multicast - adds the multicast addresses to the unicast listener 
@@ -176,10 +177,8 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
     /// ff0x::181	Precision Time Protocol (PTP) version 2 messages (Sync, Announce, etc.) except peer delay measurement
     /// ff02::6b	Precision Time Protocol (PTP) version 2 peer delay measurement messages
     /// ff0x::114	Used for experiments
-
-    pub fn join_multicast(&mut self, addr: IpAddr, segment: u8) {
+    pub fn join_multicast(&mut self, addr: IpAddr) {
         assert!(addr.is_multicast());
-        assert!(segment <= 0xf);
         let socket = self.server.socket.get_mut();
         // determine wether IPv4 or IPv6 and 
         // join the appropriate multicast address
@@ -189,6 +188,7 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
                     IpAddr::V4(ipv4) => { 
                         let i = val.ip().clone();
                         socket.join_multicast_v4(ipv4, i).unwrap();
+                        self.server.multicast_addresses.push(addr);
                     }
                     IpAddr::V6(_ipv6) => { /* handle IPv6 */ }
                 }
@@ -198,18 +198,49 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
                     IpAddr::V4(_ipv4) => { /* handle IPv4 */ }
                     IpAddr::V6(ipv6) => { 
                         socket.join_multicast_v6(&ipv6, 0).unwrap();
+                        self.server.multicast_addresses.push(addr);
                         //socket.set_only_v6(true)?;
                     }
                 }
             },
         }
     }
+    pub fn leave_multicast(&mut self, addr: IpAddr) {
+        assert!(addr.is_multicast());
+        let socket = self.server.socket.get_mut();
+        // determine wether IPv4 or IPv6 and 
+        // leave the appropriate multicast address
+        match socket.local_addr().unwrap() {
+            SocketAddr::V4(val) => {
+                match addr {
+                    IpAddr::V4(ipv4) => { 
+                        let i = val.ip().clone();
+                        socket.leave_multicast_v4(ipv4, i).unwrap();
+                        let index = self.server.multicast_addresses.iter().position(|&item| item == addr).unwrap();
+                        self.server.multicast_addresses.remove(index);
+                    }
+                    IpAddr::V6(_ipv6) => { /* handle IPv6 */ }
+                }
+            },
+            SocketAddr::V6(_val) => {
+                match addr {
+                    IpAddr::V4(_ipv4) => { /* handle IPv4 */ }
+                    IpAddr::V6(ipv6) => { 
+                        socket.leave_multicast_v6(&ipv6, 0).unwrap();
+                        let index = self.server.multicast_addresses.iter().position(|&item| item == addr).unwrap();
+                        self.server.multicast_addresses.remove(index);
+                    }
+                }
+            },
+        }
+    }    
 }
 
 pub struct CoAPServer {
     receiver: MessageReceiver,
     is_terminated: bool,
     socket: UdpFramed<Codec>,
+    multicast_addresses: Vec<IpAddr>,
 }
 
 impl CoAPServer {
@@ -221,6 +252,7 @@ impl CoAPServer {
             receiver,
             is_terminated: false,
             socket: UdpFramed::new(socket, Codec::new()),
+            multicast_addresses: Vec::new(),
         })
     }
 
@@ -243,6 +275,24 @@ impl CoAPServer {
 
 impl Drop for CoAPServer {
     fn drop(&mut self) {
+        // unregister still existing multicast addresses 
+        let socket = self.socket.get_mut();
+        for addr in &self.multicast_addresses {
+            match addr {
+                IpAddr::V4(ipv4) => { 
+                    match socket.local_addr().unwrap() {
+                        SocketAddr::V4(val) => {
+                            socket.leave_multicast_v4(*ipv4, val.ip().clone()).unwrap();
+                        }
+                        _ => { panic!("should not happen"); }
+                    }
+                }
+                IpAddr::V6(ipv6) => { 
+                    socket.leave_multicast_v6(&ipv6, 0).unwrap();
+                }
+            }
+        }
+        // stop server
         self.stop();
     }
 }
