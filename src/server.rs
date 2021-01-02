@@ -128,14 +128,10 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
         let socket = self.server.socket.get_mut();
         let m = match socket.local_addr().unwrap() {
             SocketAddr::V4(_val) => {
-                let addr = IpAddr::V4(Ipv4Addr::new(224, 0, 1, 187));
-                self.server.multicast_addresses.push(addr.clone());
-                addr
+                IpAddr::V4(Ipv4Addr::new(224, 0, 1, 187))
             },
             SocketAddr::V6(_val) => {
-                let addr = IpAddr::V6(Ipv6Addr::new(0xff00 + segment as u16,0,0,0,0,0,0,0xfd));
-                self.server.multicast_addresses.push(addr.clone());
-                addr
+                IpAddr::V6(Ipv6Addr::new(0xff00 + segment as u16,0,0,0,0,0,0,0xfd))
             },
         };
         self.join_multicast(m);
@@ -149,10 +145,8 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
     /// - It's value can be between 0x0 and 0xf. 
     /// - To join multiple segments, you have to call enable_discovery for each of the segments.
     ///
-    /// Multicast address scope
+    /// Some Multicast address scope
     /// IPv6        IPv4 equivalent[16]	        Scope	            Purpose
-    /// ff00::/16                               Reserved
-    /// ff0f::/16		                        Reserved
     /// ffx1::/16	127.0.0.0/8	                Interface-local	    Packets with this destination address may not be sent over any network link, but must remain within the current node; this is the multicast equivalent of the unicast loopback address.
     /// ffx2::/16	224.0.0.0/24	            Link-local	        Packets with this destination address may not be routed anywhere.
     /// ffx3::/16	239.255.0.0/16	            IPv4 local scope
@@ -163,82 +157,17 @@ impl<'a, HandlerRet> Server<'a, HandlerRet> where HandlerRet: Future<Output=Opti
     /// 
     /// Notable addresses:
     /// ff02::1	    All nodes on the local network segment
-    /// ff02::2	    All routers on the local network segment
-    /// ff02::5	    OSPFv3 All SPF routers
-    /// ff02::6	    OSPFv3 All DR routers
-    /// ff02::8	    IS-IS for IPv6 routers
-    /// ff02::9	    RIP routers
-    /// ff02::a	    EIGRP routers
-    /// ff02::d	    PIM routers
-    /// ff02::16	MLDv2 reports (defined in RFC 3810)
-    /// ff02::1:2	All DHCPv6 servers and relay agents on the local network segment (defined in RFC 3315)
-    /// ff02::1:3	All LLMNR hosts on the local network segment (defined in RFC 4795)
-    /// ff05::1:3	All DHCP servers on the local network site (defined in RFC 3315)
     /// ff0x::c	    Simple Service Discovery Protocol
     /// ff0x::fb	Multicast DNS
-    /// ff0x::101	Network Time Protocol
-    /// ff0x::108	Network Information Service
-    /// ff0x::181	Precision Time Protocol (PTP) version 2 messages (Sync, Announce, etc.) except peer delay measurement
-    /// ff02::6b	Precision Time Protocol (PTP) version 2 peer delay measurement messages
+    /// ff0x::fb	Multicast CoAP
     /// ff0x::114	Used for experiments
     pub fn join_multicast(&mut self, addr: IpAddr) {
-        assert!(addr.is_multicast());
-        let socket = self.server.socket.get_mut();
-        // determine wether IPv4 or IPv6 and 
-        // join the appropriate multicast address
-        match socket.local_addr().unwrap() {
-            SocketAddr::V4(val) => {
-                match addr {
-                    IpAddr::V4(ipv4) => { 
-                        let i = val.ip().clone();
-                        socket.join_multicast_v4(ipv4, i).unwrap();
-                        self.server.multicast_addresses.push(addr);
-                    }
-                    IpAddr::V6(_ipv6) => { /* handle IPv6 */ }
-                }
-            },
-            SocketAddr::V6(_val) => {
-                match addr {
-                    IpAddr::V4(_ipv4) => { /* handle IPv4 */ }
-                    IpAddr::V6(ipv6) => { 
-                        socket.join_multicast_v6(&ipv6, 0).unwrap();
-                        self.server.multicast_addresses.push(addr);
-                        //socket.set_only_v6(true)?;
-                    }
-                }
-            },
-        }
+        self.server.join_multicast(addr);
     }
 
     /// leave multicast - remove the multicast address from the listener 
     pub fn leave_multicast(&mut self, addr: IpAddr) {
-        assert!(addr.is_multicast());
-        let socket = self.server.socket.get_mut();
-        // determine wether IPv4 or IPv6 and 
-        // leave the appropriate multicast address
-        match socket.local_addr().unwrap() {
-            SocketAddr::V4(val) => {
-                match addr {
-                    IpAddr::V4(ipv4) => { 
-                        let i = val.ip().clone();
-                        socket.leave_multicast_v4(ipv4, i).unwrap();
-                        let index = self.server.multicast_addresses.iter().position(|&item| item == addr).unwrap();
-                        self.server.multicast_addresses.remove(index);
-                    }
-                    IpAddr::V6(_ipv6) => { /* handle IPv6 */ }
-                }
-            },
-            SocketAddr::V6(_val) => {
-                match addr {
-                    IpAddr::V4(_ipv4) => { /* handle IPv4 */ }
-                    IpAddr::V6(ipv6) => { 
-                        socket.leave_multicast_v6(&ipv6, 0).unwrap();
-                        let index = self.server.multicast_addresses.iter().position(|&item| item == addr).unwrap();
-                        self.server.multicast_addresses.remove(index);
-                    }
-                }
-            },
-        }
+        self.server.leave_multicast(addr);
     }    
 }
 
@@ -277,6 +206,67 @@ impl CoAPServer {
     pub fn socket_addr(&self) -> std::io::Result<SocketAddr> {
         self.socket.get_ref().local_addr()
     }
+
+    /// join multicast - adds the multicast addresses to the listener 
+    pub fn join_multicast(&mut self, addr: IpAddr) {
+        assert!(addr.is_multicast());
+        let socket = self.socket.get_mut();
+        // determine wether IPv4 or IPv6 and 
+        // join the appropriate multicast address
+        match socket.local_addr().unwrap() {
+            SocketAddr::V4(val) => {
+                match addr {
+                    IpAddr::V4(ipv4) => { 
+                        let i = val.ip().clone();
+                        socket.join_multicast_v4(ipv4, i).unwrap();
+                        self.multicast_addresses.push(addr);
+                    }
+                    IpAddr::V6(_ipv6) => { /* handle IPv6 */ }
+                }
+            },
+            SocketAddr::V6(_val) => {
+                match addr {
+                    IpAddr::V4(_ipv4) => { /* handle IPv4 */ }
+                    IpAddr::V6(ipv6) => { 
+                        socket.join_multicast_v6(&ipv6, 0).unwrap();
+                        self.multicast_addresses.push(addr);
+                        //socket.set_only_v6(true)?;
+                    }
+                }
+            },
+        }
+    }
+
+    /// leave multicast - remove the multicast address from the listener 
+    pub fn leave_multicast(&mut self, addr: IpAddr) {
+        assert!(addr.is_multicast());
+        let socket = self.socket.get_mut();
+        // determine wether IPv4 or IPv6 and 
+        // leave the appropriate multicast address
+        match socket.local_addr().unwrap() {
+            SocketAddr::V4(val) => {
+                match addr {
+                    IpAddr::V4(ipv4) => { 
+                        let i = val.ip().clone();
+                        socket.leave_multicast_v4(ipv4, i).unwrap();
+                        let index = self.multicast_addresses.iter().position(|&item| item == addr).unwrap();
+                        self.multicast_addresses.remove(index);
+                    }
+                    IpAddr::V6(_ipv6) => { /* handle IPv6 */ }
+                }
+            },
+            SocketAddr::V6(_val) => {
+                match addr {
+                    IpAddr::V4(_ipv4) => { /* handle IPv4 */ }
+                    IpAddr::V6(ipv6) => { 
+                        socket.leave_multicast_v6(&ipv6, 0).unwrap();
+                        let index = self.multicast_addresses.iter().position(|&item| item == addr).unwrap();
+                        self.multicast_addresses.remove(index);
+                    }
+                }
+            },
+        }
+    }    
 }
 
 impl Drop for CoAPServer {
@@ -387,14 +377,14 @@ pub mod test {
         rx
     }
 
-    pub fn spawn_v6_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
+    pub fn spawn_v6_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F, segment: u8) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
         let (tx, rx) = mpsc::channel();
 
         std::thread::Builder::new().name(String::from("v6-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
                 // multicast needs a server on a real interface
                 let mut server = server::Server::new(("::0", 0)).unwrap();
-                server.enable_all_coap(0x0);
+                server.enable_all_coap(segment);
 
                 tx.send(server.socket_addr().unwrap().port()).unwrap();
                 
@@ -490,7 +480,7 @@ pub mod test {
     }
 
     #[test]
-    fn test_server_all_coap_v4() {
+    fn multicast_server_all_coap_v4() {
         let server_port = spawn_v4_server_with_all_coap(request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
@@ -514,7 +504,7 @@ pub mod test {
         request.message.header.message_id = 2;
         request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
         request.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_all_coap(&request, 0x2).unwrap();
+        client.send_all_coap(&request, 0x4).unwrap();
 
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
@@ -522,8 +512,10 @@ pub mod test {
 
     #[test]
     #[ignore]  // This test does not work, not clear why. With a separate test client things seem to work.
-    fn test_server_all_coap_v6() {
-        let server_port = spawn_v6_server_with_all_coap(request_handler).recv().unwrap();
+    fn multicast_server_all_coap_v6() {
+        // use segment 0x04 which should be the smallest administered scope
+        let segment = 0x04;
+        let server_port = spawn_v6_server_with_all_coap(request_handler, segment).recv().unwrap();
 
         let client = CoAPClient::new(format!("::1:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
@@ -539,7 +531,7 @@ pub mod test {
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
         // use 0xff02 to keep it within this network
-        let client = CoAPClient::new(format!("ff02::fd:{}", server_port)).unwrap();
+        let client = CoAPClient::new(format!("ff0{}::fd:{}", segment, server_port)).unwrap();
         let mut request = CoapRequest::new();
         request.message.header.set_version(1);
         request.message.header.set_type(coap_lite::MessageType::NonConfirmable);
@@ -547,15 +539,13 @@ pub mod test {
         request.message.header.message_id = 2;
         request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
         request.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        // use segment 0x02 to keep it within this network
-        client.send_all_coap(&request, 0x3).unwrap();
-        //client.send(&request).unwrap();
+        client.send_all_coap(&request, segment).unwrap();
 
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
     #[test]
-    fn test_join_leave() {
+    fn multicast_join_leave() {
         std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
                 // multicast needs a server on a real interface
