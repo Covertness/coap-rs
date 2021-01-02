@@ -510,8 +510,9 @@ pub mod test {
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
+    //This test right now does not work on windows
+    #[cfg(unix)]
     #[test]
-    #[ignore]  // This test does not work, not clear why. With a separate test client things seem to work.
     fn multicast_server_all_coap_v6() {
         // use segment 0x04 which should be the smallest administered scope
         let segment = 0x04;
