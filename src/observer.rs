@@ -429,7 +429,7 @@ mod test {
         let (tx2, rx2) = mpsc::channel();
         let mut step = 1;
 
-        let server_port = server::test::spawn_server(request_handler).recv().unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
@@ -480,7 +480,7 @@ mod test {
         let payload1 = b"data1".to_vec();
         let payload2 = b"data2".to_vec();
 
-        let server_port = server::test::spawn_server(request_handler).recv().unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
@@ -511,7 +511,7 @@ mod test {
     fn test_observe_without_resource() {
         let path = "/test";
 
-        let server_port = server::test::spawn_server(request_handler).recv().unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
 
         let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let error = client.observe(path, |_msg| {}).unwrap_err();

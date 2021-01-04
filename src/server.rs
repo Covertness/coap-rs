@@ -330,12 +330,12 @@ pub mod test {
     use super::super::*;
     use super::*;
 
-    pub fn spawn_server<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
+    pub fn spawn_server<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(ip: &'static str, request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
         let (tx, rx) = mpsc::channel();
 
         std::thread::Builder::new().name(String::from("server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
-                let mut server = server::Server::new("127.0.0.1:0").unwrap();
+                let mut server = server::Server::new(ip).unwrap();
 
                 tx.send(server.socket_addr().unwrap().port()).unwrap();
                 
@@ -359,32 +359,14 @@ pub mod test {
         }
     }
 
-    pub fn spawn_v4_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
+    pub fn spawn_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(ip: &'static str, request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
         let (tx, rx) = mpsc::channel();
 
         std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
                 // multicast needs a server on a real interface
-                let mut server = server::Server::new(("0.0.0.0", 0)).unwrap();
+                let mut server = server::Server::new((ip, 0)).unwrap();
                 server.enable_all_coap(0x0);
-
-                tx.send(server.socket_addr().unwrap().port()).unwrap();
-                
-                server.run(request_handler).await.unwrap();
-            })
-        }).unwrap();
-        
-        rx
-    }
-
-    pub fn spawn_v6_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(request_handler: F, segment: u8) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
-        let (tx, rx) = mpsc::channel();
-
-        std::thread::Builder::new().name(String::from("v6-server")).spawn(move || {
-            tokio::runtime::Runtime::new().unwrap().block_on(async move {
-                // multicast needs a server on a real interface
-                let mut server = server::Server::new(("::0", 0)).unwrap();
-                server.enable_all_coap(segment);
 
                 tx.send(server.socket_addr().unwrap().port()).unwrap();
                 
@@ -397,7 +379,7 @@ pub mod test {
 
     #[test]
     fn test_echo_server() {
-        let server_port = spawn_server(request_handler).recv().unwrap();
+        let server_port = spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
@@ -414,10 +396,45 @@ pub mod test {
     }
 
     #[test]
+    fn test_echo_server_v6() {
+        let server_port = spawn_server("::1:0", request_handler).recv().unwrap();
+
+        let client = CoAPClient::new(format!("::1:{}", server_port)).unwrap();
+        let mut request = CoapRequest::new();
+        request.message.header.set_version(1);
+        request.message.header.set_type(coap_lite::MessageType::Confirmable);
+        request.message.header.set_code("0.01");
+        request.message.header.message_id = 1;
+        request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
+        request.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
+        client.send(&request).unwrap();
+
+        let recv_packet = client.receive().unwrap();
+        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
+    }
+
+    #[test]
     fn test_echo_server_no_token() {
-        let server_port = spawn_server(request_handler).recv().unwrap();
+        let server_port = spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
+        let mut packet = CoapRequest::new();
+        packet.message.header.set_version(1);
+        packet.message.header.set_type(coap_lite::MessageType::Confirmable);
+        packet.message.header.set_code("0.01");
+        packet.message.header.message_id = 1;
+        packet.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
+        client.send(&packet).unwrap();
+
+        let recv_packet = client.receive().unwrap();
+        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
+    }
+
+    #[test]
+    fn test_echo_server_no_token_v6() {
+        let server_port = spawn_server("::1:0", request_handler).recv().unwrap();
+
+        let client = CoAPClient::new(format!("::1:{}", server_port)).unwrap();
         let mut packet = CoapRequest::new();
         packet.message.header.set_version(1);
         packet.message.header.set_type(coap_lite::MessageType::Confirmable);
@@ -439,7 +456,7 @@ pub mod test {
         let (tx2, rx2) = mpsc::channel();
         let mut step = 1;
 
-        let server_port = spawn_server(request_handler).recv().unwrap();
+        let server_port = spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
 
         let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
 
@@ -480,8 +497,8 @@ pub mod test {
     }
 
     #[test]
-    fn multicast_server_all_coap_v4() {
-        let server_port = spawn_v4_server_with_all_coap(request_handler).recv().unwrap();
+    fn multicast_server_all_coap() {
+        let server_port = spawn_server_with_all_coap("0.0.0.0", request_handler).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
@@ -516,7 +533,7 @@ pub mod test {
     fn multicast_server_all_coap_v6() {
         // use segment 0x04 which should be the smallest administered scope
         let segment = 0x04;
-        let server_port = spawn_v6_server_with_all_coap(request_handler, segment).recv().unwrap();
+        let server_port = spawn_server_with_all_coap("::0", request_handler, segment).recv().unwrap();
 
         let client = CoAPClient::new(format!("::1:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
@@ -545,6 +562,7 @@ pub mod test {
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
+    
     #[test]
     fn multicast_join_leave() {
         std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {

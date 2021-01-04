@@ -383,7 +383,7 @@ mod test {
  
     #[test]
     fn test_get_url_timeout() {
-        let server_port = server::test::spawn_server(request_handler).recv().unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
 
         let error = CoAPClient::get_with_timeout(&format!("coap://127.0.0.1:{}/Rust", server_port), Duration::new(1, 0))
             .unwrap_err();
@@ -467,6 +467,6 @@ mod test {
         let client = CoAPClient::new(("127.0.0.1", 5683)).unwrap();
         assert!(client.send_all_coap(&request, 0).is_ok());
         let client = CoAPClient::new(("::1", 5683)).unwrap();
-        assert!(client.send_all_coap(&request, 0x1).is_ok());
+        assert!(client.send_all_coap(&request, 0x4).is_ok());
     }
 }
