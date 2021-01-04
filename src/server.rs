@@ -523,7 +523,7 @@ pub mod test {
         request.message.header.message_id = 2;
         request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
         request.message.add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_all_coap(&request, 0x4).unwrap();
+        client.send_all_coap(&request, segment).unwrap();
 
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
