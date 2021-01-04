@@ -359,14 +359,14 @@ pub mod test {
         }
     }
 
-    pub fn spawn_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(ip: &'static str, request_handler: F) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
+    pub fn spawn_server_with_all_coap<F: FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'static, HandlerRet>(ip: &'static str, request_handler: F, segment: u8) -> mpsc::Receiver<u16>  where HandlerRet: Future<Output=Option<CoapResponse>> {
         let (tx, rx) = mpsc::channel();
 
         std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
                 // multicast needs a server on a real interface
                 let mut server = server::Server::new((ip, 0)).unwrap();
-                server.enable_all_coap(0x0);
+                server.enable_all_coap(segment);
 
                 tx.send(server.socket_addr().unwrap().port()).unwrap();
                 
@@ -498,7 +498,9 @@ pub mod test {
 
     #[test]
     fn multicast_server_all_coap() {
-        let server_port = spawn_server_with_all_coap("0.0.0.0", request_handler).recv().unwrap();
+        // segment not relevant with IPv4
+        let segment = 0x0;
+        let server_port = spawn_server_with_all_coap("0.0.0.0", request_handler, segment).recv().unwrap();
 
         let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let mut request = CoapRequest::new();
@@ -562,7 +564,7 @@ pub mod test {
         let recv_packet = client.receive().unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
-    
+
     #[test]
     fn multicast_join_leave() {
         std::thread::Builder::new().name(String::from("v4-server")).spawn(move || {
