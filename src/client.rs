@@ -450,6 +450,11 @@ mod test {
         let client = CoAPClient::new(("127.0.0.1", 5683)).unwrap();
         assert!(client.set_broadcast(true).is_ok());
         assert!(client.set_broadcast(false).is_ok());
+    }
+
+    #[test]
+    #[ignore]
+    fn test_set_broadcast_v6() {
         let client = CoAPClient::new(("::1", 5683)).unwrap();
         assert!(client.set_broadcast(true).is_ok());
         assert!(client.set_broadcast(false).is_ok());
@@ -466,6 +471,18 @@ mod test {
 
         let client = CoAPClient::new(("127.0.0.1", 5683)).unwrap();
         assert!(client.send_all_coap(&request, 0).is_ok());
+    }
+
+    #[test]
+    #[ignore]
+    fn test_send_all_coap_v6() {
+        // prepare the Non-confirmable request with the broadcast message
+        let mut request: CoapRequest<SocketAddr> = CoapRequest::new();
+        request.set_method(Method::Get);
+        request.set_path("/");
+        request.message.header.set_type(coap_lite::MessageType::NonConfirmable);
+        request.message.payload = b"Discovery".to_vec();
+
         let client = CoAPClient::new(("::1", 5683)).unwrap();
         assert!(client.send_all_coap(&request, 0x4).is_ok());
     }
