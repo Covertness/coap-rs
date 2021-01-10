@@ -396,6 +396,7 @@ pub mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_echo_server_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().unwrap();
 
@@ -431,6 +432,7 @@ pub mod test {
     }
 
     #[test]
+    #[ignore]
     fn test_echo_server_no_token_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().unwrap();
 
@@ -532,6 +534,7 @@ pub mod test {
     //This test right now does not work on windows
     #[cfg(unix)]
     #[test]
+    #[ignore]
     fn multicast_server_all_coap_v6() {
         // use segment 0x04 which should be the smallest administered scope
         let segment = 0x04;
@@ -579,6 +582,11 @@ pub mod test {
             })
         }).unwrap();
 
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+    #[test]
+    #[ignore]
+    fn multicast_join_leave_v6() {
         std::thread::Builder::new().name(String::from("v6-server")).spawn(move || {
             tokio::runtime::Runtime::new().unwrap().block_on(async move {
                 // multicast needs a server on a real interface
