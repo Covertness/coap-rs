@@ -181,7 +181,7 @@ impl CoAPClient {
 
         let observe_thread = thread::spawn(move || loop {
             match Self::receive_from_socket(&socket) {
-                Ok(packet) => {
+                Ok((packet, _src)) => {
                     let receive_packet = CoapRequest::from_packet(packet, &peer_addr);
 
                     handler(receive_packet.message);
@@ -277,8 +277,14 @@ impl CoAPClient {
 
     /// Receive a response.
     pub fn receive(&self) -> Result<CoapResponse> {
-        let packet = Self::receive_from_socket(&self.socket)?;
+        let (packet, _src) = Self::receive_from_socket(&self.socket)?;
         Ok(CoapResponse { message: packet })
+    }
+
+    /// Receive a response.
+    pub fn receive_from(&self) -> Result<(CoapResponse, SocketAddr)> {
+        let (packet, src) = Self::receive_from_socket(&self.socket)?;
+        Ok((CoapResponse { message: packet }, src))
     }
 
     /// Set the receive timeout.
@@ -300,12 +306,12 @@ impl CoAPClient {
         }
     }
 
-    fn receive_from_socket(socket: &UdpSocket) -> Result<Packet> {
+    fn receive_from_socket(socket: &UdpSocket) -> Result<(Packet, SocketAddr)> {
         let mut buf = [0; 1500];
 
-        let (nread, _src) = socket.recv_from(&mut buf)?;
+        let (nread, src) = socket.recv_from(&mut buf)?;
         match Packet::from_bytes(&buf[..nread]) {
-            Ok(packet) => Ok(packet),
+            Ok(packet) => Ok((packet, src)),
             Err(_) => Err(Error::new(ErrorKind::InvalidInput, "packet error")),
         }
     }
