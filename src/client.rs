@@ -115,14 +115,14 @@ impl CoAPClient {
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url
     pub fn request(url: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
         let (domain, port, path) = Self::parse_coap_url(url)?;
-        let client = Self::new((domain, port))?;
+        let client = Self::new((domain.as_str(), port))?;
         client.request_path(&path, method, data)
     }
 
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url and a specfic timeout
     pub fn request_with_timeout(url: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
         let (domain, port, path) = Self::parse_coap_url(url)?;
-        let client = Self::new((domain, port))?;
+        let client = Self::new((domain.as_str(), port))?;
         client.request_path_with_timeout(&path, method, data, timeout)
     }
 
