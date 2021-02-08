@@ -11,7 +11,7 @@ keywords = ["CoAP"]
 edition = "2018"
 
 [dependencies]
-serde = { version= "1.0.88", features= [ "derive" ] }
+serde = { version= "1.0.88", features= [ "derive" ], default-features = false }
 url = "1.7.2"
 num-derive = "0.2.4"
 num-traits = "0.2.6"
