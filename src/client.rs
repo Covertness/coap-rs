@@ -151,18 +151,33 @@ impl CoAPClient {
         self.socket.set_broadcast(value)
     }
 
-    /// Observe a resource with the handler
-    pub fn observe<H: FnMut(Packet) + Send + 'static>(&mut self, resource_path: &str, mut handler: H) -> Result<()> {
+    pub fn observe<H: FnMut(Packet) + Send + 'static>(
+        &mut self,
+        resource_path: &str,
+        handler: H,
+    ) -> Result<()> {
+        self.observe_with_timeout(resource_path, handler, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
+    }
+
+    /// Observe a resource with the handler and specified timeout
+    pub fn observe_with_timeout<H: FnMut(Packet) + Send + 'static>(
+        &mut self,
+        resource_path: &str,
+        mut handler: H,
+        timeout: Duration,
+    ) -> Result<()> {
         // TODO: support observe multi resources at the same time
         let mut message_id: u16 = 0;
         let mut register_packet = CoapRequest::new();
-        register_packet.message.set_observe(vec![ObserveOption::Register as u8]);
+        register_packet
+            .message
+            .set_observe(vec![ObserveOption::Register as u8]);
         register_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
         register_packet.set_path(resource_path);
 
         self.send(&register_packet)?;
 
-        self.set_receive_timeout(Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)))?;
+        self.set_receive_timeout(Some(timeout))?;
         let response = self.receive()?;
         if *response.get_status() != Status::Content {
             return Err(Error::new(ErrorKind::NotFound, "the resource not found"));
@@ -202,7 +217,9 @@ impl CoAPClient {
                 },
                 Err(e) => {
                     match e.kind() {
-                        ErrorKind::WouldBlock => (),                          // timeout
+                        ErrorKind::WouldBlock => {
+                            info!("Observe timeout");
+                        },
                         _ => warn!("observe failed {:?}", e),
                     }
                 },
