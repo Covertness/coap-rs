@@ -1,17 +1,14 @@
-use std::io::{Error, ErrorKind, Result};
-use std::net::{SocketAddr, ToSocketAddrs, UdpSocket, IpAddr, Ipv4Addr, Ipv6Addr};
-use std::time::Duration;
-use std::thread;
-use std::sync::mpsc;
-use url::Url;
+use coap_lite::{
+    CoapRequest, CoapResponse, ObserveOption, Packet, RequestType as Method, ResponseType as Status,
+};
 use log::*;
 use regex::Regex;
-use coap_lite::{
-    ObserveOption,
-    RequestType as Method,
-    ResponseType as Status,
-    Packet, CoapRequest, CoapResponse
-};
+use std::io::{Error, ErrorKind, Result};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs, UdpSocket};
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
+use url::Url;
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
 
@@ -120,23 +117,44 @@ impl CoAPClient {
     }
 
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url and a specfic timeout
-    pub fn request_with_timeout(url: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
+    pub fn request_with_timeout(
+        url: &str,
+        method: Method,
+        data: Option<Vec<u8>>,
+        timeout: Duration,
+    ) -> Result<CoapResponse> {
         let (domain, port, path) = Self::parse_coap_url(url)?;
         let client = Self::new((domain.as_str(), port))?;
         client.request_path_with_timeout(&path, method, data, timeout)
     }
 
     /// Execute a request (GET, POST, PUT, DELETE)
-    pub fn request_path(&self, path: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
-        self.request_path_with_timeout(path, method, data, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
+    pub fn request_path(
+        &self,
+        path: &str,
+        method: Method,
+        data: Option<Vec<u8>>,
+    ) -> Result<CoapResponse> {
+        self.request_path_with_timeout(
+            path,
+            method,
+            data,
+            Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
+        )
     }
 
     /// Execute a request (GET, POST, PUT, DELETE) with a specfic timeout
-    pub fn request_path_with_timeout(&self, path: &str, method: Method, data: Option<Vec<u8>>, timeout: Duration) -> Result<CoapResponse> {
+    pub fn request_path_with_timeout(
+        &self,
+        path: &str,
+        method: Method,
+        data: Option<Vec<u8>>,
+        timeout: Duration,
+    ) -> Result<CoapResponse> {
         let mut request = CoapRequest::new();
         request.set_method(method);
         request.set_path(path);
-    
+
         match data {
             Some(data) => request.message.payload = data,
             None => (),
@@ -156,7 +174,11 @@ impl CoAPClient {
         resource_path: &str,
         handler: H,
     ) -> Result<()> {
-        self.observe_with_timeout(resource_path, handler, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
+        self.observe_with_timeout(
+            resource_path,
+            handler,
+            Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
+        )
     }
 
     /// Observe a resource with the handler and specified timeout
@@ -214,28 +236,30 @@ impl CoAPClient {
                             }
                         }
                     }
-                },
-                Err(e) => {
-                    match e.kind() {
-                        ErrorKind::WouldBlock => {
-                            info!("Observe timeout");
-                        },
-                        _ => warn!("observe failed {:?}", e),
+                }
+                Err(e) => match e.kind() {
+                    ErrorKind::WouldBlock => {
+                        info!("Observe timeout");
                     }
+                    _ => warn!("observe failed {:?}", e),
                 },
             };
 
             match observe_receiver.try_recv() {
                 Ok(ObserveMessage::Terminate) => {
                     let mut deregister_packet = CoapRequest::<SocketAddr>::new();
-                    deregister_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
-                    deregister_packet.message.set_observe(vec![ObserveOption::Deregister as u8]);
+                    deregister_packet.message.header.message_id =
+                        Self::gen_message_id(&mut message_id);
+                    deregister_packet
+                        .message
+                        .set_observe(vec![ObserveOption::Deregister as u8]);
                     deregister_packet.set_path(observe_path.as_str());
 
-                    Self::send_with_socket(&socket, &peer_addr, &deregister_packet.message).unwrap();
+                    Self::send_with_socket(&socket, &peer_addr, &deregister_packet.message)
+                        .unwrap();
                     Self::receive_from_socket(&socket).unwrap();
                     break;
-                },
+                }
                 _ => continue,
             }
         });
@@ -265,7 +289,7 @@ impl CoAPClient {
     /// Send a request to all CoAP devices.
     /// - IPv4 AllCoAP multicast address is '224.0.1.187'
     /// - IPv6 AllCoAp multicast addresses are 'ff0?::fd'
-    /// Parameter segment is used with IPv6 to determine the first octet. 
+    /// Parameter segment is used with IPv6 to determine the first octet.
     /// It's value can be between 0x0 and 0xf. To address multiple segments,
     /// you have to call send_all_coap for each of the segments.
     pub fn send_all_coap(&self, request: &CoapRequest<SocketAddr>, segment: u8) -> Result<()> {
@@ -273,10 +297,20 @@ impl CoAPClient {
         let addr = match self.peer_addr {
             SocketAddr::V4(val) => {
                 SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 0, 1, 187)), val.port())
-            },
-            SocketAddr::V6(val) => {
-                SocketAddr::new(IpAddr::V6(Ipv6Addr::new(0xff00 + segment as u16, 0, 0, 0, 0, 0, 0, 0xfd)), val.port())
-            },
+            }
+            SocketAddr::V6(val) => SocketAddr::new(
+                IpAddr::V6(Ipv6Addr::new(
+                    0xff00 + segment as u16,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0xfd,
+                )),
+                val.port(),
+            ),
         };
 
         match request.message.to_bytes() {
@@ -309,7 +343,11 @@ impl CoAPClient {
         self.socket.set_read_timeout(dur)
     }
 
-    fn send_with_socket(socket: &UdpSocket, peer_addr: &SocketAddr, message: &Packet) -> Result<()> {
+    fn send_with_socket(
+        socket: &UdpSocket,
+        peer_addr: &SocketAddr,
+        message: &Packet,
+    ) -> Result<()> {
         match message.to_bytes() {
             Ok(bytes) => {
                 let size = socket.send_to(&bytes[..], peer_addr)?;
@@ -344,7 +382,10 @@ impl CoAPClient {
             Some(h) => h,
             None => return Err(Error::new(ErrorKind::InvalidInput, "host error")),
         };
-        let host = Regex::new(r"^\[(.*?)]$").unwrap().replace(&host, "$1").to_string();
+        let host = Regex::new(r"^\[(.*?)]$")
+            .unwrap()
+            .replace(&host, "$1")
+            .to_string();
 
         let port = match url_params.port() {
             Some(p) => p,
@@ -370,10 +411,10 @@ impl Drop for CoAPClient {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use super::super::*;
-    use std::time::Duration;
+    use super::*;
     use std::io::ErrorKind;
+    use std::time::Duration;
 
     #[test]
     fn test_parse_coap_url_good_url() {
@@ -399,17 +440,21 @@ mod test {
 
     #[test]
     fn test_get_url() {
-        let resp = CoAPClient::get("coap://coap.me:5683/hello")
-            .unwrap();
+        let resp = CoAPClient::get("coap://coap.me:5683/hello").unwrap();
         assert_eq!(resp.message.payload, b"world".to_vec());
     }
- 
+
     #[test]
     fn test_get_url_timeout() {
-        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler)
+            .recv()
+            .unwrap();
 
-        let error = CoAPClient::get_with_timeout(&format!("coap://127.0.0.1:{}/Rust", server_port), Duration::new(1, 0))
-            .unwrap_err();
+        let error = CoAPClient::get_with_timeout(
+            &format!("coap://127.0.0.1:{}/Rust", server_port),
+            Duration::new(1, 0),
+        )
+        .unwrap_err();
         if cfg!(windows) {
             assert_eq!(error.kind(), ErrorKind::TimedOut);
         } else {
@@ -430,14 +475,16 @@ mod test {
         let resp = CoAPClient::post("coap://coap.me:5683/validate", b"test".to_vec()).unwrap();
         assert_eq!(resp.message.payload, b"POST OK".to_vec());
     }
- 
+
     #[test]
     fn test_post() {
         let client = CoAPClient::new(("coap.me", 5683)).unwrap();
-        let resp = client.request_path("/validate", Method::Post, Some(b"world".to_vec())).unwrap();
+        let resp = client
+            .request_path("/validate", Method::Post, Some(b"world".to_vec()))
+            .unwrap();
         assert_eq!(resp.message.payload, b"POST OK".to_vec());
     }
- 
+
     #[test]
     fn test_put_url() {
         let resp = CoAPClient::put("coap://coap.me:5683/create1", b"world".to_vec()).unwrap();
@@ -445,14 +492,16 @@ mod test {
         let resp = CoAPClient::put("coap://coap.me:5683/create1", b"test".to_vec()).unwrap();
         assert_eq!(resp.message.payload, b"Created".to_vec());
     }
- 
+
     #[test]
     fn test_put() {
         let client = CoAPClient::new(("coap.me", 5683)).unwrap();
-        let resp = client.request_path("/create1", Method::Put, Some(b"world".to_vec())).unwrap();
+        let resp = client
+            .request_path("/create1", Method::Put, Some(b"world".to_vec()))
+            .unwrap();
         assert_eq!(resp.message.payload, b"Created".to_vec());
     }
- 
+
     #[test]
     fn test_delete_url() {
         let resp = CoAPClient::delete("coap://coap.me:5683/validate").unwrap();
@@ -460,11 +509,13 @@ mod test {
         let resp = CoAPClient::delete("coap://coap.me:5683/validate").unwrap();
         assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
     }
- 
+
     #[test]
     fn test_delete() {
         let client = CoAPClient::new(("coap.me", 5683)).unwrap();
-        let resp = client.request_path("/validate", Method::Delete, None).unwrap();
+        let resp = client
+            .request_path("/validate", Method::Delete, None)
+            .unwrap();
         assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
     }
 
@@ -489,7 +540,10 @@ mod test {
         let mut request: CoapRequest<SocketAddr> = CoapRequest::new();
         request.set_method(Method::Get);
         request.set_path("/");
-        request.message.header.set_type(coap_lite::MessageType::NonConfirmable);
+        request
+            .message
+            .header
+            .set_type(coap_lite::MessageType::NonConfirmable);
         request.message.payload = b"Discovery".to_vec();
 
         let client = CoAPClient::new(("127.0.0.1", 5683)).unwrap();
@@ -503,7 +557,10 @@ mod test {
         let mut request: CoapRequest<SocketAddr> = CoapRequest::new();
         request.set_method(Method::Get);
         request.set_path("/");
-        request.message.header.set_type(coap_lite::MessageType::NonConfirmable);
+        request
+            .message
+            .header
+            .set_type(coap_lite::MessageType::NonConfirmable);
         request.message.payload = b"Discovery".to_vec();
 
         let client = CoAPClient::new(("::1", 5683)).unwrap();
