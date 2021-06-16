@@ -1,5 +1,5 @@
 [package]
-name = "coap_test"
+name = "coap"
 version = "0.9.2"
 description = "A CoAP library"
 readme = "README.md"
