@@ -1,6 +1,7 @@
 use coap_lite::{CoapRequest, CoapResponse, Packet};
 use futures::{select, stream::FusedStream, task::Poll, SinkExt, Stream, StreamExt};
 use log::{debug, error};
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use std::{
     self,
     future::Future,
@@ -19,7 +20,7 @@ use super::message::Codec;
 use super::observer::Observer;
 
 pub type MessageSender = mpsc::UnboundedSender<(Packet, SocketAddr)>;
-type MessageReceiver = mpsc::UnboundedReceiver<(Packet, SocketAddr)>;
+type MessageReceiver = UnboundedReceiverStream<(Packet, SocketAddr)>;
 
 #[derive(Debug)]
 pub enum CoAPServerError {
@@ -194,12 +195,12 @@ impl CoAPServer {
     /// Creates a CoAP server listening on the given address.
     pub fn new<A: ToSocketAddrs>(
         addr: A,
-        receiver: MessageReceiver,
+        rx: mpsc::UnboundedReceiver<(Packet, SocketAddr)>,
     ) -> Result<CoAPServer, io::Error> {
         let socket = UdpSocket::from_std(net::UdpSocket::bind(addr).unwrap())?;
 
         Ok(CoAPServer {
-            receiver,
+            receiver: UnboundedReceiverStream::new(rx),
             is_terminated: false,
             socket: UdpFramed::new(socket, Codec::new()),
             multicast_addresses: Vec::new(),
@@ -320,7 +321,7 @@ impl Stream for CoAPServer {
     type Item = Result<Message, io::Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if let Poll::Ready(Some((p, a))) = self.receiver.poll_recv(cx) {
+        if let Poll::Ready(Some((p, a))) = self.receiver.poll_next_unpin(cx) {
             return Poll::Ready(Some(Ok(Message::NeedSend(p, a))));
         }
 
