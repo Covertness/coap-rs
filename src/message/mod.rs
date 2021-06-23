@@ -18,9 +18,14 @@ impl Decoder for Codec {
     type Error = io::Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Packet>, io::Error> {
-        Ok(Some(Packet::from_bytes(buf).map_err(|cause| {
+        if buf.len() == 0 {
+            return Ok(None);
+        }
+        let packet = Ok(Some(Packet::from_bytes(buf).map_err(|cause| {
             io::Error::new(io::ErrorKind::InvalidData, cause.to_string())
-        })?))
+        })?));
+        buf.clear();
+        packet
     }
 }
 

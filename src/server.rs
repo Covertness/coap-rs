@@ -1,7 +1,6 @@
 use coap_lite::{CoapRequest, CoapResponse, Packet};
 use futures::{select, stream::FusedStream, task::Poll, SinkExt, Stream, StreamExt};
 use log::{debug, error};
-use tokio_stream::wrappers::UnboundedReceiverStream;
 use std::{
     self,
     future::Future,
@@ -14,6 +13,7 @@ use tokio::{
     net::UdpSocket,
     sync::mpsc::{self},
 };
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use tokio_util::udp::UdpFramed;
 
 use super::message::Codec;
@@ -197,7 +197,10 @@ impl CoAPServer {
         addr: A,
         rx: mpsc::UnboundedReceiver<(Packet, SocketAddr)>,
     ) -> Result<CoAPServer, io::Error> {
-        let socket = UdpSocket::from_std(net::UdpSocket::bind(addr).unwrap())?;
+        let std_socket = net::UdpSocket::bind(addr).unwrap();
+        std_socket.set_nonblocking(true)?;
+
+        let socket = UdpSocket::from_std(std_socket)?;
 
         Ok(CoAPServer {
             receiver: UnboundedReceiverStream::new(rx),
