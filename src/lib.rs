@@ -41,7 +41,7 @@
 //! 	Runtime::new().unwrap().block_on(async move {
 //!         let mut server = Server::new(addr).unwrap();
 //!         println!("Server up on {}", addr);
-//! 
+//!
 //!         server.run(async move |request| {
 //!             match request.get_method() {
 //!                 &Method::Get => println!("request by get {}", request.get_path()),
@@ -49,7 +49,7 @@
 //!                 &Method::Put => println!("request by put {}", String::from_utf8(request.message.payload).unwrap()),
 //!                 _ => println!("request by other method"),
 //!             };
-            
+
 //!             return match request.response {
 //!                 Some(mut message) => {
 //!                     message.message.payload = b"OK".to_vec();
@@ -83,11 +83,8 @@ extern crate quickcheck;
 
 pub use self::client::CoAPClient;
 pub use self::observer::Observer;
-pub use self::server::{Server, CoAPServer};
-pub mod message;
+pub use self::server::{CoAPServer, Server};
 pub mod client;
-pub mod server;
+pub mod message;
 mod observer;
-
-
-
+pub mod server;

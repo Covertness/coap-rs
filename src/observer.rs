@@ -1,15 +1,19 @@
-use std::{
-    net::SocketAddr,
-    collections::{HashMap, HashSet, hash_map::Entry},
-    time::{Duration},
+use coap_lite::{
+    CoapRequest, MessageClass, MessageType, ObserveOption, Packet, RequestType as Method,
+    ResponseType as Status,
+};
+use futures::{
+    stream::{Fuse, SelectNextSome},
+    StreamExt,
 };
 use log::{debug, warn};
-use futures::{StreamExt, stream::{Fuse, SelectNextSome}};
-use tokio::time::{Interval, interval};
-use coap_lite::{
-    MessageClass, MessageType, RequestType as Method, ResponseType as Status, ObserveOption,
-    Packet, CoapRequest,
+use std::{
+    collections::{hash_map::Entry, HashMap, HashSet},
+    net::SocketAddr,
+    time::Duration,
 };
+use tokio::time::interval;
+use tokio_stream::wrappers::IntervalStream;
 
 use super::server::MessageSender;
 
@@ -22,7 +26,7 @@ pub struct Observer {
     unacknowledge_messages: HashMap<u16, UnacknowledgeMessageItem>,
     tx_sender: MessageSender,
     current_message_id: u16,
-    timer: Fuse<Interval>,
+    timer: Fuse<IntervalStream>,
 }
 
 #[derive(Debug)]
@@ -61,12 +65,12 @@ impl Observer {
             unacknowledge_messages: HashMap::new(),
             tx_sender: tx_sender,
             current_message_id: 0,
-            timer: interval(Duration::from_secs(1)).fuse()
+            timer: IntervalStream::new(interval(Duration::from_secs(1))).fuse(),
         }
     }
 
     /// poll the observer's timer.
-    pub fn select_next_some(&mut self) -> SelectNextSome<Fuse<Interval>> {
+    pub fn select_next_some(&mut self) -> SelectNextSome<Fuse<IntervalStream>> {
         self.timer.select_next_some()
     }
 
@@ -101,7 +105,8 @@ impl Observer {
     pub async fn timer_handler(&mut self) {
         let register_resource_keys: Vec<String>;
         {
-            register_resource_keys = self.unacknowledge_messages
+            register_resource_keys = self
+                .unacknowledge_messages
                 .iter()
                 .map(|(_, msg)| msg.register_resource.clone())
                 .collect();
@@ -109,7 +114,8 @@ impl Observer {
 
         for register_resource_key in register_resource_keys {
             if self.try_unacknowledge_message(&register_resource_key) {
-                self.notify_register_with_newest_resource(&register_resource_key).await;
+                self.notify_register_with_newest_resource(&register_resource_key)
+                    .await;
             }
         }
     }
@@ -125,20 +131,28 @@ impl Observer {
             if let Some(ref response) = request.response {
                 let mut response2 = response.clone();
                 response2.set_status(Status::NotFound);
-                self.send_message(&register_address, &response2.message).await;
+                self.send_message(&register_address, &response2.message)
+                    .await;
             }
             return;
         }
 
-        self.record_register_resource(&register_address, &resource_path, &request.message.get_token());
+        self.record_register_resource(
+            &register_address,
+            &resource_path,
+            &request.message.get_token(),
+        );
 
         let resource = self.resources.get(&resource_path).unwrap();
 
         if let Some(ref response) = request.response {
             let mut response2 = response.clone();
             response2.message.payload = resource.payload.clone();
-            response2.message.set_observe(vec![ObserveOption::Register as u8]);
-            self.send_message(&register_address, &response2.message).await;
+            response2
+                .message
+                .set_observe(vec![ObserveOption::Register as u8]);
+            self.send_message(&register_address, &response2.message)
+                .await;
         }
     }
 
@@ -148,7 +162,11 @@ impl Observer {
 
         debug!("deregister {} {}", register_address, resource_path);
 
-        self.remove_register_resource(&register_address, &resource_path, &request.message.get_token());
+        self.remove_register_resource(
+            &register_address,
+            &resource_path,
+            &request.message.get_token(),
+        );
     }
 
     async fn resource_changed(&mut self, request: &CoapRequest<SocketAddr>) {
@@ -169,13 +187,17 @@ impl Observer {
 
         for register_resource_key in register_resource_keys {
             self.gen_message_id();
-            self.notify_register_with_newest_resource(&register_resource_key).await;
+            self.notify_register_with_newest_resource(&register_resource_key)
+                .await;
             self.record_unacknowledge_message(&register_resource_key);
         }
     }
 
     fn acknowledge(&mut self, request: &CoapRequest<SocketAddr>) {
-        self.remove_unacknowledge_message(&request.message.header.message_id, &request.message.get_token());
+        self.remove_unacknowledge_message(
+            &request.message.header.message_id,
+            &request.message.get_token(),
+        );
     }
 
     fn record_register_resource(&mut self, address: &SocketAddr, path: &String, token: &Vec<u8>) {
@@ -280,7 +302,8 @@ impl Observer {
     fn record_unacknowledge_message(&mut self, register_resource_key: &String) {
         let message_id = self.current_message_id;
 
-        let register_resource = self.register_resources
+        let register_resource = self
+            .register_resources
             .get_mut(register_resource_key)
             .unwrap();
         if let Some(old_message_id) = register_resource.unacknowledge_message {
@@ -298,7 +321,8 @@ impl Observer {
     }
 
     fn try_unacknowledge_message(&mut self, register_resource_key: &String) -> bool {
-        let register_resource = self.register_resources
+        let register_resource = self
+            .register_resources
             .get_mut(register_resource_key)
             .unwrap();
         let ref message_id = register_resource.unacknowledge_message.unwrap();
@@ -329,7 +353,8 @@ impl Observer {
 
     fn remove_unacknowledge_message(&mut self, message_id: &u16, token: &Vec<u8>) {
         if let Some(message) = self.unacknowledge_messages.get_mut(message_id) {
-            let register_resource = self.register_resources
+            let register_resource = self
+                .register_resources
                 .get_mut(&message.register_resource)
                 .unwrap();
             if register_resource.token != *token {
@@ -389,17 +414,12 @@ impl Observer {
     }
 }
 
-
 #[cfg(test)]
 mod test {
-    use std::{
-        io::ErrorKind,
-        time::Duration,
-        sync::mpsc,
-    };
-    use coap_lite::CoapResponse;
-    use super::*;
     use super::super::*;
+    use super::*;
+    use coap_lite::CoapResponse;
+    use std::{io::ErrorKind, sync::mpsc, time::Duration};
 
     async fn request_handler(req: CoapRequest<SocketAddr>) -> Option<CoapResponse> {
         match req.get_method() {
@@ -429,7 +449,9 @@ mod test {
         let (tx2, rx2) = mpsc::channel();
         let mut step = 1;
 
-        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler)
+            .recv()
+            .unwrap();
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
@@ -439,7 +461,7 @@ mod test {
         let mut request = CoapRequest::new();
         request.set_method(coap_lite::RequestType::Put);
         request.set_path(path);
-        request.message.payload =payload1.clone();
+        request.message.payload = payload1.clone();
         client.send(&request).unwrap();
         client.receive().unwrap();
 
@@ -447,21 +469,23 @@ mod test {
         let payload2_clone = payload2.clone();
 
         let mut receive_step = 1;
-        client.observe(path, move |msg| {
-            match rx.try_recv() {
-                Ok(n) => receive_step = n,
-                _ => (),
-            }
-
-            match receive_step {
-                1 => assert_eq!(msg.payload, payload1_clone),
-                2 => {
-                    assert_eq!(msg.payload, payload2_clone);
-                    tx2.send(()).unwrap();
+        client
+            .observe(path, move |msg| {
+                match rx.try_recv() {
+                    Ok(n) => receive_step = n,
+                    _ => (),
                 }
-                _ => panic!("unexpected step"),
-            }
-        }).unwrap();
+
+                match receive_step {
+                    1 => assert_eq!(msg.payload, payload1_clone),
+                    2 => {
+                        assert_eq!(msg.payload, payload2_clone);
+                        tx2.send(()).unwrap();
+                    }
+                    _ => panic!("unexpected step"),
+                }
+            })
+            .unwrap();
 
         step = 2;
         tx.send(step).unwrap();
@@ -480,7 +504,9 @@ mod test {
         let payload1 = b"data1".to_vec();
         let payload2 = b"data2".to_vec();
 
-        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler)
+            .recv()
+            .unwrap();
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
@@ -494,9 +520,11 @@ mod test {
         client.receive().unwrap();
 
         let payload1_clone = payload1.clone();
-        client.observe(path, move |msg| {
-            assert_eq!(msg.payload, payload1_clone);
-        }).unwrap();
+        client
+            .observe(path, move |msg| {
+                assert_eq!(msg.payload, payload1_clone);
+            })
+            .unwrap();
 
         client.unobserve();
 
@@ -511,7 +539,9 @@ mod test {
     fn test_observe_without_resource() {
         let path = "/test";
 
-        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler)
+            .recv()
+            .unwrap();
 
         let mut client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
         let error = client.observe(path, |_msg| {}).unwrap_err();

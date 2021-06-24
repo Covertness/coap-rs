@@ -1,15 +1,15 @@
 use bytes::BytesMut;
-use tokio::{io};
+use tokio::io;
 
 use tokio_util::codec::{Decoder, Encoder};
 
-use coap_lite::{Packet};
+use coap_lite::Packet;
 
 pub struct Codec {}
 
 impl Codec {
     pub fn new() -> Codec {
-        Codec{}
+        Codec {}
     }
 }
 
@@ -18,13 +18,18 @@ impl Decoder for Codec {
     type Error = io::Error;
 
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Packet>, io::Error> {
-        Ok(Some(Packet::from_bytes(buf)
-        .map_err(|cause| io::Error::new(io::ErrorKind::InvalidData, cause.to_string()))?))
+        if buf.len() == 0 {
+            return Ok(None);
+        }
+        let packet = Ok(Some(Packet::from_bytes(buf).map_err(|cause| {
+            io::Error::new(io::ErrorKind::InvalidData, cause.to_string())
+        })?));
+        buf.clear();
+        packet
     }
 }
 
-impl Encoder for Codec {
-    type Item = Packet;
+impl Encoder<Packet> for Codec {
     type Error = io::Error;
 
     fn encode(&mut self, my_packet: Packet, buf: &mut BytesMut) -> Result<(), io::Error> {
