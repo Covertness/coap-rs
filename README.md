@@ -22,7 +22,7 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.9"
+coap = "0.10"
 ```
 
 ## Example
