@@ -4,7 +4,6 @@ use coap_lite::{
 };
 use log::*;
 use regex::Regex;
-use std::collections::LinkedList;
 use std::io::{Error, ErrorKind, Result};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs, UdpSocket};
 use std::sync::mpsc;
@@ -72,7 +71,7 @@ impl CoAPClient {
         request.set_path(path.as_str());
 
         if let Some(q) = queries {
-            request.message.set_option(CoapOption::UriQuery, q);
+            request.message.add_option(CoapOption::UriQuery, q);
         }
 
         let client = Self::new((domain.as_str(), port))?;
@@ -140,7 +139,7 @@ impl CoAPClient {
         path: &str,
         method: Method,
         data: Option<Vec<u8>>,
-        queries: Option<LinkedList<Vec<u8>>>,
+        queries: Option<Vec<u8>>,
     ) -> Result<CoapResponse> {
         self.request_path_with_timeout(
             path,
@@ -157,14 +156,14 @@ impl CoAPClient {
         path: &str,
         method: Method,
         data: Option<Vec<u8>>,
-        queries: Option<LinkedList<Vec<u8>>>,
+        queries: Option<Vec<u8>>,
         timeout: Duration,
     ) -> Result<CoapResponse> {
         let mut request = CoapRequest::new();
         request.set_method(method);
         request.set_path(path);
         if let Some(q) = queries {
-            request.message.set_option(CoapOption::UriQuery, q);
+            request.message.add_option(CoapOption::UriQuery, q);
         }
 
         match data {
@@ -383,7 +382,7 @@ impl CoAPClient {
         }
     }
 
-    fn parse_coap_url(url: &str) -> Result<(String, u16, String, Option<LinkedList<Vec<u8>>>)> {
+    fn parse_coap_url(url: &str) -> Result<(String, u16, String, Option<Vec<u8>>)> {
         let url_params = match Url::parse(url) {
             Ok(url_params) => url_params,
             Err(_) => return Err(Error::new(ErrorKind::InvalidInput, "url error")),
@@ -406,11 +405,7 @@ impl CoAPClient {
 
         let path = url_params.path().to_string();
 
-        let mut queries_ll = LinkedList::new();
-        let queries = url_params.query().map(|q| {
-            queries_ll.push_back(q.as_bytes().to_vec());
-            queries_ll
-        });
+        let queries = url_params.query().map(|q| q.as_bytes().to_vec());
 
         return Ok((host.to_string(), port, path, queries));
     }
@@ -442,6 +437,7 @@ mod test {
         assert!(CoAPClient::parse_coap_url("coap://[::1]:5683").is_ok());
         assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]").is_ok());
         assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]:5683").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world").is_ok());
     }
 
     #[test]
@@ -454,6 +450,17 @@ mod test {
 
     async fn request_handler(_: CoapRequest<SocketAddr>) -> Option<CoapResponse> {
         None
+    }
+
+    #[test]
+    fn test_parse_queries() {
+        if let Ok((_, _, _, Some(queries))) =
+            CoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world&test1=test2")
+        {
+            assert_eq!("hello=world&test1=test2".as_bytes().to_vec(), queries);
+        } else {
+            error!("Parse Queries failed");
+        }
     }
 
     #[test]
