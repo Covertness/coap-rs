@@ -14,7 +14,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! coap = "0.10"
+//! coap = "0.11"
 //! ```
 //!
 //! Then, add this to your crate root:
