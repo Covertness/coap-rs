@@ -1,5 +1,6 @@
 use coap_lite::{
-    CoapRequest, CoapResponse, ObserveOption, Packet, RequestType as Method, ResponseType as Status,
+    CoapOption, CoapRequest, CoapResponse, ObserveOption, Packet, RequestType as Method,
+    ResponseType as Status,
 };
 use log::*;
 use regex::Regex;
@@ -64,13 +65,17 @@ impl CoAPClient {
 
     /// Execute a single get request with a coap url and a specific timeout.
     pub fn get_with_timeout(url: &str, timeout: Duration) -> Result<CoapResponse> {
-        let (domain, port, path) = Self::parse_coap_url(url)?;
+        let (domain, port, path, queries) = Self::parse_coap_url(url)?;
 
-        let mut packet = CoapRequest::new();
-        packet.set_path(path.as_str());
+        let mut request = CoapRequest::new();
+        request.set_path(path.as_str());
+
+        if let Some(q) = queries {
+            request.message.add_option(CoapOption::UriQuery, q);
+        }
 
         let client = Self::new((domain.as_str(), port))?;
-        client.send(&packet)?;
+        client.send(&request)?;
 
         client.set_receive_timeout(Some(timeout))?;
         match client.receive() {
@@ -111,9 +116,9 @@ impl CoAPClient {
 
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url
     pub fn request(url: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
-        let (domain, port, path) = Self::parse_coap_url(url)?;
+        let (domain, port, path, queries) = Self::parse_coap_url(url)?;
         let client = Self::new((domain.as_str(), port))?;
-        client.request_path(&path, method, data)
+        client.request_path(&path, method, data, queries)
     }
 
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url and a specfic timeout
@@ -123,9 +128,9 @@ impl CoAPClient {
         data: Option<Vec<u8>>,
         timeout: Duration,
     ) -> Result<CoapResponse> {
-        let (domain, port, path) = Self::parse_coap_url(url)?;
+        let (domain, port, path, queries) = Self::parse_coap_url(url)?;
         let client = Self::new((domain.as_str(), port))?;
-        client.request_path_with_timeout(&path, method, data, timeout)
+        client.request_path_with_timeout(&path, method, data, queries, timeout)
     }
 
     /// Execute a request (GET, POST, PUT, DELETE)
@@ -134,11 +139,13 @@ impl CoAPClient {
         path: &str,
         method: Method,
         data: Option<Vec<u8>>,
+        queries: Option<Vec<u8>>,
     ) -> Result<CoapResponse> {
         self.request_path_with_timeout(
             path,
             method,
             data,
+            queries,
             Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
         )
     }
@@ -149,11 +156,15 @@ impl CoAPClient {
         path: &str,
         method: Method,
         data: Option<Vec<u8>>,
+        queries: Option<Vec<u8>>,
         timeout: Duration,
     ) -> Result<CoapResponse> {
         let mut request = CoapRequest::new();
         request.set_method(method);
         request.set_path(path);
+        if let Some(q) = queries {
+            request.message.add_option(CoapOption::UriQuery, q);
+        }
 
         match data {
             Some(data) => request.message.payload = data,
@@ -371,7 +382,7 @@ impl CoAPClient {
         }
     }
 
-    fn parse_coap_url(url: &str) -> Result<(String, u16, String)> {
+    fn parse_coap_url(url: &str) -> Result<(String, u16, String, Option<Vec<u8>>)> {
         let url_params = match Url::parse(url) {
             Ok(url_params) => url_params,
             Err(_) => return Err(Error::new(ErrorKind::InvalidInput, "url error")),
@@ -394,7 +405,9 @@ impl CoAPClient {
 
         let path = url_params.path().to_string();
 
-        return Ok((host.to_string(), port, path));
+        let queries = url_params.query().map(|q| q.as_bytes().to_vec());
+
+        return Ok((host.to_string(), port, path, queries));
     }
 
     fn gen_message_id(message_id: &mut u16) -> u16 {
@@ -424,6 +437,7 @@ mod test {
         assert!(CoAPClient::parse_coap_url("coap://[::1]:5683").is_ok());
         assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]").is_ok());
         assert!(CoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]:5683").is_ok());
+        assert!(CoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world").is_ok());
     }
 
     #[test]
@@ -436,6 +450,17 @@ mod test {
 
     async fn request_handler(_: CoapRequest<SocketAddr>) -> Option<CoapResponse> {
         None
+    }
+
+    #[test]
+    fn test_parse_queries() {
+        if let Ok((_, _, _, Some(queries))) =
+            CoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world&test1=test2")
+        {
+            assert_eq!("hello=world&test1=test2".as_bytes().to_vec(), queries);
+        } else {
+            error!("Parse Queries failed");
+        }
     }
 
     #[test]
@@ -465,7 +490,9 @@ mod test {
     #[test]
     fn test_get() {
         let client = CoAPClient::new(("coap.me", 5683)).unwrap();
-        let resp = client.request_path("/hello", Method::Get, None).unwrap();
+        let resp = client
+            .request_path("/hello", Method::Get, None, None)
+            .unwrap();
         assert_eq!(resp.message.payload, b"world".to_vec());
     }
     #[test]
@@ -480,7 +507,7 @@ mod test {
     fn test_post() {
         let client = CoAPClient::new(("coap.me", 5683)).unwrap();
         let resp = client
-            .request_path("/validate", Method::Post, Some(b"world".to_vec()))
+            .request_path("/validate", Method::Post, Some(b"world".to_vec()), None)
             .unwrap();
         assert_eq!(resp.message.payload, b"POST OK".to_vec());
     }
@@ -497,7 +524,7 @@ mod test {
     fn test_put() {
         let client = CoAPClient::new(("coap.me", 5683)).unwrap();
         let resp = client
-            .request_path("/create1", Method::Put, Some(b"world".to_vec()))
+            .request_path("/create1", Method::Put, Some(b"world".to_vec()), None)
             .unwrap();
         assert_eq!(resp.message.payload, b"Created".to_vec());
     }
@@ -514,7 +541,7 @@ mod test {
     fn test_delete() {
         let client = CoAPClient::new(("coap.me", 5683)).unwrap();
         let resp = client
-            .request_path("/validate", Method::Delete, None)
+            .request_path("/validate", Method::Delete, None, None)
             .unwrap();
         assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
     }
