@@ -1,6 +1,6 @@
 [package]
 name = "coap"
-version = "0.11.0"
+version = "0.11.1"
 description = "A CoAP library"
 readme = "README.md"
 documentation = "http://covertness.github.io/coap-rs/master/coap/index.html"
@@ -22,7 +22,7 @@ tokio-util = {version = "^0.6", features = ["codec","net"]}
 tokio-stream = {version = "^0.1", features = ["time"]}
 futures = "^0.3"
 bytes = "^1.0"
-coap-lite = "^0.4"
+coap-lite = "^0.5"
 
 [dev-dependencies]
 quickcheck = "0.8.2"
