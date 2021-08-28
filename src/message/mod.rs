@@ -21,11 +21,14 @@ impl Decoder for Codec {
         if buf.len() == 0 {
             return Ok(None);
         }
-        let packet = Ok(Some(Packet::from_bytes(buf).map_err(|cause| {
-            io::Error::new(io::ErrorKind::InvalidData, cause.to_string())
-        })?));
+        let result = (|| {
+            let packet = Ok(Some(Packet::from_bytes(buf).map_err(|cause| {
+                io::Error::new(io::ErrorKind::InvalidData, cause.to_string())
+            })?));
+            packet
+        })();
         buf.clear();
-        packet
+        result
     }
 }
 
