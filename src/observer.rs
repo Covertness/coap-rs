@@ -81,13 +81,13 @@ impl Observer {
             return false;
         }
 
-        match (request.get_method(), request.message.get_observe()) {
-            (&Method::Get, Some(observe_option)) => match observe_option[0] {
-                x if x == ObserveOption::Register as u8 => {
+        match (request.get_method(), request.get_observe_flag()) {
+            (&Method::Get, Some(observe_option)) => match observe_option {
+                Ok(ObserveOption::Register) => {
                     self.register(request).await;
                     return false;
                 }
-                x if x == ObserveOption::Deregister as u8 => {
+                Ok(ObserveOption::Deregister) => {
                     self.deregister(request);
                     return true;
                 }
@@ -148,9 +148,7 @@ impl Observer {
         if let Some(ref response) = request.response {
             let mut response2 = response.clone();
             response2.message.payload = resource.payload.clone();
-            response2
-                .message
-                .set_observe(vec![ObserveOption::Register as u8]);
+            response2.message.set_observe_value(resource.sequence);
             self.send_message(&register_address, &response2.message)
                 .await;
         }
@@ -200,7 +198,7 @@ impl Observer {
         );
     }
 
-    fn record_register_resource(&mut self, address: &SocketAddr, path: &String, token: &Vec<u8>) {
+    fn record_register_resource(&mut self, address: &SocketAddr, path: &String, token: &[u8]) {
         let resource = self.resources.get_mut(path).unwrap();
         let register_key = Self::format_register(&address);
         let register_resource_key = Self::format_register_resource(&address, path);
@@ -210,7 +208,7 @@ impl Observer {
             .or_insert(RegisterResourceItem {
                 register: register_key.clone(),
                 resource: path.clone(),
-                token: token.clone(),
+                token: token.into(),
                 unacknowledge_message: None,
             });
         resource
@@ -238,7 +236,7 @@ impl Observer {
         &mut self,
         address: &SocketAddr,
         path: &String,
-        token: &Vec<u8>,
+        token: &[u8],
     ) -> bool {
         let register_resource_key = Self::format_register_resource(&address, path);
 
@@ -351,7 +349,7 @@ impl Observer {
         return try_again;
     }
 
-    fn remove_unacknowledge_message(&mut self, message_id: &u16, token: &Vec<u8>) {
+    fn remove_unacknowledge_message(&mut self, message_id: &u16, token: &[u8]) {
         if let Some(message) = self.unacknowledge_messages.get_mut(message_id) {
             let register_resource = self
                 .register_resources
@@ -382,10 +380,7 @@ impl Observer {
             let resource = self.resources.get(&register_resource.resource).unwrap();
 
             message.set_token(register_resource.token.clone());
-            let mut sequence_bin = resource.sequence.to_be_bytes().to_vec();
-            let index = sequence_bin.iter().position(|&x| x > 0).unwrap();
-            sequence_bin.drain(0..index);
-            message.set_observe(sequence_bin);
+            message.set_observe_value(resource.sequence);
             message.header.message_id = message_id;
             message.payload = resource.payload.clone();
 
@@ -424,8 +419,8 @@ mod test {
     async fn request_handler(req: CoapRequest<SocketAddr>) -> Option<CoapResponse> {
         match req.get_method() {
             &coap_lite::RequestType::Get => {
-                let observe_option = req.message.get_observe().unwrap();
-                assert_eq!(observe_option[0], ObserveOption::Deregister as u8);
+                let observe_option = req.message.get_observe_value().unwrap();
+                assert_eq!(observe_option, ObserveOption::Deregister);
             }
             &coap_lite::RequestType::Put => {}
             _ => panic!("unexpected request"),
