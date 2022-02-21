@@ -419,7 +419,7 @@ mod test {
     async fn request_handler(req: CoapRequest<SocketAddr>) -> Option<CoapResponse> {
         match req.get_method() {
             &coap_lite::RequestType::Get => {
-                let observe_option = req.message.get_observe_value().unwrap();
+                let observe_option = req.get_observe_flag().unwrap().unwrap();
                 assert_eq!(observe_option, ObserveOption::Deregister);
             }
             &coap_lite::RequestType::Put => {}
