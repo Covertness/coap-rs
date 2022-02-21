@@ -1,5 +1,3 @@
-#![feature(async_closure)]
-
 extern crate coap;
 
 use coap::{CoAPClient, Server};
@@ -12,7 +10,7 @@ fn main() {
             let mut server = Server::new("127.0.0.1:5683").unwrap();
 
             server
-                .run(async move |request| {
+                .run(|request| async {
                     let uri_path = request.get_path().to_string();
 
                     return match request.response {
