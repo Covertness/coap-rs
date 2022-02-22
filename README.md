@@ -1,6 +1,6 @@
 # coap-rs
 
-[![CircleCI](https://circleci.com/gh/Covertness/coap-rs.svg?style=svg?style=svg)](https://circleci.com/gh/Covertness/coap-rs)
+[![CircleCI](https://circleci.com/gh/Covertness/coap-rs.svg?style=svg)](https://circleci.com/gh/Covertness/coap-rs)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/ic36jdu4xy6doc59?svg=true)](https://ci.appveyor.com/project/Covertness/coap-rs)
 ![Downloads](https://img.shields.io/crates/d/coap.svg?style=flat)
 [![Coverage Status](https://coveralls.io/repos/github/Covertness/coap-rs/badge.svg?branch=master)](https://coveralls.io/github/Covertness/coap-rs?branch=master)
