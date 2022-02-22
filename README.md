@@ -28,8 +28,6 @@ coap = "0.11"
 
 ### Server:
 ```rust
-#![feature(async_closure)]
-
 use coap_lite::{RequestType as Method};
 use coap::Server;
 use tokio::runtime::Runtime;
@@ -41,7 +39,7 @@ fn main() {
         let mut server = Server::new(addr).unwrap();
         println!("Server up on {}", addr);
         
-        server.run(async move |request| {
+        server.run(|request| async {
             match request.get_method() {
                 &Method::Get => println!("request by get {}", request.get_path()),
                 &Method::Post => println!("request by post {}", String::from_utf8(request.message.payload).unwrap()),
