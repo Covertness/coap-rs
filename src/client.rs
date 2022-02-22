@@ -202,9 +202,7 @@ impl CoAPClient {
         // TODO: support observe multi resources at the same time
         let mut message_id: u16 = 0;
         let mut register_packet = CoapRequest::new();
-        register_packet
-            .message
-            .set_observe(vec![ObserveOption::Register as u8]);
+        register_packet.set_observe_flag(ObserveOption::Register);
         register_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
         register_packet.set_path(resource_path);
 
@@ -238,7 +236,7 @@ impl CoAPClient {
                         let mut packet = Packet::new();
                         packet.header.set_type(response.message.header.get_type());
                         packet.header.message_id = response.message.header.message_id;
-                        packet.set_token(response.message.get_token().clone());
+                        packet.set_token(response.message.get_token().into());
 
                         match Self::send_with_socket(&socket, &peer_addr, &packet) {
                             Ok(_) => (),
@@ -261,9 +259,7 @@ impl CoAPClient {
                     let mut deregister_packet = CoapRequest::<SocketAddr>::new();
                     deregister_packet.message.header.message_id =
                         Self::gen_message_id(&mut message_id);
-                    deregister_packet
-                        .message
-                        .set_observe(vec![ObserveOption::Deregister as u8]);
+                    deregister_packet.set_observe_flag(ObserveOption::Deregister);
                     deregister_packet.set_path(observe_path.as_str());
 
                     Self::send_with_socket(&socket, &peer_addr, &deregister_packet.message)
