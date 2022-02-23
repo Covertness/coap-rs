@@ -1,5 +1,3 @@
-#![feature(async_closure)]
-
 extern crate coap;
 
 use coap::Server;
@@ -14,7 +12,7 @@ fn main() {
         println!("Server up on {}", addr);
 
         server
-            .run(async move |request| {
+            .run(|request| async {
                 match request.get_method() {
                     &Method::Get => println!("request by get {}", request.get_path()),
                     &Method::Post => println!(
