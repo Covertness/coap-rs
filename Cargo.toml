@@ -8,7 +8,7 @@ repository = "https://github.com/covertness/coap-rs"
 license = "MIT"
 authors = ["Yang Zhang <wuyingfengsui@gmail.com>"]
 keywords = ["CoAP"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 serde = { version= "^1.0", features= [ "derive" ], default-features = false }
