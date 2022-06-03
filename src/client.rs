@@ -172,7 +172,7 @@ impl CoAPClient {
         }
 
         self.set_receive_timeout(Some(timeout))?;
-        self.send(&request).unwrap();
+        self.send(&request)?;
         self.receive()
     }
 

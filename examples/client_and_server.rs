@@ -29,6 +29,7 @@ fn main() {
     let url = "coap://127.0.0.1:5683/Rust";
     println!("Client request: {}", url);
 
+    // Maybe need sleep seconds before start client on some OS: https://github.com/Covertness/coap-rs/issues/75
     let response = CoAPClient::get(url).unwrap();
     println!(
         "Server reply: {}",
