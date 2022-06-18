@@ -1,6 +1,6 @@
 use coap_lite::{
     CoapOption, CoapRequest, CoapResponse, ObserveOption, Packet, RequestType as Method,
-    ResponseType as Status,
+    ResponseType as Status, error::HandlingError,
 };
 use log::*;
 use regex::Regex;
@@ -10,6 +10,13 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 use url::Url;
+use lru_time_cache::LruCache;
+use core::{mem, iter};
+use core::ops::{Bound, Deref, RangeBounds};
+use alloc::string::String;
+use alloc::vec::Vec;
+
+use super::block::{RequestCacheKey, BlockState, BlockValue};
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
 
@@ -22,6 +29,7 @@ pub struct CoAPClient {
     peer_addr: SocketAddr,
     observe_sender: Option<mpsc::Sender<ObserveMessage>>,
     observe_thread: Option<thread::JoinHandle<()>>,
+    block_states: LruCache<RequestCacheKey<SocketAddr>, BlockState>,
 }
 
 impl CoAPClient {
@@ -41,6 +49,9 @@ impl CoAPClient {
                                 peer_addr: paddr,
                                 observe_sender: None,
                                 observe_thread: None,
+                                block_states: LruCache::with_expiry_duration(
+                                    Duration::from_secs(120),
+                                ),
                             })
                         })
                 }),
@@ -60,28 +71,12 @@ impl CoAPClient {
 
     /// Execute a single get request with a coap url
     pub fn get(url: &str) -> Result<CoapResponse> {
-        Self::get_with_timeout(url, Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0))
+        Self::request(url, Method::Get, None)
     }
 
     /// Execute a single get request with a coap url and a specific timeout.
     pub fn get_with_timeout(url: &str, timeout: Duration) -> Result<CoapResponse> {
-        let (domain, port, path, queries) = Self::parse_coap_url(url)?;
-
-        let mut request = CoapRequest::new();
-        request.set_path(path.as_str());
-
-        if let Some(q) = queries {
-            request.message.add_option(CoapOption::UriQuery, q);
-        }
-
-        let client = Self::new((domain.as_str(), port))?;
-        client.send(&request)?;
-
-        client.set_receive_timeout(Some(timeout))?;
-        match client.receive() {
-            Ok(receive_packet) => Ok(receive_packet),
-            Err(e) => Err(e),
-        }
+        Self::request_with_timeout(url, Method::Get, None, timeout)
     }
 
     /// Execute a single post request with a coap url
@@ -117,7 +112,7 @@ impl CoAPClient {
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url
     pub fn request(url: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
-        let client = Self::new((domain.as_str(), port))?;
+        let mut client = Self::new((domain.as_str(), port))?;
         client.request_path(&path, method, data, queries)
     }
 
@@ -129,13 +124,13 @@ impl CoAPClient {
         timeout: Duration,
     ) -> Result<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
-        let client = Self::new((domain.as_str(), port))?;
+        let mut client = Self::new((domain.as_str(), port))?;
         client.request_path_with_timeout(&path, method, data, queries, timeout)
     }
 
     /// Execute a request (GET, POST, PUT, DELETE)
     pub fn request_path(
-        &self,
+        &mut self,
         path: &str,
         method: Method,
         data: Option<Vec<u8>>,
@@ -152,7 +147,7 @@ impl CoAPClient {
 
     /// Execute a request (GET, POST, PUT, DELETE) with a specfic timeout
     pub fn request_path_with_timeout(
-        &self,
+        &mut self,
         path: &str,
         method: Method,
         data: Option<Vec<u8>>,
@@ -173,7 +168,7 @@ impl CoAPClient {
 
         self.set_receive_timeout(Some(timeout))?;
         self.send(&request).unwrap();
-        self.receive()
+        self.receive2(&mut request)
     }
 
     pub fn set_broadcast(&self, value: bool) -> Result<()> {
@@ -336,7 +331,35 @@ impl CoAPClient {
     /// Receive a response.
     pub fn receive(&self) -> Result<CoapResponse> {
         let (packet, _src) = Self::receive_from_socket(&self.socket)?;
+        println!("{:?}", packet);
         Ok(CoapResponse { message: packet })
+    }
+
+    /// Receive a response support block-wise.
+    pub fn receive2(&mut self, request:&mut CoapRequest<SocketAddr>) -> Result<CoapResponse> {
+        loop {
+            let (packet, _src) = Self::receive_from_socket(&self.socket)?;
+            println!("packet {:?}", packet);
+            request.response = CoapResponse::new(&request.message);
+            let response = request
+            .response
+            .as_mut()
+            .ok_or_else(|| Error::new(ErrorKind::Interrupted, "packet error"))?;
+            response.message = packet;
+            match self.intercept_response(request) {
+                Ok(true) => {
+                    self.send(request)?;
+                }
+                Err(err) => {
+                    println!("{:?}", err);
+                    return Err(Error::new(ErrorKind::Interrupted, "packet error"));
+                }
+                Ok(false) => {
+                    break;
+                }
+            }
+        }
+        Ok(CoapResponse { message: request.response.as_ref().unwrap().message.clone() })
     }
 
     /// Receive a response.
@@ -409,6 +432,100 @@ impl CoAPClient {
     fn gen_message_id(message_id: &mut u16) -> u16 {
         (*message_id) += 1;
         return *message_id;
+    }
+
+    fn intercept_response(&mut self, request: &mut CoapRequest<SocketAddr>) -> std::result::Result<bool, HandlingError> {
+        let state = self
+            .block_states
+            .entry(request.deref().into())
+            .or_insert(BlockState::default());
+        
+        let block2_handled =
+            Self::maybe_handle_response_block2(request, state)?;
+        if block2_handled {
+            return Ok(true);
+        }
+
+        Ok(false)
+    }
+
+    fn maybe_handle_response_block2(
+        request: &mut CoapRequest<SocketAddr>,
+        state: &mut BlockState,
+    ) -> std::result::Result<bool, HandlingError> {
+        let response = request.response.as_ref().unwrap();
+        let maybe_block2 = response
+            .message
+            .get_first_option_as::<BlockValue>(CoapOption::Block2)
+            .and_then(|x| x.ok());
+        state.last_request_block2 = maybe_block2.clone();
+
+        if let Some(block2) = maybe_block2 {
+            println!("block2 {:?}", block2);
+            if state.cached_request_payload.is_none() {
+                state.cached_request_payload = Some(Vec::new());
+            }
+            let cached_payload =
+                state.cached_request_payload.as_mut().unwrap();
+
+            let payload_offset = usize::from(block2.num) * block2.size();
+            Self::extending_splice(
+                cached_payload,
+                payload_offset..payload_offset + block2.size(),
+                response.message.payload.iter().copied(),
+                16 * 1024,
+            )
+            .map_err(HandlingError::internal)?;
+
+            if block2.more {
+                request.message.clear_option(CoapOption::Block2);
+                let mut next_block2 = block2.clone();
+                next_block2.num += 1;
+                println!("next block2 {:?}", next_block2);
+                request.message.add_option_as::<BlockValue>(CoapOption::Block2, next_block2);
+                return Ok(true)
+            } else {
+                let cached_payload = mem::take(&mut state.cached_request_payload).unwrap();
+                request.response.as_mut().unwrap().message.payload = cached_payload;
+            }
+        }
+
+        Ok(false)
+    }
+
+    /// Similar to [`Vec::splice`] except that the Vec's length may be extended to
+    /// support the splice, but only up to an increase of `maximum_reserve_len`
+    /// (for security reasons if the data you're receiving is untrusted ensure this
+    /// is reasonably limited to avoid memory pressure denial of service attacks).
+    fn extending_splice<R, I, T>(
+        dst: &mut Vec<T>,
+        range: R,
+        replace_with: I,
+        maximum_reserve_len: usize,
+    ) -> std::result::Result<alloc::vec::Splice<I::IntoIter>, String>
+    where
+        R: RangeBounds<usize>,
+        I: IntoIterator<Item = T>,
+        T: Default + Copy,
+    {
+        let end_index_plus_1 = match range.end_bound() {
+            Bound::Included(&included) => included + 1,
+            Bound::Excluded(&excluded) => excluded,
+            Bound::Unbounded => panic!(),
+        };
+
+        if let Some(extend_len) = end_index_plus_1.checked_sub(dst.len()) {
+            if extend_len > maximum_reserve_len {
+                return Err(format!(
+                    "extend_len={}, maximum_extend_len={}",
+                    extend_len, maximum_reserve_len
+                ));
+            }
+            // Safe but inefficient way...
+            dst.extend(iter::repeat(T::default()).take(extend_len));
+        }
+
+        Ok(dst.splice(range, replace_with))
     }
 }
 
@@ -485,7 +602,7 @@ mod test {
 
     #[test]
     fn test_get() {
-        let client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let mut client = CoAPClient::new(("coap.me", 5683)).unwrap();
         let resp = client
             .request_path("/hello", Method::Get, None, None)
             .unwrap();
@@ -501,7 +618,7 @@ mod test {
 
     #[test]
     fn test_post() {
-        let client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let mut client = CoAPClient::new(("coap.me", 5683)).unwrap();
         let resp = client
             .request_path("/validate", Method::Post, Some(b"world".to_vec()), None)
             .unwrap();
@@ -518,7 +635,7 @@ mod test {
 
     #[test]
     fn test_put() {
-        let client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let mut client = CoAPClient::new(("coap.me", 5683)).unwrap();
         let resp = client
             .request_path("/create1", Method::Put, Some(b"world".to_vec()), None)
             .unwrap();
@@ -535,7 +652,7 @@ mod test {
 
     #[test]
     fn test_delete() {
-        let client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let mut client = CoAPClient::new(("coap.me", 5683)).unwrap();
         let resp = client
             .request_path("/validate", Method::Delete, None, None)
             .unwrap();

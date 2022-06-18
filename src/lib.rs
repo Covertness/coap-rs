@@ -76,6 +76,9 @@
 //! }
 //! ```
 
+#[macro_use]
+extern crate alloc;
+
 #[cfg(test)]
 extern crate quickcheck;
 
@@ -86,3 +89,4 @@ pub mod client;
 pub mod message;
 mod observer;
 pub mod server;
+mod block;
