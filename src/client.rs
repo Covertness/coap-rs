@@ -1,6 +1,7 @@
 use coap_lite::{
     CoapOption, CoapRequest, CoapResponse, ObserveOption, Packet, RequestType as Method,
     ResponseType as Status, error::HandlingError,
+    block_handler::{BlockValue, RequestCacheKey, extending_splice},
 };
 use log::*;
 use regex::Regex;
@@ -11,12 +12,10 @@ use std::thread;
 use std::time::Duration;
 use url::Url;
 use lru_time_cache::LruCache;
-use core::{mem, iter};
-use core::ops::{Bound, Deref, RangeBounds};
+use core::mem;
+use core::ops::Deref;
 use alloc::string::String;
 use alloc::vec::Vec;
-
-use super::block::{RequestCacheKey, BlockState, BlockValue};
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
 
@@ -331,7 +330,6 @@ impl CoAPClient {
     /// Receive a response.
     pub fn receive(&self) -> Result<CoapResponse> {
         let (packet, _src) = Self::receive_from_socket(&self.socket)?;
-        println!("{:?}", packet);
         Ok(CoapResponse { message: packet })
     }
 
@@ -339,7 +337,6 @@ impl CoAPClient {
     pub fn receive2(&mut self, request:&mut CoapRequest<SocketAddr>) -> Result<CoapResponse> {
         loop {
             let (packet, _src) = Self::receive_from_socket(&self.socket)?;
-            println!("packet {:?}", packet);
             request.response = CoapResponse::new(&request.message);
             let response = request
             .response
@@ -351,7 +348,7 @@ impl CoAPClient {
                     self.send(request)?;
                 }
                 Err(err) => {
-                    println!("{:?}", err);
+                    error!("intercept response error: {:?}", err);
                     return Err(Error::new(ErrorKind::Interrupted, "packet error"));
                 }
                 Ok(false) => {
@@ -458,18 +455,16 @@ impl CoAPClient {
             .message
             .get_first_option_as::<BlockValue>(CoapOption::Block2)
             .and_then(|x| x.ok());
-        state.last_request_block2 = maybe_block2.clone();
 
         if let Some(block2) = maybe_block2 {
-            println!("block2 {:?}", block2);
-            if state.cached_request_payload.is_none() {
-                state.cached_request_payload = Some(Vec::new());
+            if state.cached_payload.is_none() {
+                state.cached_payload = Some(Vec::new());
             }
             let cached_payload =
-                state.cached_request_payload.as_mut().unwrap();
+                state.cached_payload.as_mut().unwrap();
 
             let payload_offset = usize::from(block2.num) * block2.size();
-            Self::extending_splice(
+            extending_splice(
                 cached_payload,
                 payload_offset..payload_offset + block2.size(),
                 response.message.payload.iter().copied(),
@@ -481,51 +476,15 @@ impl CoAPClient {
                 request.message.clear_option(CoapOption::Block2);
                 let mut next_block2 = block2.clone();
                 next_block2.num += 1;
-                println!("next block2 {:?}", next_block2);
                 request.message.add_option_as::<BlockValue>(CoapOption::Block2, next_block2);
                 return Ok(true)
             } else {
-                let cached_payload = mem::take(&mut state.cached_request_payload).unwrap();
+                let cached_payload = mem::take(&mut state.cached_payload).unwrap();
                 request.response.as_mut().unwrap().message.payload = cached_payload;
             }
         }
 
         Ok(false)
-    }
-
-    /// Similar to [`Vec::splice`] except that the Vec's length may be extended to
-    /// support the splice, but only up to an increase of `maximum_reserve_len`
-    /// (for security reasons if the data you're receiving is untrusted ensure this
-    /// is reasonably limited to avoid memory pressure denial of service attacks).
-    fn extending_splice<R, I, T>(
-        dst: &mut Vec<T>,
-        range: R,
-        replace_with: I,
-        maximum_reserve_len: usize,
-    ) -> std::result::Result<alloc::vec::Splice<I::IntoIter>, String>
-    where
-        R: RangeBounds<usize>,
-        I: IntoIterator<Item = T>,
-        T: Default + Copy,
-    {
-        let end_index_plus_1 = match range.end_bound() {
-            Bound::Included(&included) => included + 1,
-            Bound::Excluded(&excluded) => excluded,
-            Bound::Unbounded => panic!(),
-        };
-
-        if let Some(extend_len) = end_index_plus_1.checked_sub(dst.len()) {
-            if extend_len > maximum_reserve_len {
-                return Err(format!(
-                    "extend_len={}, maximum_extend_len={}",
-                    extend_len, maximum_reserve_len
-                ));
-            }
-            // Safe but inefficient way...
-            dst.extend(iter::repeat(T::default()).take(extend_len));
-        }
-
-        Ok(dst.splice(range, replace_with))
     }
 }
 
@@ -533,6 +492,11 @@ impl Drop for CoAPClient {
     fn drop(&mut self) {
         self.unobserve();
     }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BlockState {
+    cached_payload: Option<Vec<u8>>,
 }
 
 #[cfg(test)]

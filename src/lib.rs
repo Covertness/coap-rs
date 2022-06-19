@@ -89,4 +89,3 @@ pub mod client;
 pub mod message;
 mod observer;
 pub mod server;
-mod block;
