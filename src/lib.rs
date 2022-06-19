@@ -76,6 +76,9 @@
 //! }
 //! ```
 
+#[macro_use]
+extern crate alloc;
+
 #[cfg(test)]
 extern crate quickcheck;
 

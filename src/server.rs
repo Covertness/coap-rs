@@ -1,4 +1,4 @@
-use coap_lite::{CoapRequest, CoapResponse, Packet};
+use coap_lite::{CoapRequest, CoapResponse, Packet, BlockHandler, BlockHandlerConfig, error::HandlingError};
 use futures::{select, stream::FusedStream, task::Poll, SinkExt, Stream, StreamExt};
 use log::{debug, error};
 use std::{
@@ -47,6 +47,7 @@ where
 {
     server: CoAPServer,
     observer: Observer,
+    block_handler: BlockHandler<SocketAddr>,
     handler: Option<Box<dyn FnMut(CoapRequest<SocketAddr>) -> HandlerRet + Send + 'a>>,
 }
 
@@ -55,11 +56,12 @@ where
     HandlerRet: Future<Output = Option<CoapResponse>>,
 {
     /// Creates a CoAP server listening on the given address.
-    pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Server<'a, HandlerRet>, io::Error> {
+    pub fn new<A: ToSocketAddrs>(addr: A) -> Result<Self, io::Error> {
         let (tx, rx) = mpsc::unbounded_channel();
         Ok(Server {
             server: CoAPServer::new(addr, rx)?,
             observer: Observer::new(tx),
+            block_handler: BlockHandler::new(BlockHandlerConfig::default()),
             handler: None,
         })
     }
@@ -76,7 +78,7 @@ where
                 message = self.server.select_next_some() => {
                     match message {
                         Ok(Message::NeedSend(packet, addr)) => {
-                            self.server.send((packet, addr)).await?;
+                            self.send_msg(packet, addr).await?;
                         }
                         Ok(Message::Received(packet, addr)) => {
                             self.dispatch_msg(packet, addr).await?;
@@ -101,18 +103,62 @@ where
         self.server.socket_addr()
     }
 
+    async fn send_msg(&mut self, packet: Packet, addr: SocketAddr) -> Result<(), io::Error> {
+        let mut request = CoapRequest::from_packet(Packet::new(), addr);
+        request.response = CoapResponse::new(&packet);
+        match self.block_handler.intercept_response(&mut request) {
+            Err(err) => {
+                if self.handle_coap_handing_error(&mut request, err) {
+                    return self.server.send((request.response.unwrap().message, addr)).await;
+                }
+                return Ok(());
+            }
+            Ok(true) => {
+                return self.server.send((request.response.unwrap().message, addr)).await;
+            }
+            _ => {
+                return self.server.send((packet, addr)).await;
+            }
+        }
+    }
+
     async fn dispatch_msg(&mut self, packet: Packet, addr: SocketAddr) -> Result<(), io::Error> {
-        let request = CoapRequest::from_packet(packet, addr);
+        let mut request = CoapRequest::from_packet(packet, addr);
+
+        match self.block_handler.intercept_request(&mut request) {
+            Ok(true) => {
+                self.server.send((request.response.unwrap().message, addr)).await?;
+                return Ok(());
+            }
+            Err(err) => {
+                if self.handle_coap_handing_error(&mut request, err) {
+                    self.server.send((request.response.unwrap().message, addr)).await?;
+                }
+                return Ok(());
+            }
+            Ok(false) => {}
+        }
+
         let filtered = !self.observer.request_handler(&request).await;
         if filtered {
             return Ok(());
         }
 
         if let Some(ref mut handler) = self.handler {
-            match handler(request).await {
+            match handler(request.clone()).await {
                 Some(response) => {
                     debug!("Response: {:?}", response);
-                    self.server.send((response.message, addr)).await?;
+                    request.response = Some(response);
+                    match self.block_handler.intercept_response(&mut request) {
+                        Err(err) => {
+                            if self.handle_coap_handing_error(&mut request, err) {
+                                self.server.send((request.response.unwrap().message, addr)).await?;
+                            }
+                            return Ok(());
+                        }
+                        _ => {}
+                    }
+                    self.server.send((request.response.unwrap().message, addr)).await?;
                 }
                 None => {
                     debug!("No response");
@@ -120,6 +166,15 @@ where
             }
         }
         Ok(())
+    }
+
+    fn handle_coap_handing_error(&mut self, request: &mut CoapRequest<SocketAddr>, err: HandlingError) -> bool {
+        if request.apply_from_error(err) {
+            // If the error happens to need block2 handling, let's do that here...
+            let _ = self.block_handler.intercept_response(request);
+            return true
+        }
+        false
     }
 
     /// enable AllCoAP multicasts - adds the AllCoap addresses to the listener

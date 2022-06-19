@@ -12,6 +12,7 @@ Features:
 - CoAP core protocol [RFC 7252](https://tools.ietf.org/rfc/rfc7252.txt)
 - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
 - *Too Many Requests* Response Code [RFC 8516](https://tools.ietf.org/html/rfc8516)
+- Block-Wise Transfers [RFC 7959](https://tools.ietf.org/html/rfc7959)
 
 [Documentation](https://docs.rs/coap/)
 

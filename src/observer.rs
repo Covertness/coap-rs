@@ -149,6 +149,7 @@ impl Observer {
             let mut response2 = response.clone();
             response2.message.payload = resource.payload.clone();
             response2.message.set_observe_value(resource.sequence);
+            response2.message.header.set_type(MessageType::NonConfirmable);
             self.send_message(&register_address, &response2.message)
                 .await;
         }
