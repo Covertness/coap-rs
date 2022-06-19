@@ -2,6 +2,9 @@
 # See: https://circleci.com/docs/2.0/configuration-reference
 version: 2.1
 
+orbs: 
+  coveralls: coveralls/coveralls@1.0.6
+
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
@@ -21,9 +24,7 @@ jobs:
       - run:
           name: Run doc
           command: "cargo doc"
-      - run:
-          name: Run coveralls
-          command: "cargo coveralls"
+      - coveralls/upload
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
