@@ -112,7 +112,7 @@ impl CoAPClient {
     pub fn request(url: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
         let mut client = Self::new((domain.as_str(), port))?;
-        client.request_path(&path, method, data, queries)
+        client.request_path(&path, method, data, queries, Some(domain))
     }
 
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url and a specfic timeout
@@ -124,7 +124,7 @@ impl CoAPClient {
     ) -> Result<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
         let mut client = Self::new((domain.as_str(), port))?;
-        client.request_path_with_timeout(&path, method, data, queries, timeout)
+        client.request_path_with_timeout(&path, method, data, queries, Some(domain), timeout)
     }
 
     /// Execute a request (GET, POST, PUT, DELETE)
@@ -134,12 +134,14 @@ impl CoAPClient {
         method: Method,
         data: Option<Vec<u8>>,
         queries: Option<Vec<u8>>,
+        domain: Option<String>,
     ) -> Result<CoapResponse> {
         self.request_path_with_timeout(
             path,
             method,
             data,
             queries,
+            domain,
             Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
         )
     }
@@ -151,6 +153,7 @@ impl CoAPClient {
         method: Method,
         data: Option<Vec<u8>>,
         queries: Option<Vec<u8>>,
+        domain: Option<String>,
         timeout: Duration,
     ) -> Result<CoapResponse> {
         let mut request = CoapRequest::new();
@@ -158,6 +161,9 @@ impl CoAPClient {
         request.set_path(path);
         if let Some(q) = queries {
             request.message.add_option(CoapOption::UriQuery, q);
+        }
+        if let Some(d) = domain {
+            request.message.add_option(CoapOption::UriHost, d.as_str().as_bytes().to_vec());
         }
 
         match data {
@@ -566,9 +572,10 @@ mod test {
 
     #[test]
     fn test_get() {
-        let mut client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let domain = "coap.me";
+        let mut client = CoAPClient::new((domain, 5683)).unwrap();
         let resp = client
-            .request_path("/hello", Method::Get, None, None)
+            .request_path("/hello", Method::Get, None, None, Some(domain.to_string()))
             .unwrap();
         assert_eq!(resp.message.payload, b"world".to_vec());
     }
@@ -582,9 +589,10 @@ mod test {
 
     #[test]
     fn test_post() {
-        let mut client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let domain = "coap.me";
+        let mut client = CoAPClient::new((domain, 5683)).unwrap();
         let resp = client
-            .request_path("/validate", Method::Post, Some(b"world".to_vec()), None)
+            .request_path("/validate", Method::Post, Some(b"world".to_vec()), None, Some(domain.to_string()))
             .unwrap();
         assert_eq!(resp.message.payload, b"POST OK".to_vec());
     }
@@ -599,9 +607,10 @@ mod test {
 
     #[test]
     fn test_put() {
-        let mut client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let domain = "coap.me";
+        let mut client = CoAPClient::new((domain, 5683)).unwrap();
         let resp = client
-            .request_path("/create1", Method::Put, Some(b"world".to_vec()), None)
+            .request_path("/create1", Method::Put, Some(b"world".to_vec()), None, Some(domain.to_string()))
             .unwrap();
         assert_eq!(resp.message.payload, b"Created".to_vec());
     }
@@ -616,9 +625,10 @@ mod test {
 
     #[test]
     fn test_delete() {
-        let mut client = CoAPClient::new(("coap.me", 5683)).unwrap();
+        let domain = "coap.me";
+        let mut client = CoAPClient::new((domain, 5683)).unwrap();
         let resp = client
-            .request_path("/validate", Method::Delete, None, None)
+            .request_path("/validate", Method::Delete, None, None, Some(domain.to_string()))
             .unwrap();
         assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
     }
