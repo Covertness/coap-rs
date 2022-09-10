@@ -29,6 +29,7 @@ pub struct CoAPClient {
     observe_sender: Option<mpsc::Sender<ObserveMessage>>,
     observe_thread: Option<thread::JoinHandle<()>>,
     block_states: LruCache<RequestCacheKey<SocketAddr>, BlockState>,
+    message_id: u16,
 }
 
 impl CoAPClient {
@@ -51,6 +52,7 @@ impl CoAPClient {
                                 block_states: LruCache::with_expiry_duration(
                                     Duration::from_secs(120),
                                 ),
+                                message_id: 0,
                             })
                         })
                 }),
@@ -165,6 +167,7 @@ impl CoAPClient {
         if let Some(d) = domain {
             request.message.add_option(CoapOption::UriHost, d.as_str().as_bytes().to_vec());
         }
+        request.message.header.message_id = Self::gen_message_id(&mut self.message_id);
 
         match data {
             Some(data) => request.message.payload = data,
@@ -200,7 +203,7 @@ impl CoAPClient {
         timeout: Duration,
     ) -> Result<()> {
         // TODO: support observe multi resources at the same time
-        let mut message_id: u16 = 0;
+        let mut message_id = self.message_id;
         let mut register_packet = CoapRequest::new();
         register_packet.set_observe_flag(ObserveOption::Register);
         register_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
