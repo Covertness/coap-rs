@@ -1,9 +1,15 @@
+use alloc::string::String;
+use alloc::vec::Vec;
 use coap_lite::{
+    block_handler::{extending_splice, BlockValue, RequestCacheKey},
+    error::HandlingError,
     CoapOption, CoapRequest, CoapResponse, ObserveOption, Packet, RequestType as Method,
-    ResponseType as Status, error::HandlingError,
-    block_handler::{BlockValue, RequestCacheKey, extending_splice},
+    ResponseType as Status,
 };
+use core::mem;
+use core::ops::Deref;
 use log::*;
+use lru_time_cache::LruCache;
 use regex::Regex;
 use std::io::{Error, ErrorKind, Result};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs, UdpSocket};
@@ -11,11 +17,6 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 use url::Url;
-use lru_time_cache::LruCache;
-use core::mem;
-use core::ops::Deref;
-use alloc::string::String;
-use alloc::vec::Vec;
 
 const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
 
@@ -28,7 +29,8 @@ pub struct CoAPClient {
     peer_addr: SocketAddr,
     observe_sender: Option<mpsc::Sender<ObserveMessage>>,
     observe_thread: Option<thread::JoinHandle<()>>,
-    block_states: LruCache<RequestCacheKey<SocketAddr>, BlockState>,
+    block2_states: LruCache<RequestCacheKey<SocketAddr>, BlockState>,
+    block1_size: usize,
     message_id: u16,
 }
 
@@ -38,6 +40,7 @@ impl CoAPClient {
         bind_addr: A,
         peer_addr: B,
     ) -> Result<CoAPClient> {
+        const MAX_PAYLOAD_BLOCK: usize = 1024;
         peer_addr
             .to_socket_addrs()
             .and_then(|mut iter| match iter.next() {
@@ -49,9 +52,10 @@ impl CoAPClient {
                                 peer_addr: paddr,
                                 observe_sender: None,
                                 observe_thread: None,
-                                block_states: LruCache::with_expiry_duration(
-                                    Duration::from_secs(120),
-                                ),
+                                block2_states: LruCache::with_expiry_duration(Duration::from_secs(
+                                    120,
+                                )),
+                                block1_size: MAX_PAYLOAD_BLOCK,
                                 message_id: 0,
                             })
                         })
@@ -165,7 +169,9 @@ impl CoAPClient {
             request.message.add_option(CoapOption::UriQuery, q);
         }
         if let Some(d) = domain {
-            request.message.add_option(CoapOption::UriHost, d.as_str().as_bytes().to_vec());
+            request
+                .message
+                .add_option(CoapOption::UriHost, d.as_str().as_bytes().to_vec());
         }
         request.message.header.message_id = Self::gen_message_id(&mut self.message_id);
 
@@ -175,10 +181,9 @@ impl CoAPClient {
         }
 
         self.set_receive_timeout(Some(timeout))?;
-        self.send(&request).unwrap();
+        self.send2(&mut request).unwrap();
         self.receive2(&mut request)
     }
-
     pub fn set_broadcast(&self, value: bool) -> Result<()> {
         self.socket.set_broadcast(value)
     }
@@ -296,6 +301,54 @@ impl CoAPClient {
         Self::send_with_socket(&self.socket, &self.peer_addr, &request.message)
     }
 
+    /// send a request supporting block1 option
+    pub fn send2(&mut self, request: &mut CoapRequest<SocketAddr>) -> Result<()> {
+        let request_length = request.message.payload.len();
+        if request_length <= self.block1_size {
+            return self.send(request);
+        }
+        let payload = std::mem::take(&mut request.message.payload);
+        let mut it = payload.chunks(self.block1_size).enumerate().peekable();
+        while let Some((idx, elem)) = it.next() {
+            let more_blocks = it.peek().is_some();
+            let block = BlockValue::new(idx, more_blocks, self.block1_size)
+                .map_err(|_| Error::new(ErrorKind::Other, "could not set block size"))?;
+
+            request.message.clear_option(CoapOption::Block1);
+            request
+                .message
+                .add_option_as::<BlockValue>(CoapOption::Block1, block.clone());
+            request.message.payload = elem.to_vec();
+
+            request.message.header.message_id = Self::gen_message_id(&mut self.message_id);
+            self.send(request)?;
+            // continue receiving responses until last element
+            if it.peek().is_some() {
+                let resp = self.receive()?;
+                let maybe_block1 = resp
+                    .message
+                    .get_first_option_as::<BlockValue>(CoapOption::Block1)
+                    .ok_or(Error::new(
+                        ErrorKind::Unsupported,
+                        "endpoint does not support blockwise transfers",
+                    ))?;
+                let block1_resp = maybe_block1.map_err(|_| {
+                    Error::new(
+                        ErrorKind::InvalidData,
+                        "endpoint responded with invalid block",
+                    )
+                })?;
+                //TODO: negotiate smaller block size
+                if block1_resp.size_exponent != block.size_exponent {
+                    return Err(Error::new(
+                        ErrorKind::Unsupported,
+                        "negotiating block size is currently unsupported",
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
     /// Send a request to all CoAP devices.
     /// - IPv4 AllCoAP multicast address is '224.0.1.187'
     /// - IPv6 AllCoAp multicast addresses are 'ff0?::fd'
@@ -343,14 +396,14 @@ impl CoAPClient {
     }
 
     /// Receive a response support block-wise.
-    pub fn receive2(&mut self, request:&mut CoapRequest<SocketAddr>) -> Result<CoapResponse> {
+    pub fn receive2(&mut self, request: &mut CoapRequest<SocketAddr>) -> Result<CoapResponse> {
         loop {
             let (packet, _src) = Self::receive_from_socket(&self.socket)?;
             request.response = CoapResponse::new(&request.message);
             let response = request
-            .response
-            .as_mut()
-            .ok_or_else(|| Error::new(ErrorKind::Interrupted, "packet error"))?;
+                .response
+                .as_mut()
+                .ok_or_else(|| Error::new(ErrorKind::Interrupted, "packet error"))?;
             response.message = packet;
             match self.intercept_response(request) {
                 Ok(true) => {
@@ -365,7 +418,9 @@ impl CoAPClient {
                 }
             }
         }
-        Ok(CoapResponse { message: request.response.as_ref().unwrap().message.clone() })
+        Ok(CoapResponse {
+            message: request.response.as_ref().unwrap().message.clone(),
+        })
     }
 
     /// Receive a response.
@@ -384,16 +439,14 @@ impl CoAPClient {
         peer_addr: &SocketAddr,
         message: &Packet,
     ) -> Result<()> {
-        match message.to_bytes() {
-            Ok(bytes) => {
-                let size = socket.send_to(&bytes[..], peer_addr)?;
-                if size == bytes.len() {
-                    Ok(())
-                } else {
-                    Err(Error::new(ErrorKind::Other, "send length error"))
-                }
-            }
-            Err(_) => Err(Error::new(ErrorKind::InvalidInput, "packet error")),
+        let message_bytes = message
+            .to_bytes()
+            .map_err(|_| Error::new(ErrorKind::InvalidInput, "packet error"))?;
+        let size = socket.send_to(&message_bytes[..], peer_addr)?;
+        if size == message_bytes.len() {
+            Ok(())
+        } else {
+            Err(Error::new(ErrorKind::Other, "send length error"))
         }
     }
 
@@ -440,14 +493,16 @@ impl CoAPClient {
         return *message_id;
     }
 
-    fn intercept_response(&mut self, request: &mut CoapRequest<SocketAddr>) -> std::result::Result<bool, HandlingError> {
+    fn intercept_response(
+        &mut self,
+        request: &mut CoapRequest<SocketAddr>,
+    ) -> std::result::Result<bool, HandlingError> {
         let state = self
-            .block_states
+            .block2_states
             .entry(request.deref().into())
             .or_insert(BlockState::default());
-        
-        let block2_handled =
-            Self::maybe_handle_response_block2(request, state)?;
+
+        let block2_handled = Self::maybe_handle_response_block2(request, state)?;
         if block2_handled {
             return Ok(true);
         }
@@ -469,8 +524,7 @@ impl CoAPClient {
             if state.cached_payload.is_none() {
                 state.cached_payload = Some(Vec::new());
             }
-            let cached_payload =
-                state.cached_payload.as_mut().unwrap();
+            let cached_payload = state.cached_payload.as_mut().unwrap();
 
             let payload_offset = usize::from(block2.num) * block2.size();
             extending_splice(
@@ -485,8 +539,10 @@ impl CoAPClient {
                 request.message.clear_option(CoapOption::Block2);
                 let mut next_block2 = block2.clone();
                 next_block2.num += 1;
-                request.message.add_option_as::<BlockValue>(CoapOption::Block2, next_block2);
-                return Ok(true)
+                request
+                    .message
+                    .add_option_as::<BlockValue>(CoapOption::Block2, next_block2);
+                return Ok(true);
             } else {
                 let cached_payload = mem::take(&mut state.cached_payload).unwrap();
                 request.response.as_mut().unwrap().message.payload = cached_payload;
@@ -595,7 +651,13 @@ mod test {
         let domain = "coap.me";
         let mut client = CoAPClient::new((domain, 5683)).unwrap();
         let resp = client
-            .request_path("/validate", Method::Post, Some(b"world".to_vec()), None, Some(domain.to_string()))
+            .request_path(
+                "/validate",
+                Method::Post,
+                Some(b"world".to_vec()),
+                None,
+                Some(domain.to_string()),
+            )
             .unwrap();
         assert_eq!(resp.message.payload, b"POST OK".to_vec());
     }
@@ -613,7 +675,13 @@ mod test {
         let domain = "coap.me";
         let mut client = CoAPClient::new((domain, 5683)).unwrap();
         let resp = client
-            .request_path("/create1", Method::Put, Some(b"world".to_vec()), None, Some(domain.to_string()))
+            .request_path(
+                "/create1",
+                Method::Put,
+                Some(b"world".to_vec()),
+                None,
+                Some(domain.to_string()),
+            )
             .unwrap();
         assert_eq!(resp.message.payload, b"Created".to_vec());
     }
@@ -631,7 +699,13 @@ mod test {
         let domain = "coap.me";
         let mut client = CoAPClient::new((domain, 5683)).unwrap();
         let resp = client
-            .request_path("/validate", Method::Delete, None, None, Some(domain.to_string()))
+            .request_path(
+                "/validate",
+                Method::Delete,
+                None,
+                None,
+                Some(domain.to_string()),
+            )
             .unwrap();
         assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
     }
