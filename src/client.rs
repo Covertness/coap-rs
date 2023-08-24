@@ -152,7 +152,8 @@ impl CoAPClient {
         )
     }
 
-    /// Execute a request (GET, POST, PUT, DELETE) with a specfic timeout
+    /// Execute a request (GET, POST, PUT, DELETE) with a specfic timeout. This method will
+    /// try to use block1 requests with a block size of 1024 by default.
     pub fn request_path_with_timeout(
         &mut self,
         path: &str,
@@ -301,7 +302,7 @@ impl CoAPClient {
         Self::send_with_socket(&self.socket, &self.peer_addr, &request.message)
     }
 
-    /// send a request supporting block1 option
+    /// send a request supporting block1 option based on the block size set in the client
     pub fn send2(&mut self, request: &mut CoapRequest<SocketAddr>) -> Result<()> {
         let request_length = request.message.payload.len();
         if request_length <= self.block1_size {
