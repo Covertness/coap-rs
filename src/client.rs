@@ -330,7 +330,7 @@ impl CoAPClient {
                     .get_first_option_as::<BlockValue>(CoapOption::Block1)
                     .ok_or(Error::new(
                         ErrorKind::Unsupported,
-                        "endpoint does not support blockwise transfers",
+                        "endpoint does not support blockwise transfers. Try setting block1_size to a larger value",
                     ))?;
                 let block1_resp = maybe_block1.map_err(|_| {
                     Error::new(
@@ -432,6 +432,11 @@ impl CoAPClient {
     /// Set the receive timeout.
     pub fn set_receive_timeout(&self, dur: Option<Duration>) -> Result<()> {
         self.socket.set_read_timeout(dur)
+    }
+
+    /// Set the maximum size for a block1 request. Default is 1024 bytes
+    pub fn set_block1_size(&mut self, block1_max_bytes: usize) {
+        self.block1_size = block1_max_bytes;
     }
 
     fn send_with_socket(
