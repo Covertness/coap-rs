@@ -182,7 +182,7 @@ impl CoAPClient {
         }
 
         self.set_receive_timeout(Some(timeout))?;
-        self.send2(&mut request).unwrap();
+        self.send2(&mut request)?;
         self.receive2(&mut request)
     }
     pub fn set_broadcast(&self, value: bool) -> Result<()> {
@@ -572,6 +572,7 @@ pub struct BlockState {
 
 #[cfg(test)]
 mod test {
+
     use super::super::*;
     use super::*;
     use std::io::ErrorKind;
@@ -747,6 +748,43 @@ mod test {
         assert!(client.send_all_coap(&request, 0).is_ok());
     }
 
+    #[test]
+    fn test_change_block_option() {
+        // this test is a little finnicky because it relies on the configuration
+        // of the reception endpoint. It tries to send a payload larger than the
+        // default using a block option, this request is expected to fail because
+        // the endpoint does not support block requests. Afterwards, we change the
+        // maximum block size and thus expect the request to work.
+        const PAYLOAD_STR: &str = "this is a payload";
+        let mut large_payload = vec![];
+        while large_payload.len() < 1024 {
+            large_payload.extend_from_slice(PAYLOAD_STR.as_bytes());
+        }
+        let domain = "coap.me";
+        let mut client = CoAPClient::new((domain, 5683)).unwrap();
+        let resp = client.request_path(
+            "/large-create",
+            Method::Put,
+            Some(large_payload.clone()),
+            None,
+            Some(domain.to_string()),
+        );
+        let err = resp.unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::Unsupported);
+        //we now set the block size to make sure it is sent in a single request
+        client.set_block1_size(10_000_000);
+
+        let resp = client
+            .request_path(
+                "/large-create",
+                Method::Post,
+                Some(large_payload.clone()),
+                None,
+                Some(domain.to_string()),
+            )
+            .unwrap();
+        assert_eq!(*resp.get_status(), Status::Created);
+    }
     #[test]
     #[ignore]
     fn test_send_all_coap_v6() {

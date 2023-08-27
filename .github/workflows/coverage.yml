@@ -28,6 +28,8 @@ jobs:
       with:
         out-type: Lcov
         args: '--avoid-cfg-tarpaulin'
+        version: '0.15.0'
+
 
     - name: Coveralls Upload
       uses: coverallsapp/github-action@1.1.3
