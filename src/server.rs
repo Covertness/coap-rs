@@ -1,4 +1,6 @@
-use coap_lite::{CoapRequest, CoapResponse, Packet, BlockHandler, BlockHandlerConfig, error::HandlingError};
+use coap_lite::{
+    error::HandlingError, BlockHandler, BlockHandlerConfig, CoapRequest, CoapResponse, Packet,
+};
 use futures::{select, stream::FusedStream, task::Poll, SinkExt, Stream, StreamExt};
 use log::{debug, error};
 use std::{
@@ -109,12 +111,18 @@ where
         match self.block_handler.intercept_response(&mut request) {
             Err(err) => {
                 if self.handle_coap_handing_error(&mut request, err) {
-                    return self.server.send((request.response.unwrap().message, addr)).await;
+                    return self
+                        .server
+                        .send((request.response.unwrap().message, addr))
+                        .await;
                 }
                 return Ok(());
             }
             Ok(true) => {
-                return self.server.send((request.response.unwrap().message, addr)).await;
+                return self
+                    .server
+                    .send((request.response.unwrap().message, addr))
+                    .await;
             }
             _ => {
                 return self.server.send((packet, addr)).await;
@@ -127,12 +135,16 @@ where
 
         match self.block_handler.intercept_request(&mut request) {
             Ok(true) => {
-                self.server.send((request.response.unwrap().message, addr)).await?;
+                self.server
+                    .send((request.response.unwrap().message, addr))
+                    .await?;
                 return Ok(());
             }
             Err(err) => {
                 if self.handle_coap_handing_error(&mut request, err) {
-                    self.server.send((request.response.unwrap().message, addr)).await?;
+                    self.server
+                        .send((request.response.unwrap().message, addr))
+                        .await?;
                 }
                 return Ok(());
             }
@@ -152,13 +164,17 @@ where
                     match self.block_handler.intercept_response(&mut request) {
                         Err(err) => {
                             if self.handle_coap_handing_error(&mut request, err) {
-                                self.server.send((request.response.unwrap().message, addr)).await?;
+                                self.server
+                                    .send((request.response.unwrap().message, addr))
+                                    .await?;
                             }
                             return Ok(());
                         }
                         _ => {}
                     }
-                    self.server.send((request.response.unwrap().message, addr)).await?;
+                    self.server
+                        .send((request.response.unwrap().message, addr))
+                        .await?;
                 }
                 None => {
                     debug!("No response");
@@ -168,11 +184,15 @@ where
         Ok(())
     }
 
-    fn handle_coap_handing_error(&mut self, request: &mut CoapRequest<SocketAddr>, err: HandlingError) -> bool {
+    fn handle_coap_handing_error(
+        &mut self,
+        request: &mut CoapRequest<SocketAddr>,
+        err: HandlingError,
+    ) -> bool {
         if request.apply_from_error(err) {
             // If the error happens to need block2 handling, let's do that here...
             let _ = self.block_handler.intercept_response(request);
-            return true
+            return true;
         }
         false
     }
@@ -406,7 +426,7 @@ impl FusedStream for CoAPServer {
 pub mod test {
     use super::super::*;
     use super::*;
-    use coap_lite::CoapOption;
+    use coap_lite::{block_handler::BlockValue, CoapOption, RequestType};
     use std::{sync::mpsc, time::Duration};
 
     pub fn spawn_server<
@@ -509,6 +529,43 @@ pub mod test {
     }
 
     #[test]
+    fn test_put_block() {
+        let server_port = spawn_server("127.0.0.1:0", request_handler).recv().unwrap();
+        let data = "hello this is a payload";
+        let mut v = Vec::new();
+        for _ in 0..1024 {
+            v.extend_from_slice(data.as_bytes());
+        }
+        let payload_size = v.len();
+        let server_string = format!("127.0.0.1:{}", server_port);
+        let mut client = CoAPClient::new(server_string.clone()).unwrap();
+
+        let resp = client
+            .request_path(
+                "/large",
+                RequestType::Put,
+                Some(v),
+                None,
+                Some(server_string.clone()),
+            )
+            .unwrap();
+        //assert_eq!(resp.message.payload, b"Created".to_vec());
+        let block_opt = resp
+            .message
+            .get_first_option_as::<BlockValue>(CoapOption::Block1)
+            .expect("expected block opt in response")
+            .expect("could not decode block1 option");
+        let expected_number = (payload_size as f32 / 1024.0).ceil() as u16 - 1;
+        assert_eq!(
+            block_opt.num, expected_number,
+            "block not completely received!"
+        );
+        println!("{:?}", &resp.message.payload);
+
+        assert_eq!(resp.message.payload, b"large".to_vec());
+    }
+
+    #[test]
     #[ignore]
     fn test_echo_server_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().unwrap();
@@ -592,7 +649,7 @@ pub mod test {
 
         tx.send(step).unwrap();
         let mut request = CoapRequest::new();
-        request.set_method(coap_lite::RequestType::Put);
+        request.set_method(RequestType::Put);
         request.set_path(path);
         request.message.payload = payload1.clone();
         client.send(&request).unwrap();
