@@ -28,7 +28,7 @@ jobs:
       with:
         out-type: Lcov
         args: '--avoid-cfg-tarpaulin'
-        version: '0.15.0'
+        version: '0.22.0'
 
 
     - name: Coveralls Upload
