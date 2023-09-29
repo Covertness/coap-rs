@@ -286,7 +286,7 @@ impl Observer {
     fn record_resource(&mut self, path: &String, payload: &Vec<u8>) -> &ResourceItem {
         match self.resources.entry(path.clone()) {
             Entry::Occupied(resource) => {
-                let mut r = resource.into_mut();
+                let r = resource.into_mut();
                 r.sequence += 1;
                 r.payload = payload.clone();
                 return r;
