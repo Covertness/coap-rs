@@ -1,31 +1,32 @@
 extern crate coap;
 
-use coap::CoAPClient;
+use coap::UDPCoAPClient;
 use std::io;
 use std::io::ErrorKind;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     println!("GET url:");
-    example_get();
+    example_get().await;
 
     println!("POST data to url:");
-    example_post();
+    example_post().await;
 
     println!("PUT data to url:");
-    example_put();
+    example_put().await;
 
     println!("DELETE url:");
-    example_delete();
+    example_delete().await;
 
     println!("Observing:");
-    example_observe();
+    example_observe().await;
 }
 
-fn example_get() {
+async fn example_get() {
     let url = "coap://127.0.0.1:5683/hello/get";
     println!("Client request: {}", url);
 
-    match CoAPClient::get(url) {
+    match UDPCoAPClient::get(url).await {
         Ok(response) => {
             println!(
                 "Server reply: {}",
@@ -42,12 +43,12 @@ fn example_get() {
     }
 }
 
-fn example_post() {
+async fn example_post() {
     let url = "coap://127.0.0.1:5683/hello/post";
     let data = b"data".to_vec();
     println!("Client request: {}", url);
 
-    match CoAPClient::post(url, data) {
+    match UDPCoAPClient::post(url, data).await {
         Ok(response) => {
             println!(
                 "Server reply: {}",
@@ -64,12 +65,12 @@ fn example_post() {
     }
 }
 
-fn example_put() {
+async fn example_put() {
     let url = "coap://127.0.0.1:5683/hello/put";
     let data = b"data".to_vec();
     println!("Client request: {}", url);
 
-    match CoAPClient::put(url, data) {
+    match UDPCoAPClient::put(url, data).await {
         Ok(response) => {
             println!(
                 "Server reply: {}",
@@ -86,11 +87,11 @@ fn example_put() {
     }
 }
 
-fn example_delete() {
+async fn example_delete() {
     let url = "coap://127.0.0.1:5683/hello/delete";
     println!("Client request: {}", url);
 
-    match CoAPClient::delete(url) {
+    match UDPCoAPClient::delete(url).await {
         Ok(response) => {
             println!(
                 "Server reply: {}",
@@ -107,8 +108,8 @@ fn example_delete() {
     }
 }
 
-fn example_observe() {
-    let mut client = CoAPClient::new("127.0.0.1:5683").unwrap();
+async fn example_observe() {
+    let client = UDPCoAPClient::new_udp("127.0.0.1:5683").await.unwrap();
     client
         .observe("/hello/put", |msg| {
             println!(
@@ -116,6 +117,7 @@ fn example_observe() {
                 String::from_utf8(msg.payload).unwrap()
             );
         })
+        .await
         .unwrap();
 
     println!("Press any key to stop...");

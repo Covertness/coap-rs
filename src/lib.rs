@@ -8,6 +8,11 @@
 //! - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
 //! - *Too Many Requests* Response Code [RFC 8516](https://tools.ietf.org/html/rfc8516)
 //! - Block-Wise Transfers [RFC 7959](https://tools.ietf.org/html/rfc7959)
+//! - DTLS support via [webrtc-rs](https://github.com/webrtc-rs/webrtc)
+//! - Option to provide custom transports for client and server
+//!
+//! Missing features:
+//! - Client receiving piggybacked requests
 //!
 //! # Installation
 //!
@@ -30,32 +35,32 @@
 //! ```no_run
 //! extern crate coap;
 //!
-//! use coap_lite::{RequestType as Method};
+//! use coap_lite::{RequestType as Method, CoapRequest};
 //! use coap::Server;
 //! use tokio::runtime::Runtime;
-
+//! use std::net::SocketAddr;
 //! fn main() {
 //!     let addr = "127.0.0.1:5683";
-
 //! 	Runtime::new().unwrap().block_on(async move {
-//!         let mut server = Server::new(addr).unwrap();
+//!         let mut server = Server::new_udp(addr).unwrap();
 //!         println!("Server up on {}", addr);
 //!
-//!         server.run(|request| async {
+//!         server.run(|mut request: Box<CoapRequest<SocketAddr>>| async {
 //!             match request.get_method() {
 //!                 &Method::Get => println!("request by get {}", request.get_path()),
-//!                 &Method::Post => println!("request by post {}", String::from_utf8(request.message.payload).unwrap()),
-//!                 &Method::Put => println!("request by put {}", String::from_utf8(request.message.payload).unwrap()),
+//!                 &Method::Post => println!("request by post {}", String::from_utf8(request.message.payload.clone()).unwrap()),
+//!                 &Method::Put => println!("request by put {}", String::from_utf8(request.message.payload.clone()).unwrap()),
 //!                 _ => println!("request by other method"),
 //!             };
 
-//!             return match request.response {
-//!                 Some(mut message) => {
+//!             match request.response {
+//!                 Some(ref mut message) => {
 //!                     message.message.payload = b"OK".to_vec();
-//!                     Some(message)
+
 //!                 },
-//!                 _ => None
+//!                 _ => {}
 //!             };
+//!             return request
 //!         }).await.unwrap();
 //!     });
 //! }
@@ -66,16 +71,16 @@
 //! extern crate coap;
 //!
 //! use coap_lite::{RequestType as Method, CoapRequest};
-//! use coap::{CoAPClient};
-//!
-//! fn main() {
+//! use coap::{UDPCoAPClient};
+//! use tokio::main;
+//! #[tokio::main]
+//! async fn main() {
 //!     let url = "coap://127.0.0.1:5683/Rust";
 //!     println!("Client request: {}", url);
 //!
-//!     let response = CoAPClient::get(url).unwrap();
+//!     let response = UDPCoAPClient::get(url).await.unwrap();
 //!     println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 //! }
-//! ```
 
 #[macro_use]
 extern crate alloc;
@@ -83,10 +88,12 @@ extern crate alloc;
 #[cfg(test)]
 extern crate quickcheck;
 
-pub use self::client::CoAPClient;
+pub use self::client::UDPCoAPClient;
 pub use self::observer::Observer;
-pub use self::server::{CoAPServer, Server};
+pub use self::server::Server;
 pub mod client;
+#[cfg(feature = "dtls")]
+pub mod dtls;
 pub mod message;
 mod observer;
 pub mod server;
