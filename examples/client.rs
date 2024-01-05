@@ -1,6 +1,6 @@
 extern crate coap;
 
-use coap::UDPCoAPClient;
+use coap::UdpCoAPClient;
 use std::io;
 use std::io::ErrorKind;
 
@@ -26,7 +26,7 @@ async fn example_get() {
     let url = "coap://127.0.0.1:5683/hello/get";
     println!("Client request: {}", url);
 
-    match UDPCoAPClient::get(url).await {
+    match UdpCoAPClient::get(url).await {
         Ok(response) => {
             println!(
                 "Server reply: {}",
@@ -48,7 +48,7 @@ async fn example_post() {
     let data = b"data".to_vec();
     println!("Client request: {}", url);
 
-    match UDPCoAPClient::post(url, data).await {
+    match UdpCoAPClient::post(url, data).await {
         Ok(response) => {
             println!(
                 "Server reply: {}",
@@ -70,7 +70,7 @@ async fn example_put() {
     let data = b"data".to_vec();
     println!("Client request: {}", url);
 
-    match UDPCoAPClient::put(url, data).await {
+    match UdpCoAPClient::put(url, data).await {
         Ok(response) => {
             println!(
                 "Server reply: {}",
@@ -91,7 +91,7 @@ async fn example_delete() {
     let url = "coap://127.0.0.1:5683/hello/delete";
     println!("Client request: {}", url);
 
-    match UDPCoAPClient::delete(url).await {
+    match UdpCoAPClient::delete(url).await {
         Ok(response) => {
             println!(
                 "Server reply: {}",
@@ -109,7 +109,7 @@ async fn example_delete() {
 }
 
 async fn example_observe() {
-    let client = UDPCoAPClient::new_udp("127.0.0.1:5683").await.unwrap();
+    let client = UdpCoAPClient::new_udp("127.0.0.1:5683").await.unwrap();
     client
         .observe("/hello/put", |msg| {
             println!(

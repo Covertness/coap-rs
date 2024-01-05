@@ -71,14 +71,14 @@
 //! extern crate coap;
 //!
 //! use coap_lite::{RequestType as Method, CoapRequest};
-//! use coap::{UDPCoAPClient};
+//! use coap::{UdpCoAPClient};
 //! use tokio::main;
 //! #[tokio::main]
 //! async fn main() {
 //!     let url = "coap://127.0.0.1:5683/Rust";
 //!     println!("Client request: {}", url);
 //!
-//!     let response = UDPCoAPClient::get(url).await.unwrap();
+//!     let response = UdpCoAPClient::get(url).await.unwrap();
 //!     println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
 //! }
 
@@ -88,7 +88,7 @@ extern crate alloc;
 #[cfg(test)]
 extern crate quickcheck;
 
-pub use self::client::UDPCoAPClient;
+pub use self::client::UdpCoAPClient;
 pub use self::observer::Observer;
 pub use self::server::Server;
 pub mod client;

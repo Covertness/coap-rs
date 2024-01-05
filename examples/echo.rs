@@ -2,7 +2,7 @@ extern crate coap;
 
 use std::net::SocketAddr;
 
-use coap::{Server, UDPCoAPClient};
+use coap::{Server, UdpCoAPClient};
 use coap_lite::CoapRequest;
 #[tokio::main]
 async fn main() {
@@ -28,7 +28,7 @@ async fn main() {
     println!("Client request: {}", url);
 
     // Maybe need sleep seconds before start client on some OS: https://github.com/Covertness/coap-rs/issues/75
-    let response = UDPCoAPClient::get(url).await.unwrap();
+    let response = UdpCoAPClient::get(url).await.unwrap();
     println!(
         "Server reply: {}",
         String::from_utf8(response.message.payload).unwrap()

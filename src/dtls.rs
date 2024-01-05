@@ -32,13 +32,13 @@ impl<L: WebRtcListener + Send + 'static> Listener for L {
     }
 }
 
-pub struct DTLSResponse {
+pub struct DtlsResponse {
     pub conn: Arc<dyn Conn + Send + Sync>,
     pub remote_addr: SocketAddr,
 }
 
 #[async_trait]
-impl Transport for DTLSConnection {
+impl Transport for DtlsConnection {
     async fn recv(&self, buf: &mut [u8]) -> std::io::Result<(usize, SocketAddr)> {
         let read = self
             .conn
@@ -57,7 +57,7 @@ impl Transport for DTLSConnection {
     }
 }
 #[async_trait]
-impl Responder for DTLSResponse {
+impl Responder for DtlsResponse {
     /// responds to a request by creating a new task. This ensures we do not
     /// block the main server handler task
     async fn respond(&self, response: Vec<u8>) {
@@ -85,7 +85,7 @@ pub async fn spawn_webrtc_conn(
             break;
         }
         unsafe { vec_buf.set_len(rx) }
-        let response = Arc::new(DTLSResponse {
+        let response = Arc::new(DtlsResponse {
             conn: conn.clone(),
             remote_addr,
         });
@@ -95,13 +95,13 @@ pub async fn spawn_webrtc_conn(
     }
 }
 
-pub struct DTLSConnection {
+pub struct DtlsConnection {
     pub conn: DTLSConn,
     pub peer_addr: SocketAddr,
 }
 
-impl DTLSConnection {
-    pub async fn try_new(dtls_config: DTLSConfig) -> Result<DTLSConnection> {
+impl DtlsConnection {
+    pub async fn try_new(dtls_config: DtlsConfig) -> Result<DtlsConnection> {
         let conn = Arc::new(
             UdpSocket::bind("0.0.0.0:0")
                 .await
@@ -122,13 +122,13 @@ impl DTLSConnection {
             )
         })?
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
-        return Ok(DTLSConnection {
+        return Ok(DtlsConnection {
             conn: dtls_conn,
             peer_addr: dtls_config.dest_addr,
         });
     }
 }
-pub struct DTLSConfig {
+pub struct DtlsConfig {
     pub config: webrtc_dtls::config::Config,
     pub dest_addr: SocketAddr,
 }
@@ -138,7 +138,7 @@ mod test {
     use super::*;
     use crate::client::CoAPClient;
     use crate::server::UdpCoapListener;
-    use crate::{Server, UDPCoAPClient};
+    use crate::{Server, UdpCoAPClient};
     use coap_lite::{CoapOption, CoapRequest, RequestType as Method};
     use futures::Future;
     use pkcs8::{LineEnding, SecretDocument};
@@ -312,7 +312,7 @@ mod test {
             .await
             .unwrap();
 
-        let dtls_config = DTLSConfig {
+        let dtls_config = DtlsConfig {
             config: client_cfg,
             dest_addr: ("127.0.0.1", server_port)
                 .to_socket_addrs()
@@ -339,7 +339,7 @@ mod test {
             .await
             .unwrap();
 
-        let dtls_config = DTLSConfig {
+        let dtls_config = DtlsConfig {
             config,
             dest_addr: ("127.0.0.1", server_port)
                 .to_socket_addrs()
@@ -368,7 +368,7 @@ mod test {
         // make the psk fail
         config.psk = Some(Arc::new(|_| Ok(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 9])));
 
-        let dtls_config = DTLSConfig {
+        let dtls_config = DtlsConfig {
             config,
             dest_addr: ("127.0.0.1", server_port)
                 .to_socket_addrs()
@@ -391,11 +391,11 @@ mod test {
             .unwrap();
         // make the psk fail
 
-        let get = UDPCoAPClient::get(&format!("coap://127.0.0.1:{}/hello", server_port)).await;
+        let get = UdpCoAPClient::get(&format!("coap://127.0.0.1:{}/hello", server_port)).await;
         let get_error = get.unwrap_err();
         assert!(get_error.kind() == ErrorKind::TimedOut);
 
-        let dtls_config = DTLSConfig {
+        let dtls_config = DtlsConfig {
             config,
             dest_addr: ("127.0.0.1", server_port)
                 .to_socket_addrs()
@@ -437,12 +437,12 @@ mod test {
 
         let (udp, dtls) = rx.recv().await.unwrap();
 
-        let get = UDPCoAPClient::get(&format!("coap://127.0.0.1:{}/hello_udp", udp))
+        let get = UdpCoAPClient::get(&format!("coap://127.0.0.1:{}/hello_udp", udp))
             .await
             .unwrap();
         assert_eq!(get.message.payload, b"hello_udp".to_vec());
 
-        let dtls_config = DTLSConfig {
+        let dtls_config = DtlsConfig {
             config,
             dest_addr: ("127.0.0.1", dtls)
                 .to_socket_addrs()

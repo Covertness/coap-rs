@@ -1,5 +1,5 @@
 #[cfg(feature = "dtls")]
-use crate::dtls::{DTLSConfig, DTLSConnection};
+use crate::dtls::{DtlsConfig, DtlsConnection};
 use alloc::string::String;
 use alloc::vec::Vec;
 use coap_lite::{
@@ -53,7 +53,7 @@ impl Transport for UdpTransport {
 }
 
 /// A CoAP client over UDP. This client can send multicast and broadcasts
-pub type UDPCoAPClient = CoAPClient<UdpTransport>;
+pub type UdpCoAPClient = CoAPClient<UdpTransport>;
 
 pub struct CoAPClient<T: Transport> {
     transport: T,
@@ -63,7 +63,7 @@ pub struct CoAPClient<T: Transport> {
     read_timeout: Option<Duration>,
 }
 
-impl UDPCoAPClient {
+impl UdpCoAPClient {
     pub async fn new_with_specific_source<A: ToSocketAddrs, B: ToSocketAddrs>(
         bind_addr: A,
         peer_addr: B,
@@ -74,7 +74,7 @@ impl UDPCoAPClient {
         ))?;
         let socket = UdpSocket::bind(bind_addr).await?;
         let transport = UdpTransport { socket, peer_addr };
-        return Ok(UDPCoAPClient::from_transport(transport));
+        return Ok(UdpCoAPClient::from_transport(transport));
     }
 
     pub async fn new_udp<A: ToSocketAddrs>(addr: A) -> Result<Self> {
@@ -137,10 +137,10 @@ impl UDPCoAPClient {
 }
 
 #[cfg(feature = "dtls")]
-impl CoAPClient<DTLSConnection> {
-    pub async fn from_dtls_config(config: DTLSConfig) -> Result<Self> {
+impl CoAPClient<DtlsConnection> {
+    pub async fn from_dtls_config(config: DtlsConfig) -> Result<Self> {
         Ok(CoAPClient::from_transport(
-            DTLSConnection::try_new(config).await?,
+            DtlsConnection::try_new(config).await?,
         ))
     }
 }
@@ -209,7 +209,7 @@ impl<T: Transport> CoAPClient<T> {
     /// Execute a single request (GET, POST, PUT, DELETE) with a coap url using udp
     pub async fn request(url: &str, method: Method, data: Option<Vec<u8>>) -> Result<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
-        let mut client = UDPCoAPClient::new_udp((domain.as_str(), port)).await?;
+        let mut client = UdpCoAPClient::new_udp((domain.as_str(), port)).await?;
         client
             .request_path(&path, method, data, queries, Some(domain))
             .await
@@ -224,7 +224,7 @@ impl<T: Transport> CoAPClient<T> {
         timeout: Duration,
     ) -> Result<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
-        let mut client = UDPCoAPClient::new_udp((domain.as_str(), port)).await?;
+        let mut client = UdpCoAPClient::new_udp((domain.as_str(), port)).await?;
         client
             .request_path_with_timeout(&path, method, data, queries, Some(domain), timeout)
             .await
@@ -644,21 +644,21 @@ mod test {
     use std::time::Duration;
     #[test]
     fn test_parse_coap_url_good_url() {
-        assert!(UDPCoAPClient::parse_coap_url("coap://127.0.0.1").is_ok());
-        assert!(UDPCoAPClient::parse_coap_url("coap://127.0.0.1:5683").is_ok());
-        assert!(UDPCoAPClient::parse_coap_url("coap://[::1]").is_ok());
-        assert!(UDPCoAPClient::parse_coap_url("coap://[::1]:5683").is_ok());
-        assert!(UDPCoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]").is_ok());
-        assert!(UDPCoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]:5683").is_ok());
-        assert!(UDPCoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world").is_ok());
+        assert!(UdpCoAPClient::parse_coap_url("coap://127.0.0.1").is_ok());
+        assert!(UdpCoAPClient::parse_coap_url("coap://127.0.0.1:5683").is_ok());
+        assert!(UdpCoAPClient::parse_coap_url("coap://[::1]").is_ok());
+        assert!(UdpCoAPClient::parse_coap_url("coap://[::1]:5683").is_ok());
+        assert!(UdpCoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]").is_ok());
+        assert!(UdpCoAPClient::parse_coap_url("coap://[bbbb::9329:f033:f558:7418]:5683").is_ok());
+        assert!(UdpCoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world").is_ok());
     }
 
     #[test]
     fn test_parse_coap_url_bad_url() {
-        assert!(UDPCoAPClient::parse_coap_url("coap://127.0.0.1:65536").is_err());
-        assert!(UDPCoAPClient::parse_coap_url("coap://").is_err());
-        assert!(UDPCoAPClient::parse_coap_url("coap://:5683").is_err());
-        assert!(UDPCoAPClient::parse_coap_url("127.0.0.1").is_err());
+        assert!(UdpCoAPClient::parse_coap_url("coap://127.0.0.1:65536").is_err());
+        assert!(UdpCoAPClient::parse_coap_url("coap://").is_err());
+        assert!(UdpCoAPClient::parse_coap_url("coap://:5683").is_err());
+        assert!(UdpCoAPClient::parse_coap_url("127.0.0.1").is_err());
     }
 
     async fn request_handler(req: Box<CoapRequest<SocketAddr>>) -> Box<CoapRequest<SocketAddr>> {
@@ -669,7 +669,7 @@ mod test {
     #[test]
     fn test_parse_queries() {
         if let Ok((_, _, _, Some(queries))) =
-            UDPCoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world&test1=test2")
+            UdpCoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world&test1=test2")
         {
             assert_eq!("hello=world&test1=test2".as_bytes().to_vec(), queries);
         } else {
@@ -679,7 +679,7 @@ mod test {
 
     #[tokio::test]
     async fn test_get_url() {
-        let resp = UDPCoAPClient::get("coap://coap.me:5683/hello")
+        let resp = UdpCoAPClient::get("coap://coap.me:5683/hello")
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"world".to_vec());
@@ -692,7 +692,7 @@ mod test {
             .await
             .unwrap();
 
-        let error = UDPCoAPClient::get_with_timeout(
+        let error = UdpCoAPClient::get_with_timeout(
             &format!("coap://127.0.0.1:{}/Rust", server_port),
             Duration::new(0, 0),
         )
@@ -704,7 +704,7 @@ mod test {
     #[tokio::test]
     async fn test_get() {
         let domain = "coap.me";
-        let mut client = UDPCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .request_path("/hello", Method::Get, None, None, Some(domain.to_string()))
             .await
@@ -713,11 +713,11 @@ mod test {
     }
     #[tokio::test]
     async fn test_post_url() {
-        let resp = UDPCoAPClient::post("coap://coap.me:5683/validate", b"world".to_vec())
+        let resp = UdpCoAPClient::post("coap://coap.me:5683/validate", b"world".to_vec())
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"POST OK".to_vec());
-        let resp = UDPCoAPClient::post("coap://coap.me:5683/validate", b"test".to_vec())
+        let resp = UdpCoAPClient::post("coap://coap.me:5683/validate", b"test".to_vec())
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"POST OK".to_vec());
@@ -726,7 +726,7 @@ mod test {
     #[tokio::test]
     async fn test_post() {
         let domain = "coap.me";
-        let mut client = UDPCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .request_path(
                 "/validate",
@@ -742,11 +742,11 @@ mod test {
 
     #[tokio::test]
     async fn test_put_url() {
-        let resp = UDPCoAPClient::put("coap://coap.me:5683/create1", b"world".to_vec())
+        let resp = UdpCoAPClient::put("coap://coap.me:5683/create1", b"world".to_vec())
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"Created".to_vec());
-        let resp = UDPCoAPClient::put("coap://coap.me:5683/create1", b"test".to_vec())
+        let resp = UdpCoAPClient::put("coap://coap.me:5683/create1", b"test".to_vec())
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"Created".to_vec());
@@ -755,7 +755,7 @@ mod test {
     #[tokio::test]
     async fn test_put() {
         let domain = "coap.me";
-        let mut client = UDPCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .request_path(
                 "/create1",
@@ -771,11 +771,11 @@ mod test {
 
     #[tokio::test]
     async fn test_delete_url() {
-        let resp = UDPCoAPClient::delete("coap://coap.me:5683/validate")
+        let resp = UdpCoAPClient::delete("coap://coap.me:5683/validate")
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
-        let resp = UDPCoAPClient::delete("coap://coap.me:5683/validate")
+        let resp = UdpCoAPClient::delete("coap://coap.me:5683/validate")
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"DELETE OK".to_vec());
@@ -784,7 +784,7 @@ mod test {
     #[tokio::test]
     async fn test_delete() {
         let domain = "coap.me";
-        let mut client = UDPCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .request_path(
                 "/validate",
@@ -800,7 +800,7 @@ mod test {
 
     #[tokio::test]
     async fn test_set_broadcast() {
-        let client = UDPCoAPClient::new_udp(("127.0.0.1", 5683)).await.unwrap();
+        let client = UdpCoAPClient::new_udp(("127.0.0.1", 5683)).await.unwrap();
         assert!(client.set_broadcast(true).is_ok());
         assert!(client.set_broadcast(false).is_ok());
     }
@@ -808,7 +808,7 @@ mod test {
     #[tokio::test]
     #[ignore]
     async fn test_set_broadcast_v6() {
-        let client = UDPCoAPClient::new_udp(("::1", 5683)).await.unwrap();
+        let client = UdpCoAPClient::new_udp(("::1", 5683)).await.unwrap();
         assert!(client.set_broadcast(true).is_ok());
         assert!(client.set_broadcast(false).is_ok());
     }
@@ -825,7 +825,7 @@ mod test {
             .set_type(coap_lite::MessageType::NonConfirmable);
         request.message.payload = b"Discovery".to_vec();
 
-        let client = UDPCoAPClient::new_udp(("127.0.0.1", 5683)).await.unwrap();
+        let client = UdpCoAPClient::new_udp(("127.0.0.1", 5683)).await.unwrap();
         client.send_all_coap(&request, 0).await.unwrap();
     }
     #[tokio::test]
@@ -841,7 +841,7 @@ mod test {
             large_payload.extend_from_slice(PAYLOAD_STR.as_bytes());
         }
         let domain = "coap.me";
-        let mut client = UDPCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .request_path(
                 "/large-create",
@@ -881,7 +881,7 @@ mod test {
             .set_type(coap_lite::MessageType::NonConfirmable);
         request.message.payload = b"Discovery".to_vec();
 
-        let client = UDPCoAPClient::new_udp(("::1", 5683)).await.unwrap();
+        let client = UdpCoAPClient::new_udp(("::1", 5683)).await.unwrap();
         client.send_all_coap(&request, 0x4).await.unwrap();
     }
 }

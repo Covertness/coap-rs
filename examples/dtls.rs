@@ -2,7 +2,7 @@
 /// a look at the test in dtls.rs
 extern crate coap;
 use coap::client::CoAPClient;
-use coap::dtls::DTLSConfig;
+use coap::dtls::DtlsConfig;
 use coap::Server;
 use coap_lite::{CoapRequest, RequestType as Method};
 use std::future::Future;
@@ -59,7 +59,7 @@ async fn main() {
     .await
     .unwrap();
 
-    let dtls_config = DTLSConfig {
+    let dtls_config = DtlsConfig {
         config,
         dest_addr: ("127.0.0.1", server_port)
             .to_socket_addrs()
