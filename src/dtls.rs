@@ -1,3 +1,5 @@
+//! this file is included by enabling the "dtls" feature. It provides a default DTLS backend using
+//! webrtc-rs's dtls implementation.
 use crate::client::Transport;
 use crate::server::{Listener, Responder, TransportRequestSender};
 use async_trait::async_trait;

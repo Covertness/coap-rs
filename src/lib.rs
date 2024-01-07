@@ -94,6 +94,5 @@ pub use self::server::Server;
 pub mod client;
 #[cfg(feature = "dtls")]
 pub mod dtls;
-pub mod message;
 mod observer;
 pub mod server;
