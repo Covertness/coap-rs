@@ -345,30 +345,33 @@ impl<T: Transport> CoAPClient<T> {
                     sock_rx = self.receive_from_socket() => {
                         self.receive_and_handle_message(sock_rx, &mut handler).await;
                     }
-                     observe = &mut rx_pinned => {
-                    match observe {
-                    Ok(ObserveMessage::Terminate) => {
-                        let mut deregister_packet = CoapRequest::<SocketAddr>::new();
-                        deregister_packet.message.header.message_id =
-                            Self::gen_message_id(&mut message_id);
-                        deregister_packet.set_observe_flag(ObserveOption::Deregister);
-                        deregister_packet.set_path(observe_path.as_str());
-
-                        Self::send_with_socket(&self.transport, &deregister_packet.message)
-                            .await
-                            .unwrap();
-                        self.receive_from_socket().await.unwrap();
-                        break;
-                    }
-                    // if the receiver is dropped, we change the future to wait forever
-                    Err(_) => {debug!("observe continuing forever"); rx_pinned  = Box::pin(futures::future::pending()) },
-                }
+                    observe = &mut rx_pinned => {
+                        match observe {
+                            Ok(ObserveMessage::Terminate) => {
+                                self.terminate_observe(&observe_path, &mut message_id).await;
+                                break;
+                            }
+                            // if the receiver is dropped, we change the future to wait forever
+                            Err(_) => {
+                                debug!("observe continuing forever");
+                                rx_pinned  = Box::pin(futures::future::pending())
+                            },
+                        }
                     }
 
                 }
             }
         });
         return Ok(tx);
+    }
+
+    async fn terminate_observe(&mut self, observe_path: &str, message_id: &mut u16) {
+        let mut deregister_packet = CoapRequest::<SocketAddr>::new();
+        deregister_packet.message.header.message_id = Self::gen_message_id(message_id);
+        deregister_packet.set_observe_flag(ObserveOption::Deregister);
+        deregister_packet.set_path(observe_path);
+        let _ = Self::send_with_socket(&self.transport, &deregister_packet.message).await;
+        let _ = self.receive_from_socket().await;
     }
 
     async fn receive_and_handle_message<H: FnMut(Packet) + Send + 'static>(
