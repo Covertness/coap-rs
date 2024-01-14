@@ -466,7 +466,7 @@ mod test {
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
-        let client = UdpCoAPClient::new_udp(server_address).await.unwrap();
+        let mut client = UdpCoAPClient::new_udp(server_address).await.unwrap();
 
         tx.send(step).unwrap();
         let mut request = CoapRequest::new();
@@ -507,7 +507,7 @@ mod test {
 
         request.message.payload = payload2.clone();
 
-        let client2 = UdpCoAPClient::new_udp(server_address).await.unwrap();
+        let mut client2 = UdpCoAPClient::new_udp(server_address).await.unwrap();
         client2.send(&request).await.unwrap();
         client2.receive().await.unwrap();
         assert_eq!(
@@ -530,7 +530,7 @@ mod test {
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
-        let client = UdpCoAPClient::new_udp(server_address).await.unwrap();
+        let mut client = UdpCoAPClient::new_udp(server_address).await.unwrap();
 
         let mut request = CoapRequest::new();
         request.set_method(coap_lite::RequestType::Put);
@@ -550,7 +550,7 @@ mod test {
         unobserve.send(client::ObserveMessage::Terminate).unwrap();
         request.message.payload = payload2.clone();
 
-        let client3 = UdpCoAPClient::new_udp(server_address).await.unwrap();
+        let mut client3 = UdpCoAPClient::new_udp(server_address).await.unwrap();
         client3.send(&request).await.unwrap();
         client3.receive().await.unwrap();
     }
@@ -564,7 +564,7 @@ mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let error = client.observe(path, |_msg| {}).await.unwrap_err();
