@@ -571,7 +571,6 @@ pub mod test {
             block_opt.num, expected_number,
             "block not completely received!"
         );
-        println!("{:?}", &resp.message.payload);
 
         assert_eq!(resp.message.payload, b"large".to_vec());
     }

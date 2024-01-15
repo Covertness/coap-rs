@@ -11,22 +11,14 @@ use coap_lite::{
 use core::mem;
 use core::ops::Deref;
 use futures::Future;
-use futures::{
-    stream::{Peekable, Stream},
-    FutureExt,
-};
 use log::*;
 use lru_time_cache::LruCache;
-use pin_project::pin_project;
 use regex::Regex;
-use std::{collections::VecDeque, future::poll_fn, time::Duration};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::time::Duration;
 use std::{
     io::{Error, ErrorKind, Result as IoResult},
     pin::Pin,
-};
-use std::{
-    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
-    task::Poll,
 };
 use tokio::net::{lookup_host, ToSocketAddrs, UdpSocket};
 use tokio::sync::oneshot;
@@ -40,10 +32,16 @@ pub enum ObserveMessage {
 use async_trait::async_trait;
 
 #[async_trait]
+/// A basic interface for a transport on both the client and transport
+/// representing a one-to-one connection between a client and server
+/// timeouts and retries do not need to be implemented by the transport
+/// if confirmable messages are sent
 pub trait Transport: Send {
     async fn recv(&self, buf: &mut [u8]) -> std::io::Result<(usize, SocketAddr)>;
     async fn send(&self, buf: &[u8]) -> std::io::Result<usize>;
 }
+
+/// a wrapper for transports responsible for retries and timeouts
 struct ClientTransport<T> {
     pub(crate) inner: T,
     cache: Option<(Packet, SocketAddr)>,
@@ -52,6 +50,7 @@ struct ClientTransport<T> {
 }
 
 impl<T: Transport> ClientTransport<T> {
+    pub const DEFAULT_NUM_RETRIES: usize = 5;
     async fn send_confirmable_message(&mut self, msg: &[u8]) -> IoResult<()> {
         self.cache = None;
         self.inner.send(&msg).await?;
@@ -59,14 +58,9 @@ impl<T: Transport> ClientTransport<T> {
         let msg_type = packet.header.get_type();
         let msg_code = packet.header.code;
         // case 1: we received an ACK and it is empty
-        println!("recv: {:?}, {:?}", msg_type, msg_code);
         match (msg_type, msg_code) {
-            (MessageType::Acknowledgement, MessageClass::Empty) => {
-                println!("receive empty ack, assuming response next read");
-                Ok(())
-            }
+            (MessageType::Acknowledgement, MessageClass::Empty) => Ok(()),
             (_, MessageClass::Response(_)) => {
-                println!("receive ack with response");
                 self.cache = Some((packet, src));
                 Ok(())
             }
@@ -89,7 +83,6 @@ impl<T: Transport> ClientTransport<T> {
         for _ in 0..self.retries {
             let try_send = timeout(self.timeout, self.send_confirmable_message(msg)).await;
             if let Ok(Ok(res)) = try_send {
-                println!("GOT RESULT!!! {:?}", res);
                 return Ok(res);
             }
         }
@@ -128,7 +121,7 @@ impl<T: Transport> ClientTransport<T> {
         return Self {
             inner: transport,
             cache: None,
-            retries: 5,
+            retries: Self::DEFAULT_NUM_RETRIES,
             timeout: Duration::from_secs(3),
         };
     }
@@ -430,7 +423,7 @@ impl<T: Transport> CoAPClient<T> {
 
         self.send(&register_packet).await?;
 
-        self.set_receive_timeout(Some(timeout))?;
+        self.set_receive_timeout(timeout);
         let response = self.receive().await?;
         if *response.get_status() != Status::Content {
             return Err(Error::new(ErrorKind::NotFound, "te resource not found"));
@@ -454,30 +447,34 @@ impl<T: Transport> CoAPClient<T> {
                     sock_rx = self.transport.receive_packet_no_timeout() => {
                         self.receive_and_handle_message_observe(sock_rx, &mut handler).await;
                     }
-                     observe = &mut rx_pinned => {
-                    match observe {
-                    Ok(ObserveMessage::Terminate) => {
-                        let mut deregister_packet = CoapRequest::<SocketAddr>::new();
-                        deregister_packet.message.header.message_id =
-                            Self::gen_message_id(&mut message_id);
-                        deregister_packet.set_observe_flag(ObserveOption::Deregister);
-                        deregister_packet.set_path(observe_path.as_str());
-
-                        self.transport.send_packet(&deregister_packet.message)
-                            .await
-                            .unwrap();
-                        self.transport.try_receive_packet().await.unwrap();
-                        break;
-                    }
-                    // if the receiver is dropped, we change the future to wait forever
-                    Err(_) => {debug!("observe continuing forever"); rx_pinned  = Box::pin(futures::future::pending()) },
-                }
+                    observe = &mut rx_pinned => {
+                        match observe {
+                            Ok(ObserveMessage::Terminate) => {
+                                self.terminate_observe(&observe_path, &mut message_id).await;
+                                break;
+                            }
+                            // if the receiver is dropped, we change the future to wait forever
+                            Err(_) => {
+                                debug!("observe continuing forever");
+                                rx_pinned  = Box::pin(futures::future::pending())
+                            },
+                        }
                     }
 
                 }
             }
         });
         return Ok(tx);
+    }
+
+    async fn terminate_observe(&mut self, observe_path: &str, message_id: &mut u16) {
+        let mut deregister_packet = CoapRequest::<SocketAddr>::new();
+        deregister_packet.message.header.message_id = Self::gen_message_id(message_id);
+        deregister_packet.set_observe_flag(ObserveOption::Deregister);
+        deregister_packet.set_path(observe_path);
+
+        let _ = self.transport.send_packet(&deregister_packet.message).await;
+        let _ = self.transport.try_receive_packet().await.unwrap();
     }
 
     async fn receive_and_handle_message_observe<H: FnMut(Packet) + Send + 'static>(
@@ -982,7 +979,10 @@ mod test {
         async fn send(&self, buf: &[u8]) -> std::io::Result<usize> {
             self.current_fails.fetch_add(1, Ordering::Relaxed);
             self.current_fails
-                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| Some(n % nf));
+                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
+                    Some(n % self.num_fails)
+                })
+                .unwrap();
             if self.current_fails.load(Ordering::Relaxed) == 0 {
                 return self.udp.send(buf).await;
             }
@@ -992,13 +992,16 @@ mod test {
 
     #[tokio::test]
     async fn test_retries() {
-        let server_port = server::test::spawn_server("127.0.0.1:0", request_handler)
-            .recv()
-            .await
-            .unwrap();
+        let server_port = server::test::spawn_server("127.0.0.1:0", |mut req| async {
+            req.response.as_mut().unwrap().message.payload = b"Rust".to_vec();
+            return req;
+        })
+        .recv()
+        .await
+        .unwrap();
 
         let server_addr = format!("127.0.0.1:{}", server_port);
-        let peer_addr = lookup_host(server_addr)
+        let peer_addr = lookup_host(server_addr.clone())
             .await
             .unwrap()
             .next()
@@ -1007,22 +1010,32 @@ mod test {
                 "could not get socket address",
             ))
             .unwrap();
-        let socket = UdpSocket::bind(server_addr).await.unwrap();
+        let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
         let transport = UdpTransport { socket, peer_addr };
         let transport = FaultyUdp {
             udp: transport,
-            num_fails: 3,
+            num_fails: ClientTransport::<UdpTransport>::DEFAULT_NUM_RETRIES as u32 + 1,
             current_fails: 0.into(),
         };
 
-        let client = UdpCoAPClient::from_transport(transport);
-
-        let error = UdpCoAPClient::get_with_timeout(
-            &format!("coap://127.0.0.1:{}/Rust", server_port),
-            Duration::new(0, 0),
-        )
-        .await
-        .unwrap_err();
+        let mut client = CoAPClient::from_transport(transport);
+        let error = client
+            .request_path("/Rust", Method::Get, None, None, Some(server_addr.clone()))
+            .await
+            .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::TimedOut);
+        //this request will work, we do this to reset the state of the faulty udp
+        client
+            .request_path("/Rust", Method::Get, None, None, Some(server_addr.clone()))
+            .await
+            .unwrap();
+
+        client.set_transport_retries(ClientTransport::<UdpTransport>::DEFAULT_NUM_RETRIES + 2);
+        let resp = client
+            .request_path("/Rust", Method::Get, None, None, Some(server_addr))
+            .await
+            .unwrap();
+
+        assert_eq!(resp.message.payload, b"Rust".to_vec());
     }
 }

@@ -556,7 +556,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn atest_bserve_without_resource() {
+    async fn test_observe_without_resource() {
         let path = "/test";
 
         let server_port = server::test::spawn_server("127.0.0.1:0", request_handler)
@@ -564,7 +564,7 @@ mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let error = client.observe(path, |_msg| {}).await.unwrap_err();
