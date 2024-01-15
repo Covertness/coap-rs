@@ -24,7 +24,7 @@ use tokio::net::{lookup_host, ToSocketAddrs, UdpSocket};
 use tokio::sync::oneshot;
 use tokio::time::timeout;
 use url::Url;
-const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
+const DEFAULT_RECEIVE_TIMEOUT_SECONDS: u64 = 2; // 2s
 
 #[derive(Debug)]
 pub enum ObserveMessage {
@@ -155,7 +155,7 @@ impl<T: Transport> CoAPClient<T> {
             block2_states: LruCache::with_expiry_duration(Duration::from_secs(120)),
             block1_size: Self::MAX_PAYLOAD_BLOCK,
             message_id: 0,
-            read_timeout: Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0)),
+            read_timeout: Some(Duration::new(DEFAULT_RECEIVE_TIMEOUT_SECONDS, 0)),
         }
     }
     /// Execute a single get request with a coap url
@@ -245,7 +245,7 @@ impl<T: Transport> CoAPClient<T> {
             data,
             queries,
             domain,
-            Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
+            Duration::new(DEFAULT_RECEIVE_TIMEOUT_SECONDS, 0),
         )
         .await
     }
@@ -295,7 +295,7 @@ impl<T: Transport> CoAPClient<T> {
         self.observe_with_timeout(
             resource_path,
             handler,
-            Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
+            Duration::new(DEFAULT_RECEIVE_TIMEOUT_SECONDS, 0),
         )
         .await
     }
