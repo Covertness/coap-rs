@@ -336,15 +336,8 @@ impl<T: Transport> CoAPClient<T> {
         queries: Option<Vec<u8>>,
         domain: Option<String>,
     ) -> IoResult<CoapResponse> {
-        self.request_path_with_timeout(
-            path,
-            method,
-            data,
-            queries,
-            domain,
-            Duration::new(DEFAULT_RECEIVE_TIMEOUT_SECONDS, 0),
-        )
-        .await
+        self.request_path_with_timeout(path, method, data, queries, domain, self.transport.timeout)
+            .await
     }
 
     /// Execute a request (GET, POST, PUT, DELETE) with a specfic timeout using the given transport. This method will
