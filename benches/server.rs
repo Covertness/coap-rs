@@ -1,41 +1,47 @@
 #![feature(test, async_closure)]
-
 extern crate test;
 
-use coap::{CoAPClient, Server};
+use std::net::SocketAddr;
+
+use coap::{server::UdpCoapListener, Server, UdpCoAPClient};
 use coap_lite::{CoapOption, CoapRequest, MessageType};
-use std::{sync::mpsc, thread};
-use tokio::runtime::Runtime;
+use tokio::{net::UdpSocket, runtime::Runtime};
 
 #[bench]
 fn bench_server_with_request(b: &mut test::Bencher) {
-    let (tx, rx) = mpsc::channel();
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 
-    thread::spawn(move || {
-        Runtime::new().unwrap().block_on(async move {
-            let mut server = Server::new("127.0.0.1:0").unwrap();
+    let rt = Runtime::new().unwrap();
+    rt.spawn(async move {
+        let sock = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let addr = sock.local_addr().unwrap();
+        let listener = Box::new(UdpCoapListener::from_socket(sock));
+        let server = Server::from_listeners(vec![listener]);
 
-            tx.send(server.socket_addr().unwrap().port()).unwrap();
+        tx.send(addr.port()).unwrap();
 
-            server
-                .run(async move |request| {
-                    let uri_path = request.get_path().to_string();
+        server
+            .run(move |mut request: Box<CoapRequest<SocketAddr>>| async {
+                let uri_path = request.get_path().to_string();
 
-                    return match request.response {
-                        Some(mut response) => {
-                            response.message.payload = uri_path.as_bytes().to_vec();
-                            Some(response)
-                        }
-                        _ => None,
-                    };
-                })
-                .await
-                .unwrap();
-        });
+                match request.response {
+                    Some(ref mut response) => {
+                        response.message.payload = uri_path.as_bytes().to_vec();
+                    }
+                    _ => {}
+                };
+                return request;
+            })
+            .await
+            .unwrap();
     });
 
-    let server_port = rx.recv().unwrap();
-    let client = CoAPClient::new(format!("127.0.0.1:{}", server_port)).unwrap();
+    let server_port = rx.blocking_recv().unwrap();
+    let client = rt.block_on(async {
+        UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+            .await
+            .unwrap()
+    });
 
     let mut request = CoapRequest::new();
     request.message.header.set_version(1);
@@ -48,8 +54,10 @@ fn bench_server_with_request(b: &mut test::Bencher) {
         .add_option(CoapOption::UriPath, "test".to_string().into_bytes());
 
     b.iter(|| {
-        client.send(&request).unwrap();
-        let recv_packet = client.receive().unwrap();
-        assert_eq!(recv_packet.message.payload, b"test".to_vec());
+        rt.block_on(async {
+            client.send(&request).await.unwrap();
+            let recv_packet = client.receive().await.unwrap();
+            assert_eq!(recv_packet.message.payload, b"test".to_vec());
+        });
     });
 }
