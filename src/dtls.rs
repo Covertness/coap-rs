@@ -226,7 +226,6 @@ mod test {
         let pkcs8_pem = pkdoc
             .to_pem("PRIVATE_KEY", LineEnding::LF)
             .expect("could not encode ec key to PEM");
-        println!("{}", &pkcs8_pem.as_str());
         return pkcs8_pem.to_string();
     }
 
@@ -239,7 +238,6 @@ mod test {
         // convert key to pkcs8
         let s = convert_to_pkcs8(&s);
 
-        println!("{}", s);
         let key_pair = KeyPair::from_pem(s.as_str()).expect("key pair in file");
         CryptoPrivateKey::from_key_pair(&key_pair).expect("crypto key pair")
     }

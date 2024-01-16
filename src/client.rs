@@ -24,7 +24,8 @@ use tokio::net::{lookup_host, ToSocketAddrs, UdpSocket};
 use tokio::sync::oneshot;
 use tokio::time::timeout;
 use url::Url;
-const DEFAULT_RECEIVE_TIMEOUT: u64 = 1; // 1s
+const DEFAULT_RECEIVE_TIMEOUT_SECONDS: u64 = 2; // 2s
+
 #[derive(Debug)]
 pub enum ObserveMessage {
     Terminate,
@@ -341,7 +342,7 @@ impl<T: Transport> CoAPClient<T> {
             data,
             queries,
             domain,
-            Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
+            Duration::new(DEFAULT_RECEIVE_TIMEOUT_SECONDS, 0),
         )
         .await
     }
@@ -382,7 +383,7 @@ impl<T: Transport> CoAPClient<T> {
         &mut self,
         mut request: CoapRequest<SocketAddr>,
     ) -> IoResult<CoapResponse> {
-        self.send2(&mut request).await?;
+        self.send_request(&mut request).await?;
         self.receive2(&mut request).await
     }
 
@@ -397,7 +398,7 @@ impl<T: Transport> CoAPClient<T> {
         self.observe_with_timeout(
             resource_path,
             handler,
-            Duration::new(DEFAULT_RECEIVE_TIMEOUT, 0),
+            Duration::new(DEFAULT_RECEIVE_TIMEOUT_SECONDS, 0),
         )
         .await
     }
@@ -421,7 +422,7 @@ impl<T: Transport> CoAPClient<T> {
         register_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
         register_packet.set_path(&resource_path);
 
-        self.send(&register_packet).await?;
+        self.send_raw_request(&register_packet).await?;
 
         self.set_receive_timeout(timeout);
         let response = self.receive().await?;
@@ -511,16 +512,21 @@ impl<T: Transport> CoAPClient<T> {
         };
     }
 
-    /// Execute a request.
-    pub async fn send(&mut self, request: &CoapRequest<SocketAddr>) -> IoResult<()> {
+    /// sends a request through the transport. If a request is confirmable, it will attempt
+    /// retries until receiving a response. requests sent using a multicast-address should be non-confirmable
+    /// the user is responsible for setting meaningful fields in the request
+    /// Do not use this method unless you need low-level control over the protocol (e.g.,
+    /// multicast), instead use perform_request for client applications.
+    pub async fn send_raw_request(&mut self, request: &CoapRequest<SocketAddr>) -> IoResult<()> {
         self.transport.send_request(request).await
     }
 
-    /// send a request supporting block1 option based on the block size set in the client
-    pub async fn send2(&mut self, request: &mut CoapRequest<SocketAddr>) -> IoResult<()> {
+    /// low-level method to send a a request supporting block1 option based on
+    /// the block size set in the client, prefer using
+    async fn send_request(&mut self, request: &mut CoapRequest<SocketAddr>) -> IoResult<()> {
         let request_length = request.message.payload.len();
         if request_length <= self.block1_size {
-            return self.send(request).await;
+            return self.send_raw_request(request).await;
         }
         let payload = std::mem::take(&mut request.message.payload);
         let mut it = payload.chunks(self.block1_size).enumerate().peekable();
@@ -536,7 +542,7 @@ impl<T: Transport> CoAPClient<T> {
             request.message.payload = elem.to_vec();
 
             request.message.header.message_id = Self::gen_message_id(&mut self.message_id);
-            self.send(request).await?;
+            self.send_raw_request(request).await?;
             // continue receiving responses until last element
             if it.peek().is_some() {
                 let resp = self.receive().await?;
@@ -585,7 +591,7 @@ impl<T: Transport> CoAPClient<T> {
             response.message = packet;
             match self.intercept_response(request) {
                 Ok(true) => {
-                    self.send(request).await?;
+                    self.send_raw_request(request).await?;
                 }
                 Err(err) => {
                     error!("intercept response error: {:?}", err);

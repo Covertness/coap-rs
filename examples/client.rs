@@ -1,5 +1,6 @@
 extern crate coap;
 
+use coap::client::ObserveMessage;
 use coap::UdpCoAPClient;
 use std::io;
 use std::io::ErrorKind;
@@ -110,7 +111,7 @@ async fn example_delete() {
 
 async fn example_observe() {
     let client = UdpCoAPClient::new_udp("127.0.0.1:5683").await.unwrap();
-    client
+    let observe_channel = client
         .observe("/hello/put", |msg| {
             println!(
                 "resource changed {}",
@@ -120,7 +121,8 @@ async fn example_observe() {
         .await
         .unwrap();
 
-    println!("Press any key to stop...");
+    println!("Enter any key to stop...");
 
     io::stdin().read_line(&mut String::new()).unwrap();
+    observe_channel.send(ObserveMessage::Terminate).unwrap();
 }
