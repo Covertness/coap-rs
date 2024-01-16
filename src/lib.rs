@@ -20,7 +20,9 @@
 //!
 //! ```toml
 //! [dependencies]
-//! coap = "0.13"
+//! coap = "0.14"
+//! coap-lite = "0.11.3"
+//! tokio = {version = "^1.32", features = ["full"]}
 //! ```
 //!
 //! Then, add this to your crate root:
