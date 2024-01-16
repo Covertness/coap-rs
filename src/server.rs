@@ -531,7 +531,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_raw_request(&request).await.unwrap();
 
-        let recv_packet = client.receive().await.unwrap();
+        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -597,7 +597,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_raw_request(&request).await.unwrap();
 
-        let recv_packet = client.receive().await.unwrap();
+        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -624,7 +624,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_raw_request(&packet).await.unwrap();
 
-        let recv_packet = client.receive().await.unwrap();
+        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -649,7 +649,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_raw_request(&packet).await.unwrap();
 
-        let recv_packet = client.receive().await.unwrap();
+        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -677,7 +677,7 @@ pub mod test {
         request.set_path(path);
         request.message.payload = payload1.clone();
         client.send_raw_request(&request).await.unwrap();
-        client.receive().await.unwrap();
+        client.receive_raw_response().await.unwrap();
 
         let mut receive_step = 1;
         let payload1_clone = payload1.clone();
@@ -708,7 +708,7 @@ pub mod test {
             .await
             .unwrap();
         client2.send_raw_request(&request).await.unwrap();
-        client2.receive().await.unwrap();
+        client2.receive_raw_response().await.unwrap();
         assert_eq!(
             tokio::time::timeout(Duration::new(5, 0), rx2.recv())
                 .await
@@ -743,7 +743,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_raw_request(&request).await.unwrap();
 
-        let recv_packet = client.receive().await.unwrap();
+        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
         let mut client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
@@ -763,7 +763,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_all_coap(&request, segment).await.unwrap();
 
-        let recv_packet = client.receive().await.unwrap();
+        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -796,7 +796,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_raw_request(&request).await.unwrap();
 
-        let recv_packet = client.receive().await.unwrap();
+        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
         // use 0xff02 to keep it within this network
@@ -817,7 +817,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_all_coap(&request, segment).await.unwrap();
 
-        let recv_packet = client.receive().await.unwrap();
+        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 

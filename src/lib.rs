@@ -11,8 +11,6 @@
 //! - DTLS support via [webrtc-rs](https://github.com/webrtc-rs/webrtc)
 //! - Option to provide custom transports for client and server
 //!
-//! Missing features:
-//! - Client receiving piggybacked requests
 //!
 //! # Installation
 //!

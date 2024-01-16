@@ -372,12 +372,14 @@ impl<T: Transport> CoAPClient<T> {
     }
 
     /// Send a Request via the given transport, and receive a response.
+    /// users are responsible for filling meaningful fields in the request
+    /// this method supports blockwise requests
     pub async fn perform_request(
         &mut self,
         mut request: CoapRequest<SocketAddr>,
     ) -> IoResult<CoapResponse> {
         self.send_request(&mut request).await?;
-        self.receive2(&mut request).await
+        self.receive(&mut request).await
     }
 
     pub async fn observe<H: FnMut(Packet) + Send + 'static>(
@@ -418,7 +420,7 @@ impl<T: Transport> CoAPClient<T> {
         self.send_raw_request(&register_packet).await?;
 
         self.set_receive_timeout(timeout);
-        let response = self.receive().await?;
+        let response = self.receive_raw_response().await?;
         if *response.get_status() != Status::Content {
             return Err(Error::new(ErrorKind::NotFound, "te resource not found"));
         }
@@ -515,7 +517,7 @@ impl<T: Transport> CoAPClient<T> {
     }
 
     /// low-level method to send a a request supporting block1 option based on
-    /// the block size set in the client, prefer using
+    /// the block size set in the client
     async fn send_request(&mut self, request: &mut CoapRequest<SocketAddr>) -> IoResult<()> {
         let request_length = request.message.payload.len();
         if request_length <= self.block1_size {
@@ -538,7 +540,7 @@ impl<T: Transport> CoAPClient<T> {
             self.send_raw_request(request).await?;
             // continue receiving responses until last element
             if it.peek().is_some() {
-                let resp = self.receive().await?;
+                let resp = self.receive_raw_response().await?;
                 let maybe_block1 = resp
                     .message
                     .get_first_option_as::<BlockValue>(CoapOption::Block1)
@@ -563,17 +565,17 @@ impl<T: Transport> CoAPClient<T> {
         }
         Ok(())
     }
-    /// Receive a response.
-    pub async fn receive(&mut self) -> IoResult<CoapResponse> {
+
+    /// low-level method to receive a response. Prefer using
+    /// Do not use this method unless you need low-level control over the protocol (e.g.,
+    /// multicast), instead use perform_request for client applications.
+    pub async fn receive_raw_response(&mut self) -> IoResult<CoapResponse> {
         let (packet, _) = self.transport.try_receive_packet().await?;
         Ok(CoapResponse { message: packet })
     }
 
     /// Receive a response support block-wise.
-    pub async fn receive2(
-        &mut self,
-        request: &mut CoapRequest<SocketAddr>,
-    ) -> IoResult<CoapResponse> {
+    async fn receive(&mut self, request: &mut CoapRequest<SocketAddr>) -> IoResult<CoapResponse> {
         loop {
             let packet = self.transport.try_receive_packet().await?.0;
             request.response = CoapResponse::new(&request.message);
@@ -989,18 +991,8 @@ mod test {
         }
     }
 
-    #[tokio::test]
-    async fn test_retries() {
-        let server_port = server::test::spawn_server("127.0.0.1:0", |mut req| async {
-            req.response.as_mut().unwrap().message.payload = b"Rust".to_vec();
-            return req;
-        })
-        .recv()
-        .await
-        .unwrap();
-
-        let server_addr = format!("127.0.0.1:{}", server_port);
-        let peer_addr = lookup_host(server_addr.clone())
+    async fn get_faulty_client(server_addr: &str, num_fails: u32) -> CoAPClient<FaultyUdp> {
+        let peer_addr = lookup_host(server_addr)
             .await
             .unwrap()
             .next()
@@ -1013,11 +1005,28 @@ mod test {
         let transport = UdpTransport { socket, peer_addr };
         let transport = FaultyUdp {
             udp: transport,
-            num_fails: ClientTransport::<UdpTransport>::DEFAULT_NUM_RETRIES as u32 + 1,
+            num_fails,
             current_fails: 0.into(),
         };
 
-        let mut client = CoAPClient::from_transport(transport);
+        return CoAPClient::from_transport(transport);
+    }
+    #[tokio::test]
+    async fn test_retries() {
+        let server_port = server::test::spawn_server("127.0.0.1:0", |mut req| async {
+            req.response.as_mut().unwrap().message.payload = b"Rust".to_vec();
+            return req;
+        })
+        .recv()
+        .await
+        .unwrap();
+
+        let server_addr = format!("127.0.0.1:{}", server_port);
+        let mut client = get_faulty_client(
+            &server_addr,
+            ClientTransport::<FaultyUdp>::DEFAULT_NUM_RETRIES as u32 + 1,
+        )
+        .await;
         let error = client
             .request_path("/Rust", Method::Get, None, None, Some(server_addr.clone()))
             .await
@@ -1036,5 +1045,26 @@ mod test {
             .unwrap();
 
         assert_eq!(resp.message.payload, b"Rust".to_vec());
+    }
+    #[tokio::test]
+    async fn test_non_confirmable_no_retries() {
+        let server_port = server::test::spawn_server("127.0.0.1:0", |mut req| async {
+            req.response.as_mut().unwrap().message.payload = b"Rust".to_vec();
+            return req;
+        })
+        .recv()
+        .await
+        .unwrap();
+
+        let server_addr = format!("127.0.0.1:{}", server_port);
+        let mut client = get_faulty_client(&server_addr, 2).await;
+        let mut request = CoapRequest::new();
+        request.set_method(Method::Get);
+        request.set_path("/Rust");
+        request.message.header.message_id = 123;
+        request.message.header.set_type(MessageType::NonConfirmable);
+
+        let req = client.perform_request(request).await;
+        assert!(req.is_err());
     }
 }
