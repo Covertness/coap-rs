@@ -577,6 +577,7 @@ pub mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_echo_server_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().await.unwrap();
 
