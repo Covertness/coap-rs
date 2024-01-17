@@ -58,9 +58,17 @@ impl<T: Transport> ClientTransport<T> {
         let (packet, src) = self.try_receive_packet().await?;
         let msg_type = packet.header.get_type();
         let msg_code = packet.header.code;
-        // case 1: we received an ACK and it is empty
         match (msg_type, msg_code) {
-            (MessageType::Acknowledgement, MessageClass::Empty) => Ok(()),
+            // in case we receive an ack, we expect to receive the content afterwards
+            (MessageType::Acknowledgement, MessageClass::Empty) => {
+                let (next, src) = self.try_receive_packet().await?;
+                let msg_code = packet.header.code;
+                let MessageClass::Response(_) = msg_code else {
+                    return Err(Error::new(ErrorKind::InvalidInput, "expected response"));
+                };
+                self.cache = Some((next, src));
+                Ok(())
+            }
             (_, MessageClass::Response(_)) => {
                 self.cache = Some((packet, src));
                 Ok(())
