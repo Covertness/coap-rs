@@ -37,7 +37,7 @@ fn bench_server_with_request(b: &mut test::Bencher) {
     });
 
     let server_port = rx.blocking_recv().unwrap();
-    let client = rt.block_on(async {
+    let mut client = rt.block_on(async {
         UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap()
@@ -55,8 +55,8 @@ fn bench_server_with_request(b: &mut test::Bencher) {
 
     b.iter(|| {
         rt.block_on(async {
-            client.send(&request).await.unwrap();
-            let recv_packet = client.receive().await.unwrap();
+            client.send_raw_request(&request).await.unwrap();
+            let recv_packet = client.receive_raw_response().await.unwrap();
             assert_eq!(recv_packet.message.payload, b"test".to_vec());
         });
     });

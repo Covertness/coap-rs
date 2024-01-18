@@ -391,7 +391,11 @@ mod test {
             .unwrap();
         // make the psk fail
 
-        let get = UdpCoAPClient::get(&format!("coap://127.0.0.1:{}/hello", server_port)).await;
+        let get = UdpCoAPClient::get_with_timeout(
+            &format!("coap://127.0.0.1:{}/hello", server_port),
+            Duration::from_millis(100),
+        )
+        .await;
         let get_error = get.unwrap_err();
         assert!(get_error.kind() == ErrorKind::TimedOut);
 
