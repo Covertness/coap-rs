@@ -131,7 +131,7 @@ impl<T: Transport> ClientTransport<T> {
             inner: transport,
             cache: None,
             retries: Self::DEFAULT_NUM_RETRIES,
-            timeout: Duration::from_secs(3),
+            timeout: Duration::from_secs(DEFAULT_RECEIVE_TIMEOUT_SECONDS),
         };
     }
 }
@@ -398,12 +398,9 @@ impl<T: Transport> CoAPClient<T> {
     where
         T: 'static + Send + Sync,
     {
-        self.observe_with_timeout(
-            resource_path,
-            handler,
-            Duration::new(DEFAULT_RECEIVE_TIMEOUT_SECONDS, 0),
-        )
-        .await
+        let timeout = self.transport.timeout;
+        self.observe_with_timeout(resource_path, handler, timeout)
+            .await
     }
 
     /// Observe a resource with the handler and specified timeout using the given transport.
