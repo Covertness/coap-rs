@@ -247,7 +247,7 @@ impl CoAPClient<DtlsConnection> {
     }
 }
 
-impl<T: Transport> CoAPClient<T> {
+impl<T: Transport + 'static> CoAPClient<T> {
     const MAX_PAYLOAD_BLOCK: usize = 1024;
     /// Create a CoAP client with a chosen transport type
 
@@ -412,27 +412,50 @@ impl<T: Transport> CoAPClient<T> {
     pub async fn observe_with_timeout<H: FnMut(Packet) + Send + 'static>(
         mut self,
         resource_path: &str,
-        mut handler: H,
+        handler: H,
         timeout: Duration,
     ) -> IoResult<oneshot::Sender<ObserveMessage>>
     where
         T: 'static + Send + Sync,
     {
         // TODO: support observe multi resources at the same time
-        let mut message_id = self.message_id;
-        let mut register_packet = CoapRequest::new();
+        let mut message_id = Self::gen_message_id(&mut self.message_id);
+
+        let request_factory = move || {
+            let mut register_packet = CoapRequest::new();
+            register_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
+            register_packet.set_path(&resource_path);
+            register_packet
+        };
+        self.set_receive_timeout(timeout);
+        self.observe_with_factory(request_factory, handler).await
+    }
+
+    /// observe a resource with a given transport using your own function to
+    /// generate requests. Use this method if you need to set some specific options in your
+    /// requests. This method will add observe flags and a message id as a fallback
+    pub async fn observe_with_factory<
+        Fac: FnOnce() -> CoapRequest<SocketAddr>,
+        H: FnMut(Packet) + Send + 'static,
+    >(
+        mut self,
+        factory: Fac,
+        mut handler: H,
+    ) -> IoResult<oneshot::Sender<ObserveMessage>> {
+        let mut register_packet = factory();
+        if 0 == register_packet.message.header.message_id {
+            register_packet.message.header.message_id = Self::gen_message_id(&mut self.message_id);
+        }
         register_packet.set_observe_flag(ObserveOption::Register);
-        register_packet.message.header.message_id = Self::gen_message_id(&mut message_id);
-        register_packet.set_path(&resource_path);
 
         self.send_raw_request(&register_packet).await?;
-
-        self.set_receive_timeout(timeout);
         let response = self.receive_raw_response().await?;
         if *response.get_status() != Status::Content {
-            return Err(Error::new(ErrorKind::NotFound, "te resource not found"));
+            return Err(Error::new(ErrorKind::NotFound, "the resource not found"));
         }
+        let mut message_id = register_packet.message.header.message_id;
 
+        let resource_path = register_packet.get_path();
         handler(response.message);
 
         let (tx, rx) = oneshot::channel();
