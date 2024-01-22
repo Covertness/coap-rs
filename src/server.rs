@@ -299,6 +299,7 @@ pub struct QueuedMessage {
 struct ServerCoapState {
     observer: Observer,
     block_handler: BlockHandler<SocketAddr>,
+    disable_observe: bool,
 }
 
 pub enum ShouldForwardToHandler {
@@ -317,6 +318,11 @@ impl ServerCoapState {
             Err(_err) => return ShouldForwardToHandler::False,
             Ok(false) => {}
         };
+
+        if self.disable_observe {
+            return ShouldForwardToHandler::True;
+        }
+
         let should_be_forwarded = self.observer.request_handler(request, responder).await;
         if should_be_forwarded {
             return ShouldForwardToHandler::True;
@@ -337,7 +343,11 @@ impl ServerCoapState {
         Self {
             observer: Observer::new(),
             block_handler: BlockHandler::new(BlockHandlerConfig::default()),
+            disable_observe: false,
         }
+    }
+    pub fn disable_observe_handling(&mut self, value: bool) {
+        self.disable_observe = value
     }
 }
 
@@ -426,6 +436,11 @@ impl Server {
             responder.respond(b).await;
         }
     }
+    /// disable auto-observe handling in server
+    pub async fn disable_observe_handling(&mut self, value: bool) {
+        let mut coap_state = self.coap_state.lock().await;
+        coap_state.disable_observe_handling(value)
+    }
 }
 
 #[cfg(test)]
@@ -503,6 +518,30 @@ pub mod test {
                     })
             })
             .unwrap();
+
+        rx
+    }
+
+    pub fn spawn_server_disable_observe<
+        F: Fn(Box<CoapRequest<SocketAddr>>) -> HandlerRet + Send + Sync + 'static,
+        HandlerRet,
+    >(
+        ip: &'static str,
+        request_handler: F,
+    ) -> mpsc::UnboundedReceiver<u16>
+    where
+        HandlerRet: Future<Output = Box<CoapRequest<SocketAddr>>> + Send,
+    {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let _task = tokio::spawn(async move {
+            let sock = UdpSocket::bind(ip).await.unwrap();
+            let addr = sock.local_addr().unwrap();
+            let listener = Box::new(UdpCoapListener::from_socket(sock));
+            let mut server = Server::from_listeners(vec![listener]);
+            server.disable_observe_handling(true).await;
+            tx.send(addr.port()).unwrap();
+            server.run(request_handler).await.unwrap();
+        });
 
         rx
     }
@@ -711,6 +750,36 @@ pub mod test {
         client2.receive_raw_response().await.unwrap();
         assert_eq!(
             tokio::time::timeout(Duration::new(5, 0), rx2.recv())
+                .await
+                .unwrap(),
+            Some(())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_observe_transparent_transmission() {
+        let path = "/test";
+        let (tx, mut rx) = mpsc::unbounded_channel();
+
+        let server_port = spawn_server_disable_observe("127.0.0.1:0", request_handler)
+            .recv()
+            .await
+            .unwrap();
+
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+            .await
+            .unwrap();
+
+        client
+            .observe(path, move |msg| {
+                assert_eq!(msg.payload, b"test".to_vec());
+                tx.send(()).unwrap();
+            })
+            .await
+            .unwrap();
+
+        assert_eq!(
+            tokio::time::timeout(Duration::new(5, 0), rx.recv())
                 .await
                 .unwrap(),
             Some(())
