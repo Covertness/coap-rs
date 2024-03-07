@@ -62,7 +62,7 @@ impl<T: Transport> ClientTransport<T> {
             // in case we receive an ack, we expect to receive the content afterwards
             (MessageType::Acknowledgement, MessageClass::Empty) => {
                 let (next, src) = self.try_receive_packet().await?;
-                let msg_code = packet.header.code;
+                let msg_code = next.header.code;
                 let MessageClass::Response(_) = msg_code else {
                     return Err(Error::new(ErrorKind::InvalidInput, "expected response"));
                 };
@@ -78,6 +78,20 @@ impl<T: Transport> ClientTransport<T> {
     }
 
     pub async fn try_receive_packet(&mut self) -> IoResult<(Packet, SocketAddr)> {
+        let result = self.try_receive_internal().await?;
+        if result.0.header.get_type() == MessageType::Confirmable {
+            self.send_ack_for_confirmable_packet(&result.0).await;
+        }
+        return Ok(result);
+    }
+    async fn send_ack_for_confirmable_packet(&mut self, packet: &Packet) {
+        let mut ack = Packet::new();
+        ack.header.set_type(MessageType::Acknowledgement);
+        ack.header.message_id = packet.header.message_id;
+        let _ = self.inner.send(&ack.to_bytes().unwrap()).await;
+    }
+
+    async fn try_receive_internal(&mut self) -> IoResult<(Packet, SocketAddr)> {
         let mut buf = [0; 1500];
         if let Some(p) = self.cache.take() {
             return Ok(p);
@@ -87,6 +101,7 @@ impl<T: Transport> ClientTransport<T> {
             .map_err(|_| Error::new(ErrorKind::InvalidInput, "packet error"))?;
         return Ok((packet, src));
     }
+
     /// tries to send a confirmable message with retries and timeouts
     async fn try_send_confirmable_message(&mut self, msg: &[u8]) -> IoResult<()> {
         for _ in 0..self.retries {
