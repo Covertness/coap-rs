@@ -1,6 +1,6 @@
 [package]
 name = "coap"
-version = "0.14.3"
+version = "0.14.4"
 description = "A CoAP library"
 readme = "README.md"
 documentation = "https://docs.rs/coap/"
