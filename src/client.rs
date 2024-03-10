@@ -62,7 +62,7 @@ impl<T: Transport> ClientTransport<T> {
             // in case we receive an ack, we expect to receive the content afterwards
             (MessageType::Acknowledgement, MessageClass::Empty) => {
                 let (next, src) = self.try_receive_packet().await?;
-                let msg_code = packet.header.code;
+                let msg_code = next.header.code;
                 let MessageClass::Response(_) = msg_code else {
                     return Err(Error::new(ErrorKind::InvalidInput, "expected response"));
                 };
@@ -78,15 +78,43 @@ impl<T: Transport> ClientTransport<T> {
     }
 
     pub async fn try_receive_packet(&mut self) -> IoResult<(Packet, SocketAddr)> {
-        let mut buf = [0; 1500];
-        if let Some(p) = self.cache.take() {
-            return Ok(p);
+        let result = self.try_receive_internal().await?;
+        return Ok(result);
+    }
+    async fn intercept_packet_for_acks(&mut self, packet: &Packet) {
+        match (packet.header.get_type(), packet.header.code) {
+            (MessageType::Confirmable, MessageClass::Response(_)) => {
+                self.send_ack_for_confirmable_response(&packet).await
+            }
+            _ => {}
         }
+    }
+    async fn send_ack_for_confirmable_response(&mut self, packet: &Packet) {
+        let mut ack = Packet::new();
+        ack.header.set_type(MessageType::Acknowledgement);
+        ack.header.message_id = packet.header.message_id;
+        ack.header.code = MessageClass::Empty;
+        let _ = self.inner.send(&ack.to_bytes().unwrap()).await;
+    }
+
+    async fn receive_internal_no_cache(&mut self) -> IoResult<(Packet, SocketAddr)> {
+        let mut buf = [0; 1500];
         let (nread, src) = timeout(self.timeout, self.inner.recv(&mut buf)).await??;
         let packet = Packet::from_bytes(&buf[..nread])
             .map_err(|_| Error::new(ErrorKind::InvalidInput, "packet error"))?;
         return Ok((packet, src));
     }
+
+    async fn try_receive_internal(&mut self) -> IoResult<(Packet, SocketAddr)> {
+        if let Some(p) = self.cache.take() {
+            return Ok(p);
+        }
+        let p = self.receive_internal_no_cache().await?;
+        let (packet, addr) = &p;
+        self.intercept_packet_for_acks(packet).await;
+        return Ok(p);
+    }
+
     /// tries to send a confirmable message with retries and timeouts
     async fn try_send_confirmable_message(&mut self, msg: &[u8]) -> IoResult<()> {
         for _ in 0..self.retries {
