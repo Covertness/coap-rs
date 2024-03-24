@@ -95,4 +95,5 @@ pub mod client;
 #[cfg(feature = "dtls")]
 pub mod dtls;
 mod observer;
+pub mod request;
 pub mod server;
