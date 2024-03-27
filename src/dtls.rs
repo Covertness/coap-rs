@@ -139,6 +139,7 @@ pub struct DtlsConfig {
 mod test {
     use super::*;
     use crate::client::CoAPClient;
+    use crate::request::RequestBuilder;
     use crate::server::UdpCoapListener;
     use crate::{Server, UdpCoAPClient};
     use coap_lite::{CoapOption, CoapRequest, RequestType as Method};
@@ -326,7 +327,16 @@ mod test {
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
         let resp = client
-            .request_path("/hello", Method::Get, None, None, Some(domain.to_string()))
+            .send(
+                RequestBuilder::request_path(
+                    "/hello",
+                    Method::Get,
+                    None,
+                    None,
+                    Some(domain.to_string()),
+                )
+                .build(),
+            )
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"hello".to_vec());
@@ -353,7 +363,16 @@ mod test {
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
         let resp = client
-            .request_path("/hello", Method::Get, None, None, Some(domain.to_string()))
+            .send(
+                RequestBuilder::request_path(
+                    "/hello",
+                    Method::Get,
+                    None,
+                    None,
+                    Some(domain.to_string()),
+                )
+                .build(),
+            )
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"hello".to_vec());
@@ -413,7 +432,16 @@ mod test {
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
         let resp = client
-            .request_path("/hello", Method::Get, None, None, Some(domain.to_string()))
+            .send(
+                RequestBuilder::request_path(
+                    "/hello",
+                    Method::Get,
+                    None,
+                    None,
+                    Some(domain.to_string()),
+                )
+                .build(),
+            )
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"hello".to_vec());
@@ -460,12 +488,15 @@ mod test {
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", dtls);
         let resp = client
-            .request_path(
-                "/hello_dtls",
-                Method::Get,
-                None,
-                None,
-                Some(domain.to_string()),
+            .send(
+                RequestBuilder::request_path(
+                    "/hello_dtls",
+                    Method::Get,
+                    None,
+                    None,
+                    Some(domain.to_string()),
+                )
+                .build(),
             )
             .await
             .unwrap();

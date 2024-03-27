@@ -445,6 +445,8 @@ impl Server {
 
 #[cfg(test)]
 pub mod test {
+    use crate::request::RequestBuilder;
+
     use super::super::*;
     use super::*;
     use coap_lite::{block_handler::BlockValue, CoapOption, RequestType};
@@ -589,17 +591,12 @@ pub mod test {
         let server_string = format!("127.0.0.1:{}", server_port);
         let mut client = UdpCoAPClient::new_udp(server_string.clone()).await.unwrap();
 
-        let resp = client
-            .request_path(
-                "/large",
-                RequestType::Put,
-                Some(v),
-                None,
-                Some(server_string.clone()),
-            )
-            .await
-            .unwrap();
-        //assert_eq!(resp.message.payload, b"Created".to_vec());
+        let request = RequestBuilder::new("/large", RequestType::Put)
+            .data(Some(v))
+            .domain(server_string.clone())
+            .build();
+
+        let resp = client.send(request).await.unwrap();
         let block_opt = resp
             .message
             .get_first_option_as::<BlockValue>(CoapOption::Block1)
