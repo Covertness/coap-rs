@@ -14,15 +14,24 @@ use futures::Future;
 use log::*;
 use lru_time_cache::LruCache;
 use regex::Regex;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::time::Duration;
+use std::{
+    collections::BTreeMap,
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+};
 use std::{
     io::{Error, ErrorKind, Result as IoResult},
     pin::Pin,
 };
-use tokio::net::{lookup_host, ToSocketAddrs, UdpSocket};
-use tokio::sync::oneshot;
+use std::{sync::Arc, time::Duration};
+use tokio::sync::{
+    mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    oneshot, Mutex,
+};
 use tokio::time::timeout;
+use tokio::{
+    net::{lookup_host, ToSocketAddrs, UdpSocket},
+    sync::RwLock,
+};
 use url::Url;
 const DEFAULT_RECEIVE_TIMEOUT_SECONDS: u64 = 2; // 2s
 
@@ -37,72 +46,159 @@ use async_trait::async_trait;
 /// representing a one-to-one connection between a client and server
 /// timeouts and retries do not need to be implemented by the transport
 /// if confirmable messages are sent
-pub trait Transport: Send {
+pub trait Transport: Send + Sync {
     async fn recv(&self, buf: &mut [u8]) -> std::io::Result<(usize, SocketAddr)>;
     async fn send(&self, buf: &[u8]) -> std::io::Result<usize>;
 }
 
+trait TransportExt {
+    async fn receive_packet(&self) -> IoResult<Option<(Packet, SocketAddr)>>;
+}
+
+impl<T: Transport> TransportExt for T {
+    async fn receive_packet(&self) -> IoResult<Option<(Packet, SocketAddr)>> {
+        let mut buf = [0; 1500];
+        let (nread, src) = timeout(self.timeout, self.inner.recv(&mut buf)).await??;
+        let parse_opt = Packet::from_bytes(&buf[..nread]).ok().map(|p| (p, src));
+        return Ok(parse_opt);
+    }
+}
+
+/// we only use the token as the identifier, and an empty token to represent empty requests
+type Token = Vec<u8>;
+type PacketRegistry = BTreeMap<Token, UnboundedSender<Packet>>;
+
+#[derive(Clone)]
+struct TransportSynchronizer {
+    pub(crate) outgoing: Arc<Mutex<PacketRegistry>>,
+    fail_error: Arc<RwLock<Option<std::io::Error>>>,
+}
+impl TransportSynchronizer {
+    async fn check_for_error(&self, sender: &UnboundedSender<IoResult<Packet>>) -> Option<()> {
+        if let Some(ref err) = self.fail_error.read().await {
+            sender.send(Err(Self::clone_err(err)));
+            None
+        }
+        Some(())
+    }
+
+    fn clone_err(error: &std::io::Error) -> std::io::Error {
+        let s = error.to_string();
+        let k = error.kind();
+        std::io::Error::new(k, s)
+    }
+
+    pub async fn fail(self, error: std::io::Error) {
+        let error_clone = Self::clone_err(&error);
+        self.fail_error.write().await.insert(error_clone);
+        let mutex = self.outgoing.lock().await;
+        let keys = mutex.keys();
+        for k in keys {
+            let error_clone = Self::clone_err(&error);
+            let _ = mutex.remove(k).map(|resp| resp.send(error_clone));
+        }
+    }
+
+    pub async fn get_sender(&self, key: &[u8]) -> Option<UnboundedSender<IoResult<Packet>>> {
+        self.outgoing
+            .lock()
+            .await
+            .get(key)
+            .map(UnboundedSender::clone)
+    }
+    /// Sets the sender of a given key,
+    /// returns the previous key if it was set
+    pub async fn set_sender(
+        &self,
+        key: Vec<u8>,
+        sender: UnboundedSender<IoResult<Packet>>,
+    ) -> Option<UnboundedSender<IoResult<Packet>>> {
+        self.check_for_error(&sender).await?;
+        self.outgoing.lock().await.insert(key, sender)
+    }
+    pub async fn remove_sender(&self, key: &[u8]) -> Option<UnboundedSender<IoResult<Packet>>> {
+        self.outgoing.lock().await.remove(key)
+    }
+}
+
+async fn receive_loop<T: Transport + 'static>(
+    transport: T,
+    transport_sync: TransportSynchronizer,
+    response_sender: UnboundedSender<Vec<u8>>,
+) -> std::io::Result<()> {
+    let err = loop {
+        let recv_res = transport.receive_packet().await;
+        let option_packet = match recv_res {
+            Err(e) => break e,
+            Ok(o) => o,
+        };
+        let Some((packet, _src)) = transport.receive_packet().await? else {
+            trace!("unexpected malformed packet received");
+            continue;
+        };
+        if let Some(ack) = parse_for_ack(&packet) {
+            response_sender.send(ack);
+        }
+
+        let MessageClass::Response(_) = packet.header.code else {
+            continue;
+        };
+
+        let token = packet.get_token();
+        let Some(sender) = transport_sync.get_sender(token).await else {
+            info!("received unexpected response for token {:?}", &token);
+            continue;
+        };
+        match packet.header.code {
+            MessageClass::Response(_) => {}
+            m => {
+                debug!("unknown message type {}", m);
+                continue;
+            }
+        };
+        let Ok(_) = sender.send(Ok(packet)) else {
+            debug!("unexpected drop of oneshot sender");
+            continue;
+        };
+    };
+    transport_sync.fail(err).await;
+}
+
+pub fn parse_for_ack(packet: &Packet) -> Option<Vec<u8>> {
+    match (packet.header.get_type(), packet.header.code) {
+        (MessageType::Confirmable, MessageClass::Response(_)) => Some(make_ack(packet)),
+        _ => None,
+    }
+}
+
+pub fn make_ack(packet: &Packet) -> Vec<u8> {
+    let mut ack = Packet::new();
+    ack.header.set_type(MessageType::Acknowledgement);
+    ack.header.message_id = packet.header.message_id;
+    ack.header.code = MessageClass::Empty;
+    return ack.to_bytes().unwrap();
+}
+
 /// a wrapper for transports responsible for retries and timeouts
-struct ClientTransport<T> {
-    pub(crate) inner: T,
-    cache: Option<(Packet, SocketAddr)>,
+struct ClientTransport<T: Transport> {
+    pub(crate) transport: Arc<T>,
+    pub(crate) synchronizer: TransportSynchronizer,
     pub(crate) retries: usize,
     pub(crate) timeout: Duration,
 }
 
 impl<T: Transport> ClientTransport<T> {
     pub const DEFAULT_NUM_RETRIES: usize = 5;
-    async fn send_confirmable_message(&mut self, msg: &[u8]) -> IoResult<()> {
-        self.cache = None;
-        self.inner.send(&msg).await?;
-        let (packet, src) = self.try_receive_packet().await?;
-        let msg_type = packet.header.get_type();
-        let msg_code = packet.header.code;
-        match (msg_type, msg_code) {
-            // in case we receive an ack, we expect to receive the content afterwards
-            (MessageType::Acknowledgement, MessageClass::Empty) => {
-                let (next, src) = self.try_receive_packet().await?;
-                let msg_code = next.header.code;
-                let MessageClass::Response(_) = msg_code else {
-                    return Err(Error::new(ErrorKind::InvalidInput, "expected response"));
-                };
-                self.cache = Some((next, src));
-                Ok(())
-            }
-            (_, MessageClass::Response(_)) => {
-                self.cache = Some((packet, src));
-                Ok(())
-            }
-            (_, _) => Err(Error::new(ErrorKind::InvalidInput, "protocol error")),
-        }
+    async fn establish_receiver_for(&self, msg: &Packet) -> UnboundedReceiver<IoResult<Packet>> {
+        let (tx, rx) = unbounded_channel();
+        let token = msg.get_token().to_owned();
+        self.synchronizer.set_sender(token, tx).await;
+        return rx;
     }
 
     pub async fn try_receive_packet(&mut self) -> IoResult<(Packet, SocketAddr)> {
         let result = self.try_receive_internal().await?;
         return Ok(result);
-    }
-    async fn intercept_packet_for_acks(&mut self, packet: &Packet) {
-        match (packet.header.get_type(), packet.header.code) {
-            (MessageType::Confirmable, MessageClass::Response(_)) => {
-                self.send_ack_for_confirmable_response(&packet).await
-            }
-            _ => {}
-        }
-    }
-    async fn send_ack_for_confirmable_response(&mut self, packet: &Packet) {
-        let mut ack = Packet::new();
-        ack.header.set_type(MessageType::Acknowledgement);
-        ack.header.message_id = packet.header.message_id;
-        ack.header.code = MessageClass::Empty;
-        let _ = self.inner.send(&ack.to_bytes().unwrap()).await;
-    }
-
-    async fn receive_internal_no_cache(&mut self) -> IoResult<(Packet, SocketAddr)> {
-        let mut buf = [0; 1500];
-        let (nread, src) = timeout(self.timeout, self.inner.recv(&mut buf)).await??;
-        let packet = Packet::from_bytes(&buf[..nread])
-            .map_err(|_| Error::new(ErrorKind::InvalidInput, "packet error"))?;
-        return Ok((packet, src));
     }
 
     async fn try_receive_internal(&mut self) -> IoResult<(Packet, SocketAddr)> {
@@ -116,35 +212,67 @@ impl<T: Transport> ClientTransport<T> {
     }
 
     /// tries to send a confirmable message with retries and timeouts
-    async fn try_send_confirmable_message(&mut self, msg: &[u8]) -> IoResult<()> {
+    async fn try_send_confirmable_message(
+        &self,
+        msg: &Packet,
+        receiver: &mut UnboundedReceiver<IoResult<Packet>>,
+    ) -> IoResult<Packet> {
+        let mut res = Err(Error::new(ErrorKind::InvalidData, "not enough retries"));
         for _ in 0..self.retries {
-            let try_send = timeout(self.timeout, self.send_confirmable_message(msg)).await;
-            if let Ok(Ok(res)) = try_send {
-                return Ok(res);
+            res = self.try_send_non_confirmable_message(&msg, receiver).await;
+            if res.is_ok() {
+                return res;
             }
+        }
+        return res;
+    }
+
+    fn encode_packet(packet: &Packet) -> IoResult<Vec<u8>> {
+        packet
+            .to_bytes()
+            .map_err(|e| std::io::Error::new(ErrorKind::InvalidData, e.to_string()))
+    }
+
+    async fn try_send_non_confirmable_message(
+        &self,
+        msg: &Packet,
+        receiver: &mut UnboundedReceiver<IoResult<Packet>>,
+    ) -> IoResult<Packet> {
+        let bytes = Self::encode_packet(msg)?;
+        self.transport.send(&bytes).await;
+        let try_receive: Result<Option<Result<Packet, Error>>, tokio::time::error::Elapsed> =
+            timeout(self.timeout, receiver.recv()).await;
+        if let Ok(Some(res)) = try_receive {
+            return res;
         }
         Err(Error::new(ErrorKind::TimedOut, "send timeout"))
     }
 
-    async fn send_non_confirmable_message(&mut self, msg: &[u8]) -> IoResult<()> {
-        self.cache = None;
-        self.inner.send(&msg).await?;
-        Ok(())
-    }
-
-    pub async fn send_request(&mut self, request: &CoapRequest<SocketAddr>) -> IoResult<()> {
-        self.send_packet(&request.message).await
-    }
-
-    pub async fn send_packet(&mut self, packet: &Packet) -> IoResult<()> {
+    async fn do_request_response_for_packet_inner(
+        &self,
+        packet: &Packet,
+        receiver: &mut UnboundedReceiver<IoResult<Packet>>,
+    ) -> IoResult<Packet> {
         if packet.header.get_type() == MessageType::Confirmable {
-            self.try_send_confirmable_message(&packet.to_bytes().unwrap())
-                .await?;
+            return self.try_send_confirmable_message(&packet, receiver).await;
         } else {
-            self.send_non_confirmable_message(&packet.to_bytes().unwrap())
-                .await?;
+            return self
+                .try_send_non_confirmable_message(&packet, receiver)
+                .await;
         }
-        Ok(())
+    }
+
+    pub async fn send_packet(&self, packet: &Packet) -> IoResult<Packet> {
+        self.do_request_response_for_packet(packet).await
+    }
+
+    pub async fn do_request_response_for_packet(&self, packet: &Packet) -> IoResult<Packet> {
+        let mut receiver = self.establish_receiver_for(packet).await;
+        let result = self
+            .do_request_response_for_packet_inner(packet, &mut receiver)
+            .await;
+        self.synchronizer.remove_sender(packet.get_token()).await;
+        result
     }
 
     pub async fn receive_packet_no_timeout(&mut self) -> IoResult<(Packet, SocketAddr)> {
@@ -414,7 +542,8 @@ impl<T: Transport + 'static> CoAPClient<T> {
         &mut self,
         mut request: CoapRequest<SocketAddr>,
     ) -> IoResult<CoapResponse> {
-        self.send_request(&mut request).await?;
+        let first_response = self.send_request(&mut request).await?;
+        request.response = Some(first_response);
         self.receive(&mut request).await
     }
 
@@ -473,7 +602,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
         }
         register_packet.set_observe_flag(ObserveOption::Register);
 
-        self.send_raw_request(&register_packet).await?;
+        self.send_single_request(&register_packet).await?;
         let response = self.receive_raw_response().await?;
         if *response.get_status() != Status::Content {
             return Err(Error::new(ErrorKind::NotFound, "the resource not found"));
@@ -525,7 +654,10 @@ impl<T: Transport + 'static> CoAPClient<T> {
         deregister_packet.set_observe_flag(ObserveOption::Deregister);
         deregister_packet.set_path(observe_path);
 
-        let _ = self.transport.send_packet(&deregister_packet.message).await;
+        let _ = self
+            .transport
+            .do_request_response_for_packet(&deregister_packet.message)
+            .await;
         let _ = self.transport.try_receive_packet().await.unwrap();
     }
 
@@ -546,7 +678,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
                     packet.header.message_id = response.message.header.message_id;
                     packet.set_token(response.message.get_token().into());
 
-                    match self.transport.send_packet(&packet).await {
+                    match self.transport.do_request_response_for_packet(&packet).await {
                         Ok(_) => (),
                         Err(e) => {
                             warn!("reply ack failed {}", e)
@@ -568,19 +700,28 @@ impl<T: Transport + 'static> CoAPClient<T> {
     /// the user is responsible for setting meaningful fields in the request
     /// Do not use this method unless you need low-level control over the protocol (e.g.,
     /// multicast), instead use perform_request for client applications.
-    pub async fn send_raw_request(&mut self, request: &CoapRequest<SocketAddr>) -> IoResult<()> {
-        self.transport.send_request(request).await
+    pub async fn send_single_request(
+        &self,
+        request: &CoapRequest<SocketAddr>,
+    ) -> IoResult<CoapResponse> {
+        let response = self.transport.send_packet(&request.message).await?;
+        Ok(CoapResponse { message: response })
     }
 
     /// low-level method to send a a request supporting block1 option based on
     /// the block size set in the client
-    async fn send_request(&mut self, request: &mut CoapRequest<SocketAddr>) -> IoResult<()> {
+    async fn send_request(
+        &mut self,
+        request: &mut CoapRequest<SocketAddr>,
+    ) -> IoResult<CoapResponse> {
         let request_length = request.message.payload.len();
         if request_length <= self.block1_size {
-            return self.send_raw_request(request).await;
+            return self.send_single_request(request).await;
         }
         let payload = std::mem::take(&mut request.message.payload);
         let mut it = payload.chunks(self.block1_size).enumerate().peekable();
+        let mut result = Err(Error::new(ErrorKind::Other, "unknown error occurred"));
+
         while let Some((idx, elem)) = it.next() {
             let more_blocks = it.peek().is_some();
             let block = BlockValue::new(idx, more_blocks, self.block1_size)
@@ -593,10 +734,9 @@ impl<T: Transport + 'static> CoAPClient<T> {
             request.message.payload = elem.to_vec();
 
             request.message.header.message_id = Self::gen_message_id(&mut self.message_id);
-            self.send_raw_request(request).await?;
+            let resp = self.send_single_request(request).await?;
             // continue receiving responses until last element
             if it.peek().is_some() {
-                let resp = self.receive_raw_response().await?;
                 let maybe_block1 = resp
                     .message
                     .get_first_option_as::<BlockValue>(CoapOption::Block1)
@@ -618,14 +758,15 @@ impl<T: Transport + 'static> CoAPClient<T> {
                     ));
                 }
             }
+            result = Ok(resp);
         }
-        Ok(())
+        return result;
     }
 
     /// low-level method to receive a response. Prefer using
     /// Do not use this method unless you need low-level control over the protocol (e.g.,
     /// multicast), instead use perform_request for client applications.
-    pub async fn receive_raw_response(&mut self) -> IoResult<CoapResponse> {
+    async fn receive_raw_response(&mut self) -> IoResult<CoapResponse> {
         let (packet, _) = self.transport.try_receive_packet().await?;
         Ok(CoapResponse { message: packet })
     }
@@ -633,16 +774,10 @@ impl<T: Transport + 'static> CoAPClient<T> {
     /// Receive a response support block-wise.
     async fn receive(&mut self, request: &mut CoapRequest<SocketAddr>) -> IoResult<CoapResponse> {
         loop {
-            let packet = self.transport.try_receive_packet().await?.0;
-            request.response = CoapResponse::new(&request.message);
-            let response = request
-                .response
-                .as_mut()
-                .ok_or_else(|| Error::new(ErrorKind::Interrupted, "packet error"))?;
-            response.message = packet;
             match self.intercept_response(request) {
                 Ok(true) => {
-                    self.send_raw_request(request).await?;
+                    let resp = self.send_single_request(request).await?;
+                    request.response = Some(resp);
                 }
                 Err(err) => {
                     error!("intercept response error: {:?}", err);

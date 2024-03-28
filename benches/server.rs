@@ -55,7 +55,7 @@ fn bench_server_with_request(b: &mut test::Bencher) {
 
     b.iter(|| {
         rt.block_on(async {
-            client.send_raw_request(&request).await.unwrap();
+            client.send_single_request(&request).await.unwrap();
             let recv_packet = client.receive_raw_response().await.unwrap();
             assert_eq!(recv_packet.message.payload, b"test".to_vec());
         });

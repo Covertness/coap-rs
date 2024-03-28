@@ -474,7 +474,7 @@ mod test {
         request.set_method(coap_lite::RequestType::Put);
         request.set_path(path);
         request.message.payload = payload1.clone();
-        client.send_raw_request(&request).await.unwrap();
+        client.send_single_request(&request).await.unwrap();
         client.receive_raw_response().await.unwrap();
 
         let payload1_clone = payload1.clone();
@@ -508,7 +508,7 @@ mod test {
         request.message.payload = payload2.clone();
 
         let mut client2 = UdpCoAPClient::new_udp(server_address).await.unwrap();
-        client2.send_raw_request(&request).await.unwrap();
+        client2.send_single_request(&request).await.unwrap();
         client2.receive_raw_response().await.unwrap();
         assert_eq!(
             tokio::time::timeout(Duration::new(5, 0), rx2.recv())
@@ -536,7 +536,7 @@ mod test {
         request.set_method(coap_lite::RequestType::Put);
         request.set_path(path);
         request.message.payload = payload1.clone();
-        client.send_raw_request(&request).await.unwrap();
+        client.send_single_request(&request).await.unwrap();
         client.receive_raw_response().await.unwrap();
 
         let payload1_clone = payload1.clone();
@@ -551,7 +551,7 @@ mod test {
         request.message.payload = payload2.clone();
 
         let mut client3 = UdpCoAPClient::new_udp(server_address).await.unwrap();
-        client3.send_raw_request(&request).await.unwrap();
+        client3.send_single_request(&request).await.unwrap();
         client3.receive_raw_response().await.unwrap();
     }
 
