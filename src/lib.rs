@@ -18,7 +18,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! coap = "0.14"
+//! coap = "0.15"
 //! coap-lite = "0.11.3"
 //! tokio = {version = "^1.32", features = ["full"]}
 //! ```
@@ -95,4 +95,5 @@ pub mod client;
 #[cfg(feature = "dtls")]
 pub mod dtls;
 mod observer;
+pub mod request;
 pub mod server;

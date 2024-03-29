@@ -3,6 +3,7 @@
 extern crate coap;
 use coap::client::CoAPClient;
 use coap::dtls::DtlsConfig;
+use coap::request::RequestBuilder;
 use coap::Server;
 use coap_lite::{CoapRequest, RequestType as Method};
 use std::future::Future;
@@ -72,10 +73,11 @@ async fn main() {
         .await
         .expect("could not create client");
     let domain = format!("127.0.0.1:{}", server_port);
-    let resp = client
-        .request_path("/hello", Method::Get, None, None, Some(domain.to_string()))
-        .await
-        .unwrap();
+
+    let request = RequestBuilder::new("/hello", Method::Get)
+        .domain(domain.to_string())
+        .build();
+    let resp = client.send(request).await.unwrap();
     println!(
         "receive on client:  {}",
         std::str::from_utf8(&resp.message.payload).unwrap()
