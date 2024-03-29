@@ -449,6 +449,7 @@ pub mod test {
     use super::*;
     use coap_lite::{block_handler::BlockValue, CoapOption, RequestType};
     use std::time::Duration;
+    use tokio::sync::mpsc::unbounded_channel;
 
     pub fn spawn_server<
         F: Fn(Box<CoapRequest<SocketAddr>>) -> HandlerRet + Send + Sync + 'static,
@@ -570,7 +571,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_single_request(&request).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.perform_request(request).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -634,9 +635,8 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_single_request(&request).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.perform_request(request).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -661,9 +661,7 @@ pub mod test {
         packet
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_single_request(&packet).await.unwrap();
-
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.perform_request(packet).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -686,9 +684,8 @@ pub mod test {
         packet
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_single_request(&packet).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.perform_request(packet).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -715,8 +712,7 @@ pub mod test {
         request.set_method(RequestType::Put);
         request.set_path(path);
         request.message.payload = payload1.clone();
-        client.send_single_request(&request).await.unwrap();
-        client.receive_raw_response().await.unwrap();
+        client.perform_request(request.clone()).await.unwrap();
 
         let mut receive_step = 1;
         let payload1_clone = payload1.clone();
@@ -746,8 +742,7 @@ pub mod test {
         let mut client2 = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
-        client2.send_single_request(&request).await.unwrap();
-        client2.receive_raw_response().await.unwrap();
+        let _ = client2.perform_request(request).await.unwrap();
         assert_eq!(
             tokio::time::timeout(Duration::new(5, 0), rx2.recv())
                 .await
@@ -810,9 +805,8 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_single_request(&request).await.unwrap();
+        let recv_packet = client.perform_request(request).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
         let mut client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
@@ -831,9 +825,11 @@ pub mod test {
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_all_coap(&request, segment).await.unwrap();
-
-        let recv_packet = client.receive_raw_response().await.unwrap();
-        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
+        let (tx, mut rx) = unbounded_channel();
+        client.create_receiver_for(&request, tx);
+        client.send_all_coap(&request, segment).await.unwrap();
+        let recv_packet = rx.recv().await.unwrap().unwrap();
+        assert_eq!(recv_packet.payload, b"test-echo".to_vec());
     }
 
     //This test right now does not work on windows
@@ -842,6 +838,8 @@ pub mod test {
     #[ignore]
     async fn multicast_server_all_coap_v6() {
         // use segment 0x04 which should be the smallest administered scope
+
+        use tokio::sync::mpsc::unbounded_channel;
         let segment = 0x04;
         let server_port = spawn_server_with_all_coap("::0", request_handler, segment)
             .recv()
@@ -865,7 +863,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_single_request(&request).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.perform_request(request).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
         // use 0xff02 to keep it within this network
@@ -884,10 +882,11 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
+        let (tx, mut rx) = unbounded_channel();
+        client.create_receiver_for(&request, tx);
         client.send_all_coap(&request, segment).await.unwrap();
-
-        let recv_packet = client.receive_raw_response().await.unwrap();
-        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
+        let recv_packet = rx.recv().await.unwrap().unwrap();
+        assert_eq!(recv_packet.payload, b"test-echo".to_vec());
     }
 
     #[test]

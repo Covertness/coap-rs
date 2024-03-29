@@ -58,7 +58,7 @@ trait TransportExt {
 impl<T: Transport> TransportExt for T {
     async fn receive_packet(&self) -> IoResult<Option<(Packet, SocketAddr)>> {
         let mut buf = [0; 1500];
-        let (nread, src) = timeout(self.timeout, self.inner.recv(&mut buf)).await??;
+        let (nread, src) = self.recv(&mut buf).await?;
         let parse_opt = Packet::from_bytes(&buf[..nread]).ok().map(|p| (p, src));
         return Ok(parse_opt);
     }
@@ -66,18 +66,27 @@ impl<T: Transport> TransportExt for T {
 
 /// we only use the token as the identifier, and an empty token to represent empty requests
 type Token = Vec<u8>;
-type PacketRegistry = BTreeMap<Token, UnboundedSender<Packet>>;
+type PacketRegistry = BTreeMap<Token, UnboundedSender<IoResult<Packet>>>;
 
 #[derive(Clone)]
 struct TransportSynchronizer {
     pub(crate) outgoing: Arc<Mutex<PacketRegistry>>,
     fail_error: Arc<RwLock<Option<std::io::Error>>>,
 }
+
 impl TransportSynchronizer {
+    pub fn new() -> Self {
+        Self {
+            outgoing: Arc::new(Mutex::new(PacketRegistry::new())),
+            fail_error: Arc::new(RwLock::new(None)),
+        }
+    }
+
     async fn check_for_error(&self, sender: &UnboundedSender<IoResult<Packet>>) -> Option<()> {
-        if let Some(ref err) = self.fail_error.read().await {
-            sender.send(Err(Self::clone_err(err)));
-            None
+        self.fail_error.read().await.as_ref();
+        if let Some(err) = self.fail_error.read().await.as_ref() {
+            let _ = sender.send(Err(Self::clone_err(err)));
+            return None;
         }
         Some(())
     }
@@ -90,12 +99,13 @@ impl TransportSynchronizer {
 
     pub async fn fail(self, error: std::io::Error) {
         let error_clone = Self::clone_err(&error);
-        self.fail_error.write().await.insert(error_clone);
-        let mutex = self.outgoing.lock().await;
-        let keys = mutex.keys();
+        let _ = self.fail_error.write().await.insert(error_clone);
+        let mut mutex = self.outgoing.lock().await;
+
+        let keys: Vec<Vec<u8>> = mutex.keys().cloned().collect();
         for k in keys {
             let error_clone = Self::clone_err(&error);
-            let _ = mutex.remove(k).map(|resp| resp.send(error_clone));
+            let _ = mutex.remove(&k).map(|resp| resp.send(Err(error_clone)));
         }
     }
 
@@ -122,9 +132,8 @@ impl TransportSynchronizer {
 }
 
 async fn receive_loop<T: Transport + 'static>(
-    transport: T,
+    transport: Arc<T>,
     transport_sync: TransportSynchronizer,
-    response_sender: UnboundedSender<Vec<u8>>,
 ) -> std::io::Result<()> {
     let err = loop {
         let recv_res = transport.receive_packet().await;
@@ -132,12 +141,12 @@ async fn receive_loop<T: Transport + 'static>(
             Err(e) => break e,
             Ok(o) => o,
         };
-        let Some((packet, _src)) = transport.receive_packet().await? else {
+        let Some((packet, _src)) = option_packet else {
             trace!("unexpected malformed packet received");
             continue;
         };
         if let Some(ack) = parse_for_ack(&packet) {
-            response_sender.send(ack);
+            transport.send(&ack).await?;
         }
 
         let MessageClass::Response(_) = packet.header.code else {
@@ -161,7 +170,10 @@ async fn receive_loop<T: Transport + 'static>(
             continue;
         };
     };
+
+    let e = Err(Error::new(err.kind(), err.to_string()));
     transport_sync.fail(err).await;
+    return e;
 }
 
 pub fn parse_for_ack(packet: &Packet) -> Option<Vec<u8>> {
@@ -180,6 +192,7 @@ pub fn make_ack(packet: &Packet) -> Vec<u8> {
 }
 
 /// a wrapper for transports responsible for retries and timeouts
+#[derive(Clone)]
 struct ClientTransport<T: Transport> {
     pub(crate) transport: Arc<T>,
     pub(crate) synchronizer: TransportSynchronizer,
@@ -194,21 +207,6 @@ impl<T: Transport> ClientTransport<T> {
         let token = msg.get_token().to_owned();
         self.synchronizer.set_sender(token, tx).await;
         return rx;
-    }
-
-    pub async fn try_receive_packet(&mut self) -> IoResult<(Packet, SocketAddr)> {
-        let result = self.try_receive_internal().await?;
-        return Ok(result);
-    }
-
-    async fn try_receive_internal(&mut self) -> IoResult<(Packet, SocketAddr)> {
-        if let Some(p) = self.cache.take() {
-            return Ok(p);
-        }
-        let p = self.receive_internal_no_cache().await?;
-        let (packet, addr) = &p;
-        self.intercept_packet_for_acks(packet).await;
-        return Ok(p);
     }
 
     /// tries to send a confirmable message with retries and timeouts
@@ -239,7 +237,7 @@ impl<T: Transport> ClientTransport<T> {
         receiver: &mut UnboundedReceiver<IoResult<Packet>>,
     ) -> IoResult<Packet> {
         let bytes = Self::encode_packet(msg)?;
-        self.transport.send(&bytes).await;
+        self.transport.send(&bytes).await?;
         let try_receive: Result<Option<Result<Packet, Error>>, tokio::time::error::Elapsed> =
             timeout(self.timeout, receiver.recv()).await;
         if let Ok(Some(res)) = try_receive {
@@ -275,17 +273,10 @@ impl<T: Transport> ClientTransport<T> {
         result
     }
 
-    pub async fn receive_packet_no_timeout(&mut self) -> IoResult<(Packet, SocketAddr)> {
-        let old_timeout = self.timeout;
-        self.timeout = Duration::from_secs(u64::MAX);
-        let res = self.try_receive_packet().await;
-        self.timeout = old_timeout;
-        return res;
-    }
-    pub fn from_transport(transport: T) -> Self {
+    pub fn from_transport(transport: Arc<T>, synchronizer: TransportSynchronizer) -> Self {
         return Self {
-            inner: transport,
-            cache: None,
+            transport,
+            synchronizer,
             retries: Self::DEFAULT_NUM_RETRIES,
             timeout: Duration::from_secs(DEFAULT_RECEIVE_TIMEOUT_SECONDS),
         };
@@ -309,6 +300,7 @@ impl Transport for UdpTransport {
 /// A CoAP client over UDP. This client can send multicast and broadcasts
 pub type UdpCoAPClient = CoAPClient<UdpTransport>;
 
+#[derive(Clone)]
 pub struct CoAPClient<T: Transport> {
     transport: ClientTransport<T>,
     block2_states: LruCache<RequestCacheKey<SocketAddr>, BlockState>,
@@ -352,7 +344,7 @@ impl UdpCoAPClient {
         segment: u8,
     ) -> IoResult<()> {
         assert!(segment <= 0xf);
-        let addr = match self.transport.inner.peer_addr {
+        let addr = match self.transport.transport.peer_addr {
             SocketAddr::V4(val) => {
                 SocketAddr::new(IpAddr::V4(Ipv4Addr::new(224, 0, 1, 187)), val.port())
             }
@@ -375,7 +367,7 @@ impl UdpCoAPClient {
             Ok(bytes) => {
                 let size = self
                     .transport
-                    .inner
+                    .transport
                     .socket
                     .send_to(&bytes[..], addr)
                     .await?;
@@ -390,7 +382,18 @@ impl UdpCoAPClient {
     }
 
     pub fn set_broadcast(&self, value: bool) -> IoResult<()> {
-        self.transport.inner.socket.set_broadcast(value)
+        self.transport.transport.socket.set_broadcast(value)
+    }
+
+    /// creates a receiver based on a specific request
+    /// only use this method if you know what you are doing
+    pub async fn create_receiver_for(
+        &self,
+        request: &CoapRequest<SocketAddr>,
+        tx: UnboundedSender<IoResult<Packet>>,
+    ) {
+        let key = request.message.get_token().to_vec();
+        self.transport.synchronizer.set_sender(key, tx).await;
     }
 }
 
@@ -408,8 +411,12 @@ impl<T: Transport + 'static> CoAPClient<T> {
     /// Create a CoAP client with a chosen transport type
 
     pub fn from_transport(transport: T) -> Self {
+        let synchronizer = TransportSynchronizer::new();
+        let transport_arc = Arc::new(transport);
+        // spawn receive loop to handle responses
+        tokio::spawn(receive_loop(transport_arc.clone(), synchronizer.clone()));
         CoAPClient {
-            transport: ClientTransport::from_transport(transport),
+            transport: ClientTransport::from_transport(transport_arc.clone(), synchronizer),
             block2_states: LruCache::with_expiry_duration(Duration::from_secs(120)),
             block1_size: Self::MAX_PAYLOAD_BLOCK,
             message_id: 0,
@@ -602,14 +609,20 @@ impl<T: Transport + 'static> CoAPClient<T> {
         }
         register_packet.set_observe_flag(ObserveOption::Register);
 
-        self.send_single_request(&register_packet).await?;
-        let response = self.receive_raw_response().await?;
+        let req_token = register_packet.message.get_token().to_vec();
+        let mut message_id = register_packet.message.header.message_id;
+        let resource_path = register_packet.get_path();
+        let response = self.perform_request(register_packet).await?;
         if *response.get_status() != Status::Content {
             return Err(Error::new(ErrorKind::NotFound, "the resource not found"));
         }
-        let mut message_id = register_packet.message.header.message_id;
+        // TODO: join into single request instead of racily re-requesting
+        let (tx_observe, mut rx_observe) = unbounded_channel();
+        self.transport
+            .synchronizer
+            .set_sender(req_token, tx_observe)
+            .await;
 
-        let resource_path = register_packet.get_path();
         handler(response.message);
 
         let (tx, rx) = oneshot::channel();
@@ -625,8 +638,8 @@ impl<T: Transport + 'static> CoAPClient<T> {
             > = Box::pin(rx);
             loop {
                 tokio::select! {
-                    sock_rx = self.transport.receive_packet_no_timeout() => {
-                        self.receive_and_handle_message_observe(sock_rx, &mut handler).await;
+                    sock_rx = rx_observe.recv() => {
+                        self.receive_and_handle_message_observe(sock_rx?, &mut handler).await;
                     }
                     observe = &mut rx_pinned => {
                         match observe {
@@ -644,6 +657,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
 
                 }
             }
+            Some(())
         });
         return Ok(tx);
     }
@@ -658,33 +672,31 @@ impl<T: Transport + 'static> CoAPClient<T> {
             .transport
             .do_request_response_for_packet(&deregister_packet.message)
             .await;
-        let _ = self.transport.try_receive_packet().await.unwrap();
     }
 
     async fn receive_and_handle_message_observe<H: FnMut(Packet) + Send + 'static>(
         &mut self,
-        socket_result: IoResult<(Packet, SocketAddr)>,
+        socket_result: IoResult<Packet>,
         handler: &mut H,
     ) {
         match socket_result {
-            Ok((packet, src)) => {
-                let receive_packet = CoapRequest::from_packet(packet, src);
-                debug!("received a packet: {:?}", &receive_packet);
-                handler(receive_packet.message);
+            Ok(packet) => {
+                handler(packet);
 
-                if let Some(response) = receive_packet.response {
-                    let mut packet = Packet::new();
-                    packet.header.set_type(response.message.header.get_type());
-                    packet.header.message_id = response.message.header.message_id;
-                    packet.set_token(response.message.get_token().into());
+                // TODO: what does this do?
+                //  if let Some(response) = receive_packet.response {
+                //      let mut packet = Packet::new();
+                //      packet.header.set_type(response.message.header.get_type());
+                //      packet.header.message_id = response.message.header.message_id;
+                //      packet.set_token(response.message.get_token().into());
 
-                    match self.transport.do_request_response_for_packet(&packet).await {
-                        Ok(_) => (),
-                        Err(e) => {
-                            warn!("reply ack failed {}", e)
-                        }
-                    }
-                }
+                //      match self.transport.do_request_response_for_packet(&packet).await {
+                //          Ok(_) => (),
+                //          Err(e) => {
+                //              warn!("reply ack failed {}", e)
+                //          }
+                //      }
+                //  }
             }
             Err(e) => match e.kind() {
                 ErrorKind::WouldBlock => {
@@ -761,14 +773,6 @@ impl<T: Transport + 'static> CoAPClient<T> {
             result = Ok(resp);
         }
         return result;
-    }
-
-    /// low-level method to receive a response. Prefer using
-    /// Do not use this method unless you need low-level control over the protocol (e.g.,
-    /// multicast), instead use perform_request for client applications.
-    async fn receive_raw_response(&mut self) -> IoResult<CoapResponse> {
-        let (packet, _) = self.transport.try_receive_packet().await?;
-        Ok(CoapResponse { message: packet })
     }
 
     /// Receive a response support block-wise.
