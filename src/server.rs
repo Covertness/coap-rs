@@ -448,6 +448,7 @@ pub mod test {
     use super::super::*;
     use super::*;
     use coap_lite::{block_handler::BlockValue, CoapOption, RequestType};
+    use std::str;
     use std::time::Duration;
     use tokio::{sync::mpsc::unbounded_channel, time};
 
@@ -488,7 +489,6 @@ pub mod test {
         }
         return req;
     }
-    use std::str;
     async fn wait_handler(mut req: Box<CoapRequest<SocketAddr>>) -> Box<CoapRequest<SocketAddr>> {
         let uri_path_list = req.message.get_option(CoapOption::UriPath).unwrap().clone();
         let payload = str::from_utf8(&req.message.payload).unwrap();
@@ -984,14 +984,16 @@ pub mod test {
         return client.perform_request(request).await.unwrap();
     }
 
+    /// run 2 clients using the same transport and receive an answer
+    /// in the expected order without interference
     #[tokio::test]
-    async fn test_multiple_clients() {
+    async fn test_multiple_clients_same_socket() {
         let server_port = spawn_server("127.0.0.1:0", wait_handler)
             .recv()
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut b = tokio::spawn(do_wait_request(client.clone(), "/bar", vec![1], 500));
@@ -1003,7 +1005,7 @@ pub mod test {
             assert_eq!(a_first.message.payload, b"/foo".to_vec());
             assert_eq!(a_first.message.get_token(), vec![2]);
             },
-            b_first = &mut b => {
+            _b_first = &mut b => {
                 panic!("should not happen");
 
             }
