@@ -55,7 +55,7 @@ fn bench_server_with_request(b: &mut test::Bencher) {
 
     b.iter(|| {
         rt.block_on(async {
-            let recv_packet = client.perform_request(request.clone()).await.unwrap();
+            let recv_packet = client.send(request.clone()).await.unwrap();
             assert_eq!(recv_packet.message.payload, b"test".to_vec());
         });
     });

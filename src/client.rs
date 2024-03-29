@@ -570,6 +570,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
     /// observe a resource with a given transport using your own request
     /// Use this method if you need to set some specific options in your
     /// requests. This method will add observe flags and a message id as a fallback
+    /// Use this method if you plan on re-using the same client for requests
     pub async fn observe_with<H: FnMut(Packet) + Send + 'static>(
         mut self,
         request: CoapRequest<SocketAddr>,
@@ -584,7 +585,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
         let req_token = register_packet.message.get_token().to_vec();
         let mut message_id = register_packet.message.header.message_id;
         let resource_path = register_packet.get_path();
-        let response = self.perform_request(register_packet).await?;
+        let response = self.send(register_packet).await?;
         if *response.get_status() != Status::Content {
             return Err(Error::new(ErrorKind::NotFound, "the resource not found"));
         }
@@ -683,7 +684,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
     /// retries until receiving a response. requests sent using a multicast-address should be non-confirmable
     /// the user is responsible for setting meaningful fields in the request
     /// Do not use this method unless you need low-level control over the protocol (e.g.,
-    /// multicast), instead use perform_request for client applications.
+    /// multicast), instead use send for client applications.
     pub async fn send_single_request(
         &self,
         request: &CoapRequest<SocketAddr>,
