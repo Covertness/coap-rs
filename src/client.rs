@@ -192,12 +192,22 @@ pub fn make_ack(packet: &Packet) -> Vec<u8> {
 }
 
 /// a wrapper for transports responsible for retries and timeouts
-#[derive(Clone)]
 struct ClientTransport<T: Transport> {
     pub(crate) transport: Arc<T>,
     pub(crate) synchronizer: TransportSynchronizer,
     pub(crate) retries: usize,
     pub(crate) timeout: Duration,
+}
+
+impl<T: Transport> Clone for ClientTransport<T> {
+    fn clone(&self) -> Self {
+        Self {
+            transport: self.transport.clone(),
+            synchronizer: self.synchronizer.clone(),
+            retries: self.retries.clone(),
+            timeout: self.timeout.clone(),
+        }
+    }
 }
 
 impl<T: Transport> ClientTransport<T> {
@@ -300,12 +310,22 @@ impl Transport for UdpTransport {
 /// A CoAP client over UDP. This client can send multicast and broadcasts
 pub type UdpCoAPClient = CoAPClient<UdpTransport>;
 
-#[derive(Clone)]
 pub struct CoAPClient<T: Transport> {
     transport: ClientTransport<T>,
     block2_states: LruCache<RequestCacheKey<SocketAddr>, BlockState>,
     block1_size: usize,
     message_id: u16,
+}
+
+impl<T: Transport> Clone for CoAPClient<T> {
+    fn clone(&self) -> Self {
+        Self {
+            transport: self.transport.clone(),
+            block2_states: self.block2_states.clone(),
+            block1_size: self.block1_size.clone(),
+            message_id: self.message_id.clone(),
+        }
+    }
 }
 
 impl UdpCoAPClient {
