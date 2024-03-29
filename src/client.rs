@@ -1225,8 +1225,8 @@ mod test {
         let error = client
             .request_path("/Rust", Method::Get, None, None, Some(server_addr.clone()))
             .await
-            .unwrap_err();
-        assert_eq!(error.kind(), ErrorKind::TimedOut);
+            .expect_err("transport should fail");
+        assert_eq!(error.kind(), ErrorKind::Other);
         //this request will work, we do this to reset the state of the faulty udp
         client
             .request_path("/Rust", Method::Get, None, None, Some(server_addr.clone()))

@@ -826,7 +826,7 @@ pub mod test {
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         client.send_all_coap(&request, segment).await.unwrap();
         let (tx, mut rx) = unbounded_channel();
-        client.create_receiver_for(&request, tx);
+        client.create_receiver_for(&request, tx).await;
         client.send_all_coap(&request, segment).await.unwrap();
         let recv_packet = rx.recv().await.unwrap().unwrap();
         assert_eq!(recv_packet.payload, b"test-echo".to_vec());
