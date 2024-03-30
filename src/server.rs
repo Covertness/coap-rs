@@ -491,20 +491,6 @@ pub mod test {
         }
         return req;
     }
-    async fn wait_handler(mut req: Box<CoapRequest<SocketAddr>>) -> Box<CoapRequest<SocketAddr>> {
-        let uri_path_list = req.message.get_option(CoapOption::UriPath).unwrap().clone();
-        let payload = str::from_utf8(&req.message.payload).unwrap();
-        let to_wait_ms: u64 = payload.parse().unwrap();
-        time::sleep(Duration::from_millis(to_wait_ms)).await;
-
-        match req.response {
-            Some(ref mut response) => {
-                response.message.payload = uri_path_list.front().unwrap().clone();
-            }
-            _ => {}
-        }
-        return req;
-    }
 
     pub fn spawn_server_with_all_coap<
         F: Fn(Box<CoapRequest<SocketAddr>>) -> HandlerRet + Send + Sync + 'static,
@@ -955,60 +941,5 @@ pub mod test {
             .unwrap();
 
         std::thread::sleep(std::time::Duration::from_secs(1));
-    }
-
-    async fn do_wait_request(
-        mut client: UdpCoAPClient,
-        path: &str,
-        token: Vec<u8>,
-        wait_ms: u64,
-    ) -> CoapResponse {
-        let mut request = CoapRequest::new();
-        request.message.header.set_version(1);
-        request
-            .message
-            .header
-            .set_type(coap_lite::MessageType::Confirmable);
-        request.message.header.set_code("0.01");
-        request.message.header.message_id = 1;
-        request.message.set_token(token);
-        request
-            .message
-            .add_option(CoapOption::UriPath, path.as_bytes().to_vec());
-        request.message.payload = wait_ms.to_string().into();
-        client.send_single_request(&request).await.unwrap();
-
-        return client.send(request).await.unwrap();
-    }
-
-    /// run 2 clients using the same transport and receive an answer
-    /// in the expected order without interference
-    #[tokio::test]
-    async fn test_multiple_clients_same_socket() {
-        let server_port = spawn_server("127.0.0.1:0", wait_handler)
-            .recv()
-            .await
-            .unwrap();
-
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
-            .await
-            .unwrap();
-        let mut b = tokio::spawn(do_wait_request(client.clone(), "/bar", vec![1], 500));
-        let a = tokio::spawn(do_wait_request(client.clone(), "/foo", vec![2], 50));
-
-        tokio::select! {
-            a_first = a => {
-            let a_first = a_first.unwrap();
-            assert_eq!(a_first.message.payload, b"/foo".to_vec());
-            assert_eq!(a_first.message.get_token(), vec![2]);
-            },
-            _b_first = &mut b => {
-                panic!("should not happen");
-
-            }
-        }
-        let b_end = b.await.unwrap();
-        assert_eq!(b_end.message.payload, b"/bar".to_vec());
-        assert_eq!(b_end.message.get_token(), vec![1]);
     }
 }

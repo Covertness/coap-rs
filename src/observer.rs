@@ -424,6 +424,8 @@ impl Observer {
 #[cfg(test)]
 mod test {
 
+    use crate::request::RequestBuilder;
+
     use super::super::*;
     use super::*;
     use std::{io::ErrorKind, time::Duration};
@@ -536,10 +538,10 @@ mod test {
 
         let mut client3 = client.clone();
 
-        let mut request = CoapRequest::new();
-        request.set_method(coap_lite::RequestType::Put);
-        request.set_path(path);
-        request.message.payload = payload1.clone();
+        let mut request = RequestBuilder::new(path, coap_lite::RequestType::Put)
+            .token(Some(vec![1]))
+            .data(Some(payload1.clone()))
+            .build();
         let _ = client.send(request.clone()).await.unwrap();
 
         let payload1_clone = payload1.clone();

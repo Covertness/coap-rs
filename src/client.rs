@@ -279,6 +279,7 @@ impl<T: Transport> ClientTransport<T> {
         let mut receiver = self.establish_receiver_for(packet).await;
         let result = self
             .do_request_response_for_packet_inner(packet, &mut receiver)
+            // TODO: join into single request instead of racily re-requesting
             .await;
         self.synchronizer.remove_sender(packet.get_token()).await;
         result
@@ -589,7 +590,6 @@ impl<T: Transport + 'static> CoAPClient<T> {
         if *response.get_status() != Status::Content {
             return Err(Error::new(ErrorKind::NotFound, "the resource not found"));
         }
-        // TODO: join into single request instead of racily re-requesting
         let (tx_observe, mut rx_observe) = unbounded_channel();
         self.transport
             .synchronizer
@@ -885,10 +885,16 @@ pub struct BlockState {
 #[cfg(test)]
 mod test {
 
+    use tokio::time;
+
+    use crate::server::test::spawn_server;
+
     use super::super::*;
     use super::*;
     use std::io::ErrorKind;
-    use std::sync::atomic::{AtomicU32, Ordering};
+    use std::ops::DerefMut;
+    use std::str;
+    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
     use std::time::Duration;
     #[test]
     fn test_parse_coap_url_good_url() {
@@ -1237,5 +1243,149 @@ mod test {
 
         let req = client.send(request).await;
         assert!(req.is_err());
+    }
+
+    async fn do_wait_request<T: Transport + 'static>(
+        mut client: CoAPClient<T>,
+        path: &str,
+        token: Vec<u8>,
+        wait_ms: u64,
+    ) -> IoResult<CoapResponse> {
+        let mut request = CoapRequest::new();
+        request.message.header.set_version(1);
+        request
+            .message
+            .header
+            .set_type(coap_lite::MessageType::Confirmable);
+        request.message.header.set_code("0.01");
+        request.message.header.message_id = 1;
+        request.message.set_token(token);
+        request
+            .message
+            .add_option(CoapOption::UriPath, path.as_bytes().to_vec());
+        request.message.payload = wait_ms.to_string().into();
+
+        return client.send(request).await;
+    }
+
+    async fn wait_handler(mut req: Box<CoapRequest<SocketAddr>>) -> Box<CoapRequest<SocketAddr>> {
+        let uri_path_list = req.message.get_option(CoapOption::UriPath).unwrap().clone();
+        let payload = str::from_utf8(&req.message.payload).unwrap();
+        let to_wait_ms: u64 = payload.parse().unwrap();
+        time::sleep(Duration::from_millis(to_wait_ms)).await;
+
+        match req.response {
+            Some(ref mut response) => {
+                response.message.payload = uri_path_list.front().unwrap().clone();
+            }
+            _ => {}
+        }
+        return req;
+    }
+    /// run 2 clients using the same transport and receive an answer
+    /// in the expected order without interference
+    #[tokio::test]
+    async fn test_multiple_clients_same_socket() {
+        let server_port = spawn_server("127.0.0.1:0", wait_handler)
+            .recv()
+            .await
+            .unwrap();
+
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+            .await
+            .unwrap();
+        let mut b = tokio::spawn(do_wait_request(client.clone(), "/bar", vec![1], 500));
+        let a = tokio::spawn(do_wait_request(client.clone(), "/foo", vec![2], 50));
+
+        tokio::select! {
+            a_first = a => {
+            let a_first = a_first.unwrap().unwrap();
+            assert_eq!(a_first.message.payload, b"/foo".to_vec());
+            assert_eq!(a_first.message.get_token(), vec![2]);
+            },
+            _b_first = &mut b => {
+                panic!("should not happen");
+
+            }
+        }
+        let b_end = b.await.unwrap().expect("should receive a response");
+        assert_eq!(b_end.message.payload, b"/bar".to_vec());
+        assert_eq!(b_end.message.get_token(), vec![1]);
+    }
+
+    struct FaultyReceiver {
+        pub udp: UdpTransport,
+        pub should_fail: Mutex<oneshot::Receiver<std::io::Error>>,
+    }
+    #[async_trait]
+    impl Transport for FaultyReceiver {
+        async fn recv(&self, buf: &mut [u8]) -> std::io::Result<(usize, SocketAddr)> {
+            let mut mutex = self.should_fail.lock().await;
+            tokio::select! {
+                e = mutex.deref_mut() => {
+                    return Err(e.unwrap());
+                }
+                result = self.udp.recv(buf) => {
+                    return result;
+                }
+            }
+        }
+
+        async fn send(&self, buf: &[u8]) -> std::io::Result<usize> {
+            self.udp.send(buf).await
+        }
+    }
+
+    async fn get_faulty_receiver_client(
+        server_addr: &str,
+    ) -> (oneshot::Sender<std::io::Error>, CoAPClient<FaultyReceiver>) {
+        let (tx, rx) = oneshot::channel();
+        let peer_addr = lookup_host(server_addr)
+            .await
+            .unwrap()
+            .next()
+            .ok_or(Error::new(
+                ErrorKind::InvalidInput,
+                "could not get socket address",
+            ))
+            .unwrap();
+        let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let transport = UdpTransport { socket, peer_addr };
+        let transport = FaultyReceiver {
+            udp: transport,
+            should_fail: Mutex::new(rx),
+        };
+
+        return (tx, CoAPClient::from_transport(transport));
+    }
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_synchronizer_receive_error() {
+        let server_port = server::test::spawn_server("127.0.0.1:0", wait_handler)
+            .recv()
+            .await
+            .unwrap();
+
+        let server_addr = format!("127.0.0.1:{}", server_port);
+        let (flag, client) = get_faulty_receiver_client(&server_addr).await;
+        let mut handles = vec![];
+        for i in 0..10 {
+            let c_clone = client.clone();
+            handles.push(tokio::spawn(async move {
+                do_wait_request(c_clone, &format!("/{}", i), vec![i], 2000).await
+            }));
+        }
+        //wait for all futures to advance
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        flag.send(Error::new(ErrorKind::Other, "fail")).unwrap();
+
+        //all handles should fail now because of the error
+        for h in handles {
+            assert!(h.await.unwrap().is_err());
+        }
+
+        assert!(
+            do_wait_request(client, "/foo", vec![254], 1).await.is_err(),
+            "failed transport should make all other requests fail"
+        )
     }
 }
