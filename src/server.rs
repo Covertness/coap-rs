@@ -452,7 +452,7 @@ pub mod test {
     use coap_lite::{block_handler::BlockValue, CoapOption, RequestType};
     use std::str;
     use std::time::Duration;
-    use tokio::{sync::mpsc::unbounded_channel, time};
+    use tokio::sync::mpsc::unbounded_channel;
 
     pub fn spawn_server<
         F: Fn(Box<CoapRequest<SocketAddr>>) -> HandlerRet + Send + Sync + 'static,
@@ -807,7 +807,7 @@ pub mod test {
 
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
-        let mut client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -865,7 +865,7 @@ pub mod test {
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
         // use 0xff02 to keep it within this network
-        let mut client = UdpCoAPClient::new_udp(format!("ff0{}::fd:{}", segment, server_port))
+        let client = UdpCoAPClient::new_udp(format!("ff0{}::fd:{}", segment, server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -881,7 +881,7 @@ pub mod test {
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         let (tx, mut rx) = unbounded_channel();
-        client.create_receiver_for(&request, tx);
+        client.create_receiver_for(&request, tx).await;
         client.send_all_coap(&request, segment).await.unwrap();
         let recv_packet = rx.recv().await.unwrap().unwrap();
         assert_eq!(recv_packet.payload, b"test-echo".to_vec());

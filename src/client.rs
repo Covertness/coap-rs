@@ -894,7 +894,7 @@ mod test {
     use std::io::ErrorKind;
     use std::ops::DerefMut;
     use std::str;
-    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+    use std::sync::atomic::{AtomicU32, Ordering};
     use std::time::Duration;
     #[test]
     fn test_parse_coap_url_good_url() {
