@@ -1,5 +1,0 @@
-[env]
-CC_aarch64-linux-android="/Users/osobiehl/Library/Android/sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android30-clang"
-AR_aarch64-linux-android="/Users/osobiehl/Library/Android/sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android-ar"
-
-

@@ -10,6 +10,8 @@
 //! - Block-Wise Transfers [RFC 7959](https://tools.ietf.org/html/rfc7959)
 //! - DTLS support via [webrtc-rs](https://github.com/webrtc-rs/webrtc)
 //! - Option to provide custom transports for client and server
+//! - Client can perform multiple concurrent requests, like observing and sending requests using
+//! the same underlying socket
 //!
 //!
 //! # Installation
