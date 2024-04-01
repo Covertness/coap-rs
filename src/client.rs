@@ -408,6 +408,8 @@ impl UdpCoAPClient {
     }
 
     /// creates a receiver based on a specific request
+    /// this method can be used if you send a multicast request and
+    /// expect multiple responses.
     /// only use this method if you know what you are doing
     pub async fn create_receiver_for(
         &self,
@@ -416,6 +418,13 @@ impl UdpCoAPClient {
     ) {
         let key = request.message.get_token().to_vec();
         self.transport.synchronizer.set_sender(key, tx).await;
+    }
+
+    pub async fn cancel_receiver_for(&self, request_token: &[u8]) {
+        self.transport
+            .synchronizer
+            .remove_sender(request_token)
+            .await;
     }
 }
 
@@ -655,21 +664,6 @@ impl<T: Transport + 'static> CoAPClient<T> {
         match socket_result {
             Ok(packet) => {
                 handler(packet);
-
-                // TODO: what does this do?
-                //  if let Some(response) = receive_packet.response {
-                //      let mut packet = Packet::new();
-                //      packet.header.set_type(response.message.header.get_type());
-                //      packet.header.message_id = response.message.header.message_id;
-                //      packet.set_token(response.message.get_token().into());
-
-                //      match self.transport.do_request_response_for_packet(&packet).await {
-                //          Ok(_) => (),
-                //          Err(e) => {
-                //              warn!("reply ack failed {}", e)
-                //          }
-                //      }
-                //  }
             }
             Err(e) => match e.kind() {
                 ErrorKind::WouldBlock => {

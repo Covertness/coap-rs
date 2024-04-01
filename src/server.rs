@@ -828,6 +828,9 @@ pub mod test {
         client.send_all_coap(&request, segment).await.unwrap();
         let recv_packet = rx.recv().await.unwrap().unwrap();
         assert_eq!(recv_packet.payload, b"test-echo".to_vec());
+        client
+            .cancel_receiver_for(request.message.get_token())
+            .await;
     }
 
     //This test right now does not work on windows
@@ -885,6 +888,9 @@ pub mod test {
         client.send_all_coap(&request, segment).await.unwrap();
         let recv_packet = rx.recv().await.unwrap().unwrap();
         assert_eq!(recv_packet.payload, b"test-echo".to_vec());
+        client
+            .cancel_receiver_for(request.message.get_token())
+            .await;
     }
 
     #[test]
