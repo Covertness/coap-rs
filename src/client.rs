@@ -18,6 +18,7 @@ use regex::Regex;
 use std::{
     collections::BTreeMap,
     net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+    sync::atomic::AtomicU16,
 };
 use std::{
     io::{Error, ErrorKind, Result as IoResult},
@@ -316,7 +317,7 @@ pub struct CoAPClient<T: Transport> {
     transport: ClientTransport<T>,
     block2_states: LruCache<RequestCacheKey<SocketAddr>, BlockState>,
     block1_size: usize,
-    message_id: u16,
+    message_id: Arc<AtomicU16>,
 }
 
 impl<T: Transport> Clone for CoAPClient<T> {
@@ -444,13 +445,14 @@ impl<T: Transport + 'static> CoAPClient<T> {
     pub fn from_transport(transport: T) -> Self {
         let synchronizer = TransportSynchronizer::new();
         let transport_arc = Arc::new(transport);
+        let message_id: u16 = rand::random();
         // spawn receive loop to handle responses
         tokio::spawn(receive_loop(transport_arc.clone(), synchronizer.clone()));
         CoAPClient {
             transport: ClientTransport::from_transport(transport_arc.clone(), synchronizer),
             block2_states: LruCache::with_expiry_duration(Duration::from_secs(120)),
             block1_size: Self::MAX_PAYLOAD_BLOCK,
-            message_id: 0,
+            message_id: Arc::new(AtomicU16::new(message_id)),
         }
     }
     /// Execute a single get request with a coap url
@@ -588,12 +590,11 @@ impl<T: Transport + 'static> CoAPClient<T> {
     ) -> IoResult<oneshot::Sender<ObserveMessage>> {
         let mut register_packet = request;
         if 0 == register_packet.message.header.message_id {
-            register_packet.message.header.message_id = Self::gen_message_id(&mut self.message_id);
+            register_packet.message.header.message_id = self.gen_message_id();
         }
         register_packet.set_observe_flag(ObserveOption::Register);
 
         let req_token = register_packet.message.get_token().to_vec();
-        let mut message_id = register_packet.message.header.message_id;
         let resource_path = register_packet.get_path();
         let response = self.send(register_packet).await?;
         if *response.get_status() != Status::Content {
@@ -602,7 +603,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
         let (tx_observe, mut rx_observe) = unbounded_channel();
         self.transport
             .synchronizer
-            .set_sender(req_token, tx_observe)
+            .set_sender(req_token.clone(), tx_observe)
             .await;
 
         handler(response.message);
@@ -626,7 +627,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
                     observe = &mut rx_pinned => {
                         match observe {
                             Ok(ObserveMessage::Terminate) => {
-                                self.terminate_observe(&observe_path, &mut message_id).await;
+                                self.terminate_observe(&observe_path, req_token).await;
                                 break;
                             }
                             // if the receiver is dropped, we change the future to wait forever
@@ -644,11 +645,12 @@ impl<T: Transport + 'static> CoAPClient<T> {
         return Ok(tx);
     }
 
-    async fn terminate_observe(&mut self, observe_path: &str, message_id: &mut u16) {
+    async fn terminate_observe(&self, observe_path: &str, req_token: Vec<u8>) {
         let mut deregister_packet = CoapRequest::<SocketAddr>::new();
-        deregister_packet.message.header.message_id = Self::gen_message_id(message_id);
+        deregister_packet.message.header.message_id = self.gen_message_id();
         deregister_packet.set_observe_flag(ObserveOption::Deregister);
         deregister_packet.set_path(observe_path);
+        deregister_packet.message.set_token(req_token);
 
         let _ = self
             .transport
@@ -689,10 +691,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
 
     /// low-level method to send a a request supporting block1 option based on
     /// the block size set in the client
-    async fn send_request(
-        &mut self,
-        request: &mut CoapRequest<SocketAddr>,
-    ) -> IoResult<CoapResponse> {
+    async fn send_request(&self, request: &mut CoapRequest<SocketAddr>) -> IoResult<CoapResponse> {
         let request_length = request.message.payload.len();
         if request_length <= self.block1_size {
             return self.send_single_request(request).await;
@@ -712,7 +711,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
                 .add_option_as::<BlockValue>(CoapOption::Block1, block.clone());
             request.message.payload = elem.to_vec();
 
-            request.message.header.message_id = Self::gen_message_id(&mut self.message_id);
+            request.message.header.message_id = self.gen_message_id();
             let resp = self.send_single_request(request).await?;
             // continue receiving responses until last element
             if it.peek().is_some() {
@@ -806,9 +805,9 @@ impl<T: Transport + 'static> CoAPClient<T> {
         return Ok((host.to_string(), port, path, queries));
     }
 
-    fn gen_message_id(message_id: &mut u16) -> u16 {
-        (*message_id) += 1;
-        return *message_id;
+    fn gen_message_id(&self) -> u16 {
+        self.message_id
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     }
 
     fn intercept_response(

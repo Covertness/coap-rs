@@ -34,6 +34,7 @@ rustls-pemfile  = {version = "2.0.0", optional = true}
 rcgen  = {version = "^0.11.0", optional = true}
 pkcs8  = {version = "0.10.2", optional = true}
 sec1 = { version = "0.7.3", features = ["pem", "pkcs8", "std"], optional = true}
+rand = "0.8.5"
 
 [features]
 default = ["dtls"]
