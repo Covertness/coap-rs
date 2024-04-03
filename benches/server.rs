@@ -37,7 +37,7 @@ fn bench_server_with_request(b: &mut test::Bencher) {
     });
 
     let server_port = rx.blocking_recv().unwrap();
-    let mut client = rt.block_on(async {
+    let client = rt.block_on(async {
         UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap()

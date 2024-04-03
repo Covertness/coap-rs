@@ -557,7 +557,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -591,7 +591,7 @@ pub mod test {
         }
         let payload_size = v.len();
         let server_string = format!("127.0.0.1:{}", server_port);
-        let mut client = UdpCoAPClient::new_udp(server_string.clone()).await.unwrap();
+        let client = UdpCoAPClient::new_udp(server_string.clone()).await.unwrap();
 
         let request = RequestBuilder::new("/large", RequestType::Put)
             .data(Some(v))
@@ -618,7 +618,7 @@ pub mod test {
     async fn test_echo_server_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().await.unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -645,7 +645,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut packet = CoapRequest::new();
@@ -668,7 +668,7 @@ pub mod test {
     async fn test_echo_server_no_token_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().await.unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut packet = CoapRequest::new();
@@ -701,7 +701,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
 
@@ -737,7 +737,7 @@ pub mod test {
         step = 2;
         tx.send(step).unwrap();
         request.message.payload = payload2.clone();
-        let mut client2 = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client2 = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let _ = client2.send(request).await.unwrap();
@@ -788,7 +788,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -847,7 +847,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();

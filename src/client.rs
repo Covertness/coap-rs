@@ -4,16 +4,16 @@ use crate::request::RequestBuilder;
 use alloc::string::String;
 use alloc::vec::Vec;
 use coap_lite::{
-    block_handler::{extending_splice, BlockValue, RequestCacheKey},
+    block_handler::{extending_splice, BlockValue},
     error::HandlingError,
     CoapOption, CoapRequest, CoapResponse, MessageClass, MessageType, ObserveOption, Packet,
     RequestType as Method, ResponseType as Status,
 };
 use core::mem;
-use core::ops::Deref;
+
 use futures::Future;
 use log::*;
-use lru_time_cache::LruCache;
+
 use regex::Regex;
 use std::{
     collections::BTreeMap,
@@ -507,7 +507,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
         data: Option<Vec<u8>>,
     ) -> IoResult<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
-        let mut client = UdpCoAPClient::new_udp((domain.as_str(), port)).await?;
+        let client = UdpCoAPClient::new_udp((domain.as_str(), port)).await?;
         let request = RequestBuilder::new(&path, method)
             .queries(queries)
             .domain(domain)
@@ -581,7 +581,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
     /// requests. This method will add observe flags and a message id as a fallback
     /// Use this method if you plan on re-using the same client for requests
     pub async fn observe_with<H: FnMut(Packet) + Send + 'static>(
-        mut self,
+        self,
         request: CoapRequest<SocketAddr>,
         mut handler: H,
     ) -> IoResult<oneshot::Sender<ObserveMessage>> {
@@ -944,7 +944,7 @@ mod test {
     #[tokio::test]
     async fn test_get() {
         let domain = "coap.me";
-        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::request_path(
@@ -975,7 +975,7 @@ mod test {
     #[tokio::test]
     async fn test_post() {
         let domain = "coap.me";
-        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::request_path(
@@ -1007,7 +1007,7 @@ mod test {
     #[tokio::test]
     async fn test_put() {
         let domain = "coap.me";
-        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::new("/create1", Method::Put)
@@ -1035,7 +1035,7 @@ mod test {
     #[tokio::test]
     async fn test_delete() {
         let domain = "coap.me";
-        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::new("/validate", Method::Delete)
@@ -1220,7 +1220,7 @@ mod test {
         .unwrap();
 
         let server_addr = format!("127.0.0.1:{}", server_port);
-        let mut client = get_faulty_client(&server_addr, 2).await;
+        let client = get_faulty_client(&server_addr, 2).await;
         let mut request = CoapRequest::new();
         request.set_method(Method::Get);
         request.set_path("/Rust");
@@ -1232,7 +1232,7 @@ mod test {
     }
 
     async fn do_wait_request<T: Transport + 'static>(
-        mut client: CoAPClient<T>,
+        client: CoAPClient<T>,
         path: &str,
         token: Vec<u8>,
         wait_ms: u64,
@@ -1402,7 +1402,7 @@ mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let resp = client

@@ -468,7 +468,7 @@ mod test {
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
-        let mut client = UdpCoAPClient::new_udp(server_address).await.unwrap();
+        let client = UdpCoAPClient::new_udp(server_address).await.unwrap();
 
         tx.send(step).unwrap();
         let mut request = CoapRequest::new();
@@ -483,7 +483,7 @@ mod test {
         let payload1_clone = payload1.clone();
         let payload2_clone = payload2.clone();
 
-        let mut client2 = client.clone();
+        let client2 = client.clone();
 
         let mut receive_step = 1;
         client
@@ -534,9 +534,9 @@ mod test {
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
-        let mut client = UdpCoAPClient::new_udp(server_address).await.unwrap();
+        let client = UdpCoAPClient::new_udp(server_address).await.unwrap();
 
-        let mut client3 = client.clone();
+        let client3 = client.clone();
 
         let mut request = RequestBuilder::new(path, coap_lite::RequestType::Put)
             .token(Some(vec![1]))
