@@ -272,15 +272,10 @@ impl<T: Transport> ClientTransport<T> {
         }
     }
 
-    pub async fn send_packet(&self, packet: &Packet) -> IoResult<Packet> {
-        self.do_request_response_for_packet(packet).await
-    }
-
     pub async fn do_request_response_for_packet(&self, packet: &Packet) -> IoResult<Packet> {
         let mut receiver = self.establish_receiver_for(packet).await;
         let result = self
             .do_request_response_for_packet_inner(packet, &mut receiver)
-            // TODO: join into single request instead of racily re-requesting
             .await;
         self.synchronizer.remove_sender(packet.get_token()).await;
         result
@@ -410,6 +405,7 @@ impl UdpCoAPClient {
     /// this method can be used if you send a multicast request and
     /// expect multiple responses.
     /// only use this method if you know what you are doing
+
     pub async fn create_receiver_for(
         &self,
         request: &CoapRequest<SocketAddr>,
@@ -679,7 +675,10 @@ impl<T: Transport + 'static> CoAPClient<T> {
         &self,
         request: &CoapRequest<SocketAddr>,
     ) -> IoResult<CoapResponse> {
-        let response = self.transport.send_packet(&request.message).await?;
+        let response = self
+            .transport
+            .do_request_response_for_packet(&request.message)
+            .await?;
         Ok(CoapResponse { message: response })
     }
 
