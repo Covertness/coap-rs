@@ -315,7 +315,6 @@ pub type UdpCoAPClient = CoAPClient<UdpTransport>;
 
 pub struct CoAPClient<T: Transport> {
     transport: ClientTransport<T>,
-    block2_states: LruCache<RequestCacheKey<SocketAddr>, BlockState>,
     block1_size: usize,
     message_id: Arc<AtomicU16>,
 }
@@ -324,7 +323,6 @@ impl<T: Transport> Clone for CoAPClient<T> {
     fn clone(&self) -> Self {
         Self {
             transport: self.transport.clone(),
-            block2_states: self.block2_states.clone(),
             block1_size: self.block1_size.clone(),
             message_id: self.message_id.clone(),
         }
@@ -450,7 +448,6 @@ impl<T: Transport + 'static> CoAPClient<T> {
         tokio::spawn(receive_loop(transport_arc.clone(), synchronizer.clone()));
         CoAPClient {
             transport: ClientTransport::from_transport(transport_arc.clone(), synchronizer),
-            block2_states: LruCache::with_expiry_duration(Duration::from_secs(120)),
             block1_size: Self::MAX_PAYLOAD_BLOCK,
             message_id: Arc::new(AtomicU16::new(message_id)),
         }
@@ -542,7 +539,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
     /// Send a Request via the given transport, and receive a response.
     /// users are responsible for filling meaningful fields in the request
     /// this method supports blockwise requests
-    pub async fn send(&mut self, mut request: CoapRequest<SocketAddr>) -> IoResult<CoapResponse> {
+    pub async fn send(&self, mut request: CoapRequest<SocketAddr>) -> IoResult<CoapResponse> {
         let first_response = self.send_request(&mut request).await?;
         request.response = Some(first_response);
         self.receive(&mut request).await
@@ -659,7 +656,7 @@ impl<T: Transport + 'static> CoAPClient<T> {
     }
 
     async fn receive_and_handle_message_observe<H: FnMut(Packet) + Send + 'static>(
-        &mut self,
+        &self,
         socket_result: IoResult<Packet>,
         handler: &mut H,
     ) {
@@ -742,9 +739,10 @@ impl<T: Transport + 'static> CoAPClient<T> {
     }
 
     /// Receive a response support block-wise.
-    async fn receive(&mut self, request: &mut CoapRequest<SocketAddr>) -> IoResult<CoapResponse> {
+    async fn receive(&self, request: &mut CoapRequest<SocketAddr>) -> IoResult<CoapResponse> {
+        let mut block2_state = BlockState::default();
         loop {
-            match self.intercept_response(request) {
+            match Self::intercept_response(request, &mut block2_state) {
                 Ok(true) => {
                     let resp = self.send_single_request(request).await?;
                     request.response = Some(resp);
@@ -811,14 +809,9 @@ impl<T: Transport + 'static> CoAPClient<T> {
     }
 
     fn intercept_response(
-        &mut self,
         request: &mut CoapRequest<SocketAddr>,
+        state: &mut BlockState,
     ) -> std::result::Result<bool, HandlingError> {
-        let state = self
-            .block2_states
-            .entry(request.deref().into())
-            .or_insert(BlockState::default());
-
         let block2_handled = Self::maybe_handle_response_block2(request, state)?;
         if block2_handled {
             return Ok(true);
