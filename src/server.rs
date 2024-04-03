@@ -948,4 +948,45 @@ pub mod test {
 
         std::thread::sleep(std::time::Duration::from_secs(1));
     }
+
+    fn get_expected_response() -> Vec<u8> {
+        let mut resp = vec![];
+        for c in b'a'..=b'z' {
+            resp.extend(std::iter::repeat(c).take(1024));
+        }
+        resp
+    }
+    async fn block2_responder(
+        mut req: Box<CoapRequest<SocketAddr>>,
+    ) -> Box<CoapRequest<SocketAddr>> {
+        // vec should contain 'a' 1024 times, then 'b' 1024, up to ascii 'z'
+
+        match req.response {
+            Some(ref mut response) => {
+                response.message.payload = get_expected_response();
+            }
+            _ => {}
+        }
+        return req;
+    }
+    #[tokio::test]
+    async fn test_block2_server_response() {
+        let server_port = spawn_server("127.0.0.1:0", block2_responder)
+            .recv()
+            .await
+            .unwrap();
+
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+            .await
+            .unwrap();
+        let resp = client
+            .send(RequestBuilder::new("/", RequestType::Get).build())
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.message.payload,
+            get_expected_response(),
+            "responses do not match"
+        );
+    }
 }

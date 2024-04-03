@@ -546,23 +546,22 @@ impl<T: Transport + 'static> CoAPClient<T> {
     }
 
     pub async fn observe<H: FnMut(Packet) + Send + 'static>(
-        self,
+        &self,
         resource_path: &str,
         handler: H,
     ) -> IoResult<oneshot::Sender<ObserveMessage>>
     where
         T: 'static + Send + Sync,
     {
-        let timeout = self.transport.timeout;
-        self.observe_with_timeout(resource_path, handler, timeout)
-            .await
+        let register_packet = RequestBuilder::new(resource_path, Method::Get).build();
+        self.observe_with(register_packet, handler).await
     }
 
     /// Observe a resource with the handler and specified timeout using the given transport.
     /// Use the oneshot sender to cancel observation. If this sender is dropped without explicitly
     /// cancelling it, the observation will continue forever.
     pub async fn observe_with_timeout<H: FnMut(Packet) + Send + 'static>(
-        mut self,
+        &mut self,
         resource_path: &str,
         handler: H,
         timeout: Duration,
@@ -570,10 +569,8 @@ impl<T: Transport + 'static> CoAPClient<T> {
     where
         T: 'static + Send + Sync,
     {
-        let register_packet = RequestBuilder::new(resource_path, Method::Get).build();
-
         self.set_receive_timeout(timeout);
-        self.observe_with(register_packet, handler).await
+        self.observe(resource_path, handler).await
     }
 
     /// observe a resource with a given transport using your own request
@@ -581,10 +578,11 @@ impl<T: Transport + 'static> CoAPClient<T> {
     /// requests. This method will add observe flags and a message id as a fallback
     /// Use this method if you plan on re-using the same client for requests
     pub async fn observe_with<H: FnMut(Packet) + Send + 'static>(
-        self,
+        &self,
         request: CoapRequest<SocketAddr>,
         mut handler: H,
     ) -> IoResult<oneshot::Sender<ObserveMessage>> {
+        let this = self.clone();
         let mut register_packet = request;
         if 0 == register_packet.message.header.message_id {
             register_packet.message.header.message_id = self.gen_message_id();
@@ -619,12 +617,12 @@ impl<T: Transport + 'static> CoAPClient<T> {
             loop {
                 tokio::select! {
                     sock_rx = rx_observe.recv() => {
-                        self.receive_and_handle_message_observe(sock_rx?, &mut handler).await;
+                        Self::receive_and_handle_message_observe(sock_rx?, &mut handler).await;
                     }
                     observe = &mut rx_pinned => {
                         match observe {
                             Ok(ObserveMessage::Terminate) => {
-                                self.terminate_observe(&observe_path, req_token).await;
+                                this.terminate_observe(&observe_path, req_token).await;
                                 break;
                             }
                             // if the receiver is dropped, we change the future to wait forever
@@ -656,7 +654,6 @@ impl<T: Transport + 'static> CoAPClient<T> {
     }
 
     async fn receive_and_handle_message_observe<H: FnMut(Packet) + Send + 'static>(
-        &self,
         socket_result: IoResult<Packet>,
         handler: &mut H,
     ) {
@@ -1232,7 +1229,7 @@ mod test {
     }
 
     async fn do_wait_request<T: Transport + 'static>(
-        client: CoAPClient<T>,
+        client: Arc<CoAPClient<T>>,
         path: &str,
         token: Vec<u8>,
         wait_ms: u64,
@@ -1277,9 +1274,11 @@ mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
-            .await
-            .unwrap();
+        let client = Arc::new(
+            UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+                .await
+                .unwrap(),
+        );
         let mut b = tokio::spawn(do_wait_request(client.clone(), "/bar", vec![1], 500));
         let a = tokio::spawn(do_wait_request(client.clone(), "/foo", vec![2], 50));
 
@@ -1354,8 +1353,9 @@ mod test {
         let server_addr = format!("127.0.0.1:{}", server_port);
         let (flag, client) = get_faulty_receiver_client(&server_addr).await;
         let mut handles = vec![];
+        let arc_client = Arc::new(client);
         for i in 0..10 {
-            let c_clone = client.clone();
+            let c_clone = arc_client.clone();
             handles.push(tokio::spawn(async move {
                 do_wait_request(c_clone, &format!("/{}", i), vec![i], 2000).await
             }));
@@ -1370,49 +1370,10 @@ mod test {
         }
 
         assert!(
-            do_wait_request(client, "/foo", vec![254], 1).await.is_err(),
+            do_wait_request(arc_client.clone(), "/foo", vec![254], 1)
+                .await
+                .is_err(),
             "failed transport should make all other requests fail"
         )
-    }
-
-    fn get_expected_response() -> Vec<u8> {
-        let mut resp = vec![];
-        for c in b'a'..=b'z' {
-            resp.extend(std::iter::repeat(c).take(1024));
-        }
-        resp
-    }
-    async fn block2_responder(
-        mut req: Box<CoapRequest<SocketAddr>>,
-    ) -> Box<CoapRequest<SocketAddr>> {
-        // vec should contain 'a' 1024 times, then 'b' 1024, up to ascii 'z'
-
-        match req.response {
-            Some(ref mut response) => {
-                response.message.payload = get_expected_response();
-            }
-            _ => {}
-        }
-        return req;
-    }
-    #[tokio::test]
-    async fn test_block2_server_response() {
-        let server_port = spawn_server("127.0.0.1:0", block2_responder)
-            .recv()
-            .await
-            .unwrap();
-
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
-            .await
-            .unwrap();
-        let resp = client
-            .send(RequestBuilder::new("/", Method::Get).build())
-            .await
-            .unwrap();
-        assert_eq!(
-            resp.message.payload,
-            get_expected_response(),
-            "responses do not match"
-        );
     }
 }
