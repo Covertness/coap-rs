@@ -452,7 +452,6 @@ pub mod test {
     use coap_lite::{block_handler::BlockValue, CoapOption, RequestType};
     use std::str;
     use std::time::Duration;
-    use tokio::sync::mpsc::unbounded_channel;
 
     pub fn spawn_server<
         F: Fn(Box<CoapRequest<SocketAddr>>) -> HandlerRet + Send + Sync + 'static,
@@ -810,27 +809,15 @@ pub mod test {
         let client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
             .await
             .unwrap();
-        let mut request = CoapRequest::new();
-        request.message.header.set_version(1);
-        request
-            .message
-            .header
-            .set_type(coap_lite::MessageType::Confirmable);
-        request.message.header.set_code("0.01");
-        request.message.header.message_id = 2;
-        request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
-        request
-            .message
-            .add_option(CoapOption::UriPath, b"test-echo".to_vec());
+        let request = RequestBuilder::new("test-echo", RequestType::Get)
+            .data(Some(vec![0x51, 0x55, 0x77, 0xE8]))
+            .confirmable(true)
+            .build();
+
+        let mut receiver = client.create_receiver_for(&request).await;
         client.send_all_coap(&request, segment).await.unwrap();
-        let (tx, mut rx) = unbounded_channel();
-        client.create_receiver_for(&request, tx).await;
-        client.send_all_coap(&request, segment).await.unwrap();
-        let recv_packet = rx.recv().await.unwrap().unwrap();
+        let recv_packet = receiver.receive().await.unwrap();
         assert_eq!(recv_packet.payload, b"test-echo".to_vec());
-        client
-            .cancel_receiver_for(request.message.get_token())
-            .await;
     }
 
     //This test right now does not work on windows
@@ -840,7 +827,6 @@ pub mod test {
     async fn multicast_server_all_coap_v6() {
         // use segment 0x04 which should be the smallest administered scope
 
-        use tokio::sync::mpsc::unbounded_channel;
         let segment = 0x04;
         let server_port = spawn_server_with_all_coap("::0", request_handler, segment)
             .recv()
@@ -883,14 +869,10 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        let (tx, mut rx) = unbounded_channel();
-        client.create_receiver_for(&request, tx).await;
+        let mut receiver = client.create_receiver_for(&request).await;
         client.send_all_coap(&request, segment).await.unwrap();
-        let recv_packet = rx.recv().await.unwrap().unwrap();
+        let recv_packet = receiver.receive().await.unwrap();
         assert_eq!(recv_packet.payload, b"test-echo".to_vec());
-        client
-            .cancel_receiver_for(request.message.get_token())
-            .await;
     }
 
     #[test]

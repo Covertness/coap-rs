@@ -71,7 +71,7 @@ type Token = Vec<u8>;
 type PacketRegistry = BTreeMap<Token, UnboundedSender<IoResult<Packet>>>;
 
 #[derive(Clone)]
-struct TransportSynchronizer {
+pub struct TransportSynchronizer {
     pub(crate) outgoing: Arc<Mutex<PacketRegistry>>,
     fail_error: Arc<RwLock<Option<std::io::Error>>>,
 }
@@ -324,6 +324,45 @@ impl<T: Transport> Clone for CoAPClient<T> {
     }
 }
 
+/// a receiver used whenever you have a use case involving multiple responses to a single request
+pub struct MessageReceiver {
+    synchronizer: TransportSynchronizer,
+    receiver: UnboundedReceiver<IoResult<Packet>>,
+    token: Vec<u8>,
+}
+
+impl MessageReceiver {
+    pub async fn receive(&mut self) -> IoResult<Packet> {
+        match self.receiver.recv().await {
+            Some(Ok(packet)) => Ok(packet),
+            Some(Err(e)) => Err(e),
+            None => Err(Error::new(
+                ErrorKind::Other,
+                "sender dropped by synchronizer",
+            )),
+        }
+    }
+    pub fn new(
+        synchronizer: TransportSynchronizer,
+        receiver: UnboundedReceiver<IoResult<Packet>>,
+        token: &[u8],
+    ) -> Self {
+        Self {
+            synchronizer,
+            receiver,
+            token: token.to_vec(),
+        }
+    }
+}
+
+impl Drop for MessageReceiver {
+    fn drop(&mut self) {
+        let sync = self.synchronizer.clone();
+        let tok = std::mem::take(&mut self.token);
+        tokio::spawn(async move { sync.remove_sender(&tok).await });
+    }
+}
+
 impl UdpCoAPClient {
     pub async fn new_with_specific_source<A: ToSocketAddrs, B: ToSocketAddrs>(
         bind_addr: A,
@@ -405,21 +444,42 @@ impl UdpCoAPClient {
     /// this method can be used if you send a multicast request and
     /// expect multiple responses.
     /// only use this method if you know what you are doing
+    /// ```
+    ///
+    /// use coap_lite::{
+    ///     RequestType
+    /// };
+    /// use coap::request::RequestBuilder;
+    /// use coap::client::UdpCoAPClient;
+    ///
+    /// async fn foo() {
+    ///   let segment = 0x0;
+    ///   let client = UdpCoAPClient::new_udp("127.0.0.1:5683")
+    ///          .await
+    ///          .unwrap();
+    ///   let request = RequestBuilder::new("test-echo", RequestType::Get)
+    ///       .data(Some(vec![0x51, 0x55, 0x77, 0xE8]))
+    ///       .confirmable(true)
+    ///       .build();
+    ///
+    ///   let mut receiver = client.create_receiver_for(&request).await;
+    ///   client.send_all_coap(&request, segment).await.unwrap();
+    ///   loop {
+    ///      let recv_packet = receiver.receive().await.unwrap();
+    ///      assert_eq!(recv_packet.payload, b"test-echo".to_vec());
+    ///   }
+    /// }
+    /// ```
 
-    pub async fn create_receiver_for(
-        &self,
-        request: &CoapRequest<SocketAddr>,
-        tx: UnboundedSender<IoResult<Packet>>,
-    ) {
+    pub async fn create_receiver_for(&self, request: &CoapRequest<SocketAddr>) -> MessageReceiver {
+        let (tx, rx) = unbounded_channel();
         let key = request.message.get_token().to_vec();
         self.transport.synchronizer.set_sender(key, tx).await;
-    }
-
-    pub async fn cancel_receiver_for(&self, request_token: &[u8]) {
-        self.transport
-            .synchronizer
-            .remove_sender(request_token)
-            .await;
+        return MessageReceiver::new(
+            self.transport.synchronizer.clone(),
+            rx,
+            request.message.get_token(),
+        );
     }
 }
 
