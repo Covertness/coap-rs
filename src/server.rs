@@ -450,6 +450,7 @@ pub mod test {
     use super::super::*;
     use super::*;
     use coap_lite::{block_handler::BlockValue, CoapOption, RequestType};
+    use std::str;
     use std::time::Duration;
 
     pub fn spawn_server<
@@ -555,7 +556,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -570,9 +571,9 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_raw_request(&request).await.unwrap();
+        client.send_single_request(&request).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.send(request).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -589,7 +590,7 @@ pub mod test {
         }
         let payload_size = v.len();
         let server_string = format!("127.0.0.1:{}", server_port);
-        let mut client = UdpCoAPClient::new_udp(server_string.clone()).await.unwrap();
+        let client = UdpCoAPClient::new_udp(server_string.clone()).await.unwrap();
 
         let request = RequestBuilder::new("/large", RequestType::Put)
             .data(Some(v))
@@ -616,7 +617,7 @@ pub mod test {
     async fn test_echo_server_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().await.unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -631,9 +632,8 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_raw_request(&request).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.send(request).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -644,7 +644,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut packet = CoapRequest::new();
@@ -658,9 +658,7 @@ pub mod test {
         packet
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_raw_request(&packet).await.unwrap();
-
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.send(packet).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -669,7 +667,7 @@ pub mod test {
     async fn test_echo_server_no_token_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().await.unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut packet = CoapRequest::new();
@@ -683,9 +681,8 @@ pub mod test {
         packet
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_raw_request(&packet).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.send(packet).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
 
@@ -703,7 +700,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
 
@@ -712,8 +709,7 @@ pub mod test {
         request.set_method(RequestType::Put);
         request.set_path(path);
         request.message.payload = payload1.clone();
-        client.send_raw_request(&request).await.unwrap();
-        client.receive_raw_response().await.unwrap();
+        client.send(request.clone()).await.unwrap();
 
         let mut receive_step = 1;
         let payload1_clone = payload1.clone();
@@ -740,11 +736,10 @@ pub mod test {
         step = 2;
         tx.send(step).unwrap();
         request.message.payload = payload2.clone();
-        let mut client2 = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client2 = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
-        client2.send_raw_request(&request).await.unwrap();
-        client2.receive_raw_response().await.unwrap();
+        let _ = client2.send(request).await.unwrap();
         assert_eq!(
             tokio::time::timeout(Duration::new(5, 0), rx2.recv())
                 .await
@@ -792,7 +787,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -807,30 +802,22 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_raw_request(&request).await.unwrap();
+        let recv_packet = client.send(request).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
-        let mut client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
             .await
             .unwrap();
-        let mut request = CoapRequest::new();
-        request.message.header.set_version(1);
-        request
-            .message
-            .header
-            .set_type(coap_lite::MessageType::Confirmable);
-        request.message.header.set_code("0.01");
-        request.message.header.message_id = 2;
-        request.message.set_token(vec![0x51, 0x55, 0x77, 0xE8]);
-        request
-            .message
-            .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_all_coap(&request, segment).await.unwrap();
+        let request = RequestBuilder::new("test-echo", RequestType::Get)
+            .data(Some(vec![0x51, 0x55, 0x77, 0xE8]))
+            .confirmable(true)
+            .build();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
-        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
+        let mut receiver = client.create_receiver_for(&request).await;
+        client.send_all_coap(&request, segment).await.unwrap();
+        let recv_packet = receiver.receive().await.unwrap();
+        assert_eq!(recv_packet.payload, b"test-echo".to_vec());
     }
 
     //This test right now does not work on windows
@@ -839,13 +826,14 @@ pub mod test {
     #[ignore]
     async fn multicast_server_all_coap_v6() {
         // use segment 0x04 which should be the smallest administered scope
+
         let segment = 0x04;
         let server_port = spawn_server_with_all_coap("::0", request_handler, segment)
             .recv()
             .await
             .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -860,13 +848,13 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
-        client.send_raw_request(&request).await.unwrap();
+        client.send_single_request(&request).await.unwrap();
 
-        let recv_packet = client.receive_raw_response().await.unwrap();
+        let recv_packet = client.send(request).await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
         // use 0xff02 to keep it within this network
-        let mut client = UdpCoAPClient::new_udp(format!("ff0{}::fd:{}", segment, server_port))
+        let client = UdpCoAPClient::new_udp(format!("ff0{}::fd:{}", segment, server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -881,10 +869,10 @@ pub mod test {
         request
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
+        let mut receiver = client.create_receiver_for(&request).await;
         client.send_all_coap(&request, segment).await.unwrap();
-
-        let recv_packet = client.receive_raw_response().await.unwrap();
-        assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
+        let recv_packet = receiver.receive().await.unwrap();
+        assert_eq!(recv_packet.payload, b"test-echo".to_vec());
     }
 
     #[test]
@@ -941,5 +929,46 @@ pub mod test {
             .unwrap();
 
         std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+
+    fn get_expected_response() -> Vec<u8> {
+        let mut resp = vec![];
+        for c in b'a'..=b'z' {
+            resp.extend(std::iter::repeat(c).take(1024));
+        }
+        resp
+    }
+    async fn block2_responder(
+        mut req: Box<CoapRequest<SocketAddr>>,
+    ) -> Box<CoapRequest<SocketAddr>> {
+        // vec should contain 'a' 1024 times, then 'b' 1024, up to ascii 'z'
+
+        match req.response {
+            Some(ref mut response) => {
+                response.message.payload = get_expected_response();
+            }
+            _ => {}
+        }
+        return req;
+    }
+    #[tokio::test]
+    async fn test_block2_server_response() {
+        let server_port = spawn_server("127.0.0.1:0", block2_responder)
+            .recv()
+            .await
+            .unwrap();
+
+        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+            .await
+            .unwrap();
+        let resp = client
+            .send(RequestBuilder::new("/", RequestType::Get).build())
+            .await
+            .unwrap();
+        assert_eq!(
+            resp.message.payload,
+            get_expected_response(),
+            "responses do not match"
+        );
     }
 }

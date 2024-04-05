@@ -322,7 +322,7 @@ mod test {
                 .unwrap(),
         };
 
-        let mut client = CoAPClient::from_dtls_config(dtls_config)
+        let client = CoAPClient::from_dtls_config(dtls_config)
             .await
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
@@ -358,7 +358,7 @@ mod test {
                 .unwrap(),
         };
 
-        let mut client = CoAPClient::from_dtls_config(dtls_config)
+        let client = CoAPClient::from_dtls_config(dtls_config)
             .await
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
@@ -427,7 +427,7 @@ mod test {
                 .unwrap(),
         };
 
-        let mut client = CoAPClient::from_dtls_config(dtls_config)
+        let client = CoAPClient::from_dtls_config(dtls_config)
             .await
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
@@ -483,7 +483,7 @@ mod test {
                 .unwrap(),
         };
 
-        let mut client = CoAPClient::from_dtls_config(dtls_config)
+        let client = CoAPClient::from_dtls_config(dtls_config)
             .await
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", dtls);

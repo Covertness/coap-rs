@@ -424,6 +424,8 @@ impl Observer {
 #[cfg(test)]
 mod test {
 
+    use crate::request::RequestBuilder;
+
     use super::super::*;
     use super::*;
     use std::{io::ErrorKind, time::Duration};
@@ -466,19 +468,22 @@ mod test {
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
-        let mut client = UdpCoAPClient::new_udp(server_address).await.unwrap();
+        let client = UdpCoAPClient::new_udp(server_address).await.unwrap();
 
         tx.send(step).unwrap();
         let mut request = CoapRequest::new();
 
         request.set_method(coap_lite::RequestType::Put);
         request.set_path(path);
+        request.message.set_token(vec![1]);
+
         request.message.payload = payload1.clone();
-        client.send_raw_request(&request).await.unwrap();
-        client.receive_raw_response().await.unwrap();
+        let _ = client.send(request.clone()).await.unwrap();
 
         let payload1_clone = payload1.clone();
         let payload2_clone = payload2.clone();
+
+        let client2 = client.clone();
 
         let mut receive_step = 1;
         client
@@ -506,10 +511,9 @@ mod test {
         tx.send(step).unwrap();
 
         request.message.payload = payload2.clone();
+        request.message.set_token(vec![2]);
 
-        let mut client2 = UdpCoAPClient::new_udp(server_address).await.unwrap();
-        client2.send_raw_request(&request).await.unwrap();
-        client2.receive_raw_response().await.unwrap();
+        let _ = client2.send(request).await.unwrap();
         assert_eq!(
             tokio::time::timeout(Duration::new(5, 0), rx2.recv())
                 .await
@@ -530,14 +534,15 @@ mod test {
 
         let server_address = &format!("127.0.0.1:{}", server_port);
 
-        let mut client = UdpCoAPClient::new_udp(server_address).await.unwrap();
+        let client = UdpCoAPClient::new_udp(server_address).await.unwrap();
 
-        let mut request = CoapRequest::new();
-        request.set_method(coap_lite::RequestType::Put);
-        request.set_path(path);
-        request.message.payload = payload1.clone();
-        client.send_raw_request(&request).await.unwrap();
-        client.receive_raw_response().await.unwrap();
+        let client3 = client.clone();
+
+        let mut request = RequestBuilder::new(path, coap_lite::RequestType::Put)
+            .token(Some(vec![1]))
+            .data(Some(payload1.clone()))
+            .build();
+        let _ = client.send(request.clone()).await.unwrap();
 
         let payload1_clone = payload1.clone();
         let unobserve = client
@@ -550,9 +555,7 @@ mod test {
         unobserve.send(client::ObserveMessage::Terminate).unwrap();
         request.message.payload = payload2.clone();
 
-        let mut client3 = UdpCoAPClient::new_udp(server_address).await.unwrap();
-        client3.send_raw_request(&request).await.unwrap();
-        client3.receive_raw_response().await.unwrap();
+        let _ = client3.send(request).await.unwrap();
     }
 
     #[tokio::test]
