@@ -103,18 +103,31 @@ pub struct DtlsConnection {
 }
 
 impl DtlsConnection {
-    pub async fn try_new(dtls_config: DtlsConfig) -> Result<DtlsConnection> {
-        let conn = Arc::new(
-            UdpSocket::bind("0.0.0.0:0")
-                .await
-                .map_err(|e| Error::new(ErrorKind::Other, e))?,
-        );
-        conn.connect(dtls_config.dest_addr)
-            .await
-            .map_err(|_| Error::new(ErrorKind::AddrNotAvailable, "address is in use"))?;
+    /// create a DTLS client connection from a socket. This function will attempt to perform a DTLS
+    /// hanshake
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
+    /// socket cannot connect to `dest_addr` specified in dtls_config or
+    /// handshake times out in the given timeout duration
+    pub async fn from_udp_socket(
+        socket: UdpSocket,
+        dtls_config: DtlsConfig,
+        handshake_timeout: Duration,
+    ) -> Result<Self> {
+        socket.connect(dtls_config.dest_addr).await?;
+        return Self::from_connection(Arc::new(socket), dtls_config, handshake_timeout).await;
+    }
+
+    pub async fn from_connection(
+        connection: Arc<dyn Conn + Send + Sync>,
+        dtls_config: DtlsConfig,
+        handshake_timeout: Duration,
+    ) -> Result<Self> {
         let dtls_conn = timeout(
-            Duration::new(30, 0),
-            DTLSConn::new(conn, dtls_config.config, true, None),
+            handshake_timeout,
+            DTLSConn::new(connection, dtls_config.config, true, None),
         )
         .await
         .map_err(|_| {
@@ -128,6 +141,13 @@ impl DtlsConnection {
             conn: dtls_conn,
             peer_addr: dtls_config.dest_addr,
         });
+    }
+
+    pub async fn try_new(dtls_config: DtlsConfig) -> Result<DtlsConnection> {
+        let conn = UdpSocket::bind("0.0.0.0:0")
+            .await
+            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        return Self::from_udp_socket(conn, dtls_config, Duration::new(30, 0)).await;
     }
 }
 pub struct DtlsConfig {
