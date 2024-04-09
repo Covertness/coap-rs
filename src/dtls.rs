@@ -1,18 +1,19 @@
 //! this file is included by enabling the "dtls" feature. It provides a default DTLS backend using
 //! webrtc-rs's dtls implementation.
-use crate::client::Transport;
+use crate::client::ClientTransport;
 use crate::server::{Listener, Responder, TransportRequestSender};
 use async_trait::async_trait;
 use std::net::SocketAddr;
 use std::time::Duration;
 use std::{
-    io::{Error, ErrorKind, Result},
+    io::{Error, ErrorKind, Result as IoResult},
     sync::Arc,
 };
 use tokio::net::UdpSocket;
 use tokio::task::JoinHandle;
 use tokio::time::timeout;
 use webrtc_dtls::conn::DTLSConn;
+use webrtc_dtls::state::State;
 use webrtc_util::conn::{Conn, Listener as WebRtcListener};
 
 #[async_trait]
@@ -20,7 +21,7 @@ impl<L: WebRtcListener + Send + 'static> Listener for L {
     async fn listen(
         self: Box<Self>,
         sender: TransportRequestSender,
-    ) -> std::io::Result<JoinHandle<std::io::Result<()>>> {
+    ) -> IoResult<JoinHandle<IoResult<()>>> {
         Ok(tokio::spawn(async move {
             loop {
                 let res = self.accept().await;
@@ -40,18 +41,17 @@ pub struct DtlsResponse {
 }
 
 #[async_trait]
-impl Transport for DtlsConnection {
-    async fn recv(&self, buf: &mut [u8]) -> std::io::Result<(usize, SocketAddr)> {
+impl ClientTransport for DtlsConnection {
+    async fn recv(&self, buf: &mut [u8]) -> IoResult<usize> {
         let read = self
             .conn
             .read(buf, None)
             .await
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
-        let from = self.peer_addr;
-        return Ok((read, from));
+        return Ok(read);
     }
 
-    async fn send(&self, buf: &[u8]) -> std::io::Result<usize> {
+    async fn send(&self, buf: &[u8]) -> IoResult<usize> {
         self.conn
             .write(buf, None)
             .await
@@ -96,25 +96,35 @@ pub async fn spawn_webrtc_conn(
         };
     }
 }
-
+#[async_trait]
+/// This trait is used to implement a hook that is called when a DTLS connection is dropped
+/// Only use this in case you need to save your connection
+pub trait DtlsDropHook: Send + Sync {
+    async fn on_drop(&self, conn: Arc<DTLSConn>);
+}
 pub struct DtlsConnection {
-    pub conn: DTLSConn,
-    pub peer_addr: SocketAddr,
+    conn: Arc<DTLSConn>,
+    on_drop: Option<Box<dyn DtlsDropHook>>,
 }
 
 impl DtlsConnection {
-    pub async fn try_new(dtls_config: DtlsConfig) -> Result<DtlsConnection> {
-        let conn = Arc::new(
-            UdpSocket::bind("0.0.0.0:0")
-                .await
-                .map_err(|e| Error::new(ErrorKind::Other, e))?,
-        );
-        conn.connect(dtls_config.dest_addr)
-            .await
-            .map_err(|_| Error::new(ErrorKind::AddrNotAvailable, "address is in use"))?;
+    /// Creates a new DTLS connection from a given connection. This connection can be  
+    /// a tokio UDP socket or a user-created struct implementing Conn, Send, and Sync
+    ///
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the handshake fails or if it times out
+    pub async fn try_from_connection(
+        connection: Arc<dyn Conn + Send + Sync>,
+        dtls_config: webrtc_dtls::config::Config,
+        handshake_timeout: Duration,
+        state: Option<State>,
+        on_drop: Option<Box<dyn DtlsDropHook>>,
+    ) -> IoResult<Self> {
         let dtls_conn = timeout(
-            Duration::new(30, 0),
-            DTLSConn::new(conn, dtls_config.config, true, None),
+            handshake_timeout,
+            DTLSConn::new(connection, dtls_config, true, state),
         )
         .await
         .map_err(|_| {
@@ -125,14 +135,43 @@ impl DtlsConnection {
         })?
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
         return Ok(DtlsConnection {
-            conn: dtls_conn,
-            peer_addr: dtls_config.dest_addr,
+            conn: Arc::new(dtls_conn),
+            on_drop,
         });
     }
+
+    pub async fn try_new(dtls_config: UdpDtlsConfig) -> IoResult<DtlsConnection> {
+        let conn = UdpSocket::bind("0.0.0.0:0")
+            .await
+            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        conn.connect(dtls_config.dest_addr).await?;
+        return Self::try_from_connection(
+            Arc::new(conn),
+            dtls_config.config,
+            Duration::new(30, 0),
+            None,
+            None,
+        )
+        .await;
+    }
 }
-pub struct DtlsConfig {
+pub struct UdpDtlsConfig {
     pub config: webrtc_dtls::config::Config,
     pub dest_addr: SocketAddr,
+}
+
+impl Drop for DtlsConnection {
+    fn drop(&mut self) {
+        if let Some(drop_hook) = self.on_drop.take() {
+            println!("dropping");
+            //this is a nasty hack necessary to call async methods inside the drop method without
+            //transferring ownership
+            let conn = self.conn.clone();
+            tokio::spawn(async move {
+                drop_hook.on_drop(conn).await;
+            });
+        }
+    }
 }
 
 #[cfg(test)]
@@ -149,7 +188,9 @@ mod test {
     use std::fs::File;
     use std::io::{BufReader, Read};
     use std::net::{SocketAddr, ToSocketAddrs};
+    use std::sync::atomic::AtomicBool;
     use tokio::sync::mpsc;
+    use tokio::time::sleep;
     use webrtc_dtls::cipher_suite::CipherSuiteId;
     use webrtc_dtls::config::{ClientAuthType, Config, ExtendedMasterSecretType};
     use webrtc_dtls::crypto::{Certificate, CryptoPrivateKey};
@@ -313,7 +354,7 @@ mod test {
             .await
             .unwrap();
 
-        let dtls_config = DtlsConfig {
+        let dtls_config = UdpDtlsConfig {
             config: client_cfg,
             dest_addr: ("127.0.0.1", server_port)
                 .to_socket_addrs()
@@ -322,7 +363,7 @@ mod test {
                 .unwrap(),
         };
 
-        let client = CoAPClient::from_dtls_config(dtls_config)
+        let client = CoAPClient::from_udp_dtls_config(dtls_config)
             .await
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
@@ -349,7 +390,7 @@ mod test {
             .await
             .unwrap();
 
-        let dtls_config = DtlsConfig {
+        let dtls_config = UdpDtlsConfig {
             config,
             dest_addr: ("127.0.0.1", server_port)
                 .to_socket_addrs()
@@ -358,7 +399,7 @@ mod test {
                 .unwrap(),
         };
 
-        let client = CoAPClient::from_dtls_config(dtls_config)
+        let client = CoAPClient::from_udp_dtls_config(dtls_config)
             .await
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
@@ -387,7 +428,7 @@ mod test {
         // make the psk fail
         config.psk = Some(Arc::new(|_| Ok(vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 9])));
 
-        let dtls_config = DtlsConfig {
+        let dtls_config = UdpDtlsConfig {
             config,
             dest_addr: ("127.0.0.1", server_port)
                 .to_socket_addrs()
@@ -396,7 +437,7 @@ mod test {
                 .unwrap(),
         };
         assert!(
-            CoAPClient::from_dtls_config(dtls_config).await.is_err(),
+            CoAPClient::from_udp_dtls_config(dtls_config).await.is_err(),
             "should not have connected"
         );
     }
@@ -418,7 +459,7 @@ mod test {
         let get_error = get.unwrap_err();
         assert!(get_error.kind() == ErrorKind::TimedOut);
 
-        let dtls_config = DtlsConfig {
+        let dtls_config = UdpDtlsConfig {
             config,
             dest_addr: ("127.0.0.1", server_port)
                 .to_socket_addrs()
@@ -427,7 +468,7 @@ mod test {
                 .unwrap(),
         };
 
-        let client = CoAPClient::from_dtls_config(dtls_config)
+        let client = CoAPClient::from_udp_dtls_config(dtls_config)
             .await
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", server_port);
@@ -474,7 +515,7 @@ mod test {
             .unwrap();
         assert_eq!(get.message.payload, b"hello_udp".to_vec());
 
-        let dtls_config = DtlsConfig {
+        let dtls_config = UdpDtlsConfig {
             config,
             dest_addr: ("127.0.0.1", dtls)
                 .to_socket_addrs()
@@ -483,7 +524,7 @@ mod test {
                 .unwrap(),
         };
 
-        let client = CoAPClient::from_dtls_config(dtls_config)
+        let client = CoAPClient::from_udp_dtls_config(dtls_config)
             .await
             .expect("could not create client");
         let domain = format!("127.0.0.1:{}", dtls);
@@ -501,5 +542,148 @@ mod test {
             .await
             .unwrap();
         assert_eq!(resp.message.payload, b"hello_dtls".to_vec());
+    }
+
+    struct OnDropFlag(pub Arc<AtomicBool>);
+
+    #[async_trait]
+    impl DtlsDropHook for OnDropFlag {
+        async fn on_drop(&self, conn: Arc<DTLSConn>) {
+            let _state = conn.connection_state().await;
+            self.0.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_drop_hook() {
+        let config = get_psk_config();
+        let server_port = spawn_dtls_server("127.0.0.1:0", request_handler, config.clone())
+            .recv()
+            .await
+            .unwrap();
+        let dtls_config = UdpDtlsConfig {
+            config,
+            dest_addr: ("127.0.0.1", server_port)
+                .to_socket_addrs()
+                .unwrap()
+                .next()
+                .unwrap(),
+        };
+
+        let flag = Arc::new(AtomicBool::new(false));
+        {
+            let socket = Arc::new(UdpSocket::bind("0.0.0.0:0").await.unwrap());
+            socket.connect(dtls_config.dest_addr).await.unwrap();
+            let on_drop = OnDropFlag(flag.clone());
+
+            let transport = DtlsConnection::try_from_connection(
+                socket,
+                dtls_config.config,
+                Duration::from_secs(1),
+                None,
+                Some(Box::new(on_drop)),
+            )
+            .await
+            .expect("could not create client");
+            let client = CoAPClient::from_transport(transport);
+            let domain = format!("127.0.0.1:{}", server_port);
+            let resp = client
+                .send(
+                    RequestBuilder::request_path(
+                        "/hello",
+                        Method::Get,
+                        None,
+                        None,
+                        Some(domain.to_string()),
+                    )
+                    .build(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(resp.message.payload, b"hello".to_vec());
+            drop(client);
+        }
+        sleep(Duration::from_millis(500)).await;
+        assert!(
+            flag.load(std::sync::atomic::Ordering::Relaxed),
+            "flag not called"
+        );
+    }
+
+    struct SocketWrapper(pub UdpSocket);
+
+    type WebrtcResult<T> = std::result::Result<T, webrtc_util::Error>;
+    #[async_trait]
+    impl Conn for SocketWrapper {
+        async fn connect(&self, addr: SocketAddr) -> WebrtcResult<()> {
+            self.0.connect(addr).await;
+            Ok(())
+        }
+        async fn recv(&self, buf: &mut [u8]) -> WebrtcResult<usize> {
+            Ok(self.0.recv(buf).await?)
+        }
+        async fn recv_from(&self, buf: &mut [u8]) -> WebrtcResult<(usize, SocketAddr)> {
+            todo!("not needed")
+        }
+        async fn send(&self, buf: &[u8]) -> WebrtcResult<usize> {
+            Ok(self.0.send(buf).await?)
+        }
+        async fn send_to(&self, buf: &[u8], target: SocketAddr) -> WebrtcResult<usize> {
+            todo!("not needed");
+        }
+        fn local_addr(&self) -> WebrtcResult<SocketAddr> {
+            todo!("not needed");
+        }
+        fn remote_addr(&self) -> Option<SocketAddr> {
+            todo!("not needed")
+        }
+        async fn close(&self) -> WebrtcResult<()> {
+            Ok(self.0.close().await?)
+        }
+    }
+    #[tokio::test]
+    async fn test_own_connection() {
+        let config = get_psk_config();
+        let server_port = spawn_dtls_server("127.0.0.1:0", request_handler, config.clone())
+            .recv()
+            .await
+            .unwrap();
+        let dtls_config = UdpDtlsConfig {
+            config,
+            dest_addr: ("127.0.0.1", server_port)
+                .to_socket_addrs()
+                .unwrap()
+                .next()
+                .unwrap(),
+        };
+        let socket = Arc::new(SocketWrapper(UdpSocket::bind("0.0.0.0:0").await.unwrap()));
+        socket.connect(dtls_config.dest_addr).await.unwrap();
+
+        let transport = DtlsConnection::try_from_connection(
+            socket,
+            dtls_config.config,
+            Duration::from_secs(1),
+            None,
+            None,
+        )
+        .await
+        .expect("could not create client");
+        let client = CoAPClient::from_transport(transport);
+        let domain = format!("127.0.0.1:{}", server_port);
+        let resp = client
+            .send(
+                RequestBuilder::request_path(
+                    "/hello",
+                    Method::Get,
+                    None,
+                    None,
+                    Some(domain.to_string()),
+                )
+                .build(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.message.payload, b"hello".to_vec());
+        drop(client);
     }
 }

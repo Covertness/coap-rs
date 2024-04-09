@@ -2,7 +2,7 @@
 /// a look at the test in dtls.rs
 extern crate coap;
 use coap::client::CoAPClient;
-use coap::dtls::DtlsConfig;
+use coap::dtls::UdpDtlsConfig;
 use coap::request::RequestBuilder;
 use coap::Server;
 use coap_lite::{CoapRequest, RequestType as Method};
@@ -60,7 +60,7 @@ async fn main() {
     .await
     .unwrap();
 
-    let dtls_config = DtlsConfig {
+    let dtls_config = UdpDtlsConfig {
         config,
         dest_addr: ("127.0.0.1", server_port)
             .to_socket_addrs()
@@ -69,7 +69,7 @@ async fn main() {
             .unwrap(),
     };
 
-    let client = CoAPClient::from_dtls_config(dtls_config)
+    let client = CoAPClient::from_udp_dtls_config(dtls_config)
         .await
         .expect("could not create client");
     let domain = format!("127.0.0.1:{}", server_port);
