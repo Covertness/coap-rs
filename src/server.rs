@@ -817,7 +817,7 @@ pub mod test {
         let mut receiver = client.create_receiver_for(&request).await;
         client.send_all_coap(&request, segment).await.unwrap();
         let recv_packet = receiver.receive().await.unwrap();
-        assert_eq!(recv_packet.payload, b"test-echo".to_vec());
+        assert_eq!(recv_packet.packet.payload, b"test-echo".to_vec());
     }
 
     //This test right now does not work on windows
@@ -872,7 +872,7 @@ pub mod test {
         let mut receiver = client.create_receiver_for(&request).await;
         client.send_all_coap(&request, segment).await.unwrap();
         let recv_packet = receiver.receive().await.unwrap();
-        assert_eq!(recv_packet.payload, b"test-echo".to_vec());
+        assert_eq!(recv_packet.packet.payload, b"test-echo".to_vec());
     }
 
     #[test]

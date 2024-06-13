@@ -3,7 +3,7 @@
 use crate::client::ClientTransport;
 use crate::server::{Listener, Responder, TransportRequestSender};
 use async_trait::async_trait;
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 use std::{
     io::{Error, ErrorKind, Result as IoResult},
@@ -42,13 +42,14 @@ pub struct DtlsResponse {
 
 #[async_trait]
 impl ClientTransport for DtlsConnection {
-    async fn recv(&self, buf: &mut [u8]) -> IoResult<usize> {
+    async fn recv(&self, buf: &mut [u8]) -> IoResult<(usize, SocketAddr)> {
         let read = self
             .conn
             .read(buf, None)
             .await
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
-        return Ok(read);
+
+        return Ok((read, SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)));
     }
 
     async fn send(&self, buf: &[u8]) -> IoResult<usize> {
@@ -108,7 +109,7 @@ pub struct DtlsConnection {
 }
 
 impl DtlsConnection {
-    /// Creates a new DTLS connection from a given connection. This connection can be  
+    /// Creates a new DTLS connection from a given connection. This connection can be
     /// a tokio UDP socket or a user-created struct implementing Conn, Send, and Sync
     ///
     ///
