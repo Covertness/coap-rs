@@ -3,7 +3,7 @@
 use crate::client::ClientTransport;
 use crate::server::{Listener, Responder, TransportRequestSender};
 use async_trait::async_trait;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
 use std::time::Duration;
 use std::{
     io::{Error, ErrorKind, Result as IoResult},
@@ -42,14 +42,13 @@ pub struct DtlsResponse {
 
 #[async_trait]
 impl ClientTransport for DtlsConnection {
-    async fn recv(&self, buf: &mut [u8]) -> IoResult<(usize, SocketAddr)> {
+    async fn recv(&self, buf: &mut [u8]) -> IoResult<(usize, Option<SocketAddr>)> {
         let read = self
             .conn
             .read(buf, None)
             .await
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
-
-        return Ok((read, SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0)));
+        return Ok((read, self.conn.remote_addr()));
     }
 
     async fn send(&self, buf: &[u8]) -> IoResult<usize> {
@@ -188,7 +187,7 @@ mod test {
     use rcgen::KeyPair;
     use std::fs::File;
     use std::io::{BufReader, Read};
-    use std::net::{SocketAddr, ToSocketAddrs};
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
     use std::sync::atomic::AtomicBool;
     use tokio::sync::mpsc;
     use tokio::time::sleep;
@@ -636,7 +635,7 @@ mod test {
             todo!("not needed");
         }
         fn remote_addr(&self) -> Option<SocketAddr> {
-            todo!("not needed")
+            Some(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 0))
         }
         async fn close(&self) -> WebrtcResult<()> {
             Ok(self.0.close().await?)
