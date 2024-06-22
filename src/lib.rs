@@ -20,7 +20,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! coap = "0.17"
+//! coap = "0.18"
 //! coap-lite = "0.11.3"
 //! tokio = {version = "^1.32", features = ["full"]}
 //! ```
