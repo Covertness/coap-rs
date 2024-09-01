@@ -441,6 +441,15 @@ impl UdpCoAPClient {
             ),
         };
 
+        self.send_multicast(request, &addr).await
+    }
+
+    /// Send a multicast request to multiple devices.
+    pub async fn send_multicast(
+        &self,
+        request: &CoapRequest<SocketAddr>,
+        addr: &SocketAddr,
+    ) -> IoResult<()> {
         match request.message.to_bytes() {
             Ok(bytes) => {
                 let size = self
