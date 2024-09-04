@@ -391,13 +391,8 @@ impl UdpCoAPClient {
         bind_addr: A,
         peer_addr: B,
     ) -> IoResult<Self> {
-        let peer_addr = lookup_host(peer_addr).await?.next().ok_or(Error::new(
-            ErrorKind::InvalidInput,
-            "could not get socket address",
-        ))?;
         let socket = UdpSocket::bind(bind_addr).await?;
-        let transport = UdpTransport { socket, peer_addr };
-        return Ok(UdpCoAPClient::from_transport(transport));
+        Self::new_with_tokio_socket(socket, peer_addr).await
     }
 
     pub async fn new_udp<A: ToSocketAddrs>(addr: A) -> IoResult<Self> {
@@ -410,6 +405,45 @@ impl UdpCoAPClient {
             SocketAddr::V6(_) => Self::new_with_specific_source(":::0", sock_addr).await?,
         })
     }
+
+    /// Create a client with a `std::net` socket
+    ///
+    /// Using a standard socket is useful to get advanced features from socket2 crate
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # tokio_test::block_on(async {
+    ///   use socket2::{Socket, Domain, Type};
+    ///   use coap::UdpCoAPClient;
+    ///
+    ///   let socket = Socket::new(Domain::IPV6, Type::DGRAM, None).expect("Standard socket creation failed");
+    ///   socket.set_multicast_hops_v6(16).expect("Setting multicast hops failed");
+    ///   let client = UdpCoAPClient::new_with_std_socket(socket.into(), "[::1]:5683").await.expect("Client creation failed");
+    /// # })
+    /// ```
+    pub async fn new_with_std_socket<A: ToSocketAddrs>(
+        socket: std::net::UdpSocket,
+        peer_addr: A,
+    ) -> IoResult<Self> {
+        socket.set_nonblocking(true)?;
+        let socket = UdpSocket::from_std(socket)?;
+        Self::new_with_tokio_socket(socket, peer_addr).await
+    }
+
+    async fn new_with_tokio_socket<A: ToSocketAddrs>(
+        socket: UdpSocket,
+        peer_addr: A,
+    ) -> IoResult<Self> {
+        let peer_addr = lookup_host(peer_addr).await?.next().ok_or(Error::new(
+            ErrorKind::InvalidInput,
+            "could not get socket address",
+        ))?;
+
+        let transport = UdpTransport { socket, peer_addr };
+        Ok(UdpCoAPClient::from_transport(transport))
+    }
+
     /// Send a request to all CoAP devices.
     /// - IPv4 AllCoAP multicast address is '224.0.1.187'
     /// - IPv6 AllCoAp multicast addresses are 'ff0?::fd'
