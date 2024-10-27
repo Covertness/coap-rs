@@ -974,6 +974,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                 request.message.clear_option(CoapOption::Block2);
                 let mut next_block2 = block2.clone();
                 next_block2.num += 1;
+                next_block2.more = false;
                 request
                     .message
                     .add_option_as::<BlockValue>(CoapOption::Block2, next_block2);
