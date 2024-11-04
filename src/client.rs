@@ -816,6 +816,9 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
     async fn send_request(&self, request: &mut CoapRequest<SocketAddr>) -> IoResult<CoapResponse> {
         let request_length = request.message.payload.len();
         if request_length <= self.block1_size {
+            if 0 == request.message.header.message_id {
+                request.message.header.message_id = self.gen_message_id();
+            }
             return self.send_single_request(request).await;
         }
         let payload = std::mem::take(&mut request.message.payload);
@@ -869,6 +872,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         loop {
             match Self::intercept_response(request, &mut block2_state) {
                 Ok(true) => {
+                    request.message.header.message_id = self.gen_message_id();
                     let resp = self.send_single_request(request).await?;
                     request.response = Some(resp);
                 }
