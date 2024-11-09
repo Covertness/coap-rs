@@ -1048,6 +1048,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_get_url() {
         let resp = UdpCoAPClient::get("coap://coap.me:5683/hello")
             .await
@@ -1072,6 +1073,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_get() {
         let domain = "coap.me";
         let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
@@ -1091,6 +1093,7 @@ mod test {
         assert_eq!(resp.message.payload, b"world".to_vec());
     }
     #[tokio::test]
+    #[ignore]
     async fn test_post_url() {
         let resp = UdpCoAPClient::post("coap://coap.me:5683/validate", b"world".to_vec())
             .await
@@ -1103,6 +1106,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_post() {
         let domain = "coap.me";
         let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
@@ -1123,6 +1127,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_put_url() {
         let resp = UdpCoAPClient::put("coap://coap.me:5683/create1", b"world".to_vec())
             .await
@@ -1135,6 +1140,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_put() {
         let domain = "coap.me";
         let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
@@ -1151,6 +1157,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_delete_url() {
         let resp = UdpCoAPClient::delete("coap://coap.me:5683/validate")
             .await
@@ -1163,6 +1170,7 @@ mod test {
     }
 
     #[tokio::test]
+    #[ignore]
     async fn test_delete() {
         let domain = "coap.me";
         let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
@@ -1208,6 +1216,7 @@ mod test {
         client.send_all_coap(&request, 0).await.unwrap();
     }
     #[tokio::test]
+    #[ignore]
     async fn test_change_block_option() {
         // this test is a little finnicky because it relies on the configuration
         // of the reception endpoint. It tries to send a payload larger than the
