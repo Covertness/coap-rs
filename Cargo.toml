@@ -11,7 +11,7 @@ keywords = ["CoAP"]
 edition = "2021"
 
 [dependencies]
-url = "^2.2"
+url = "^2.5"
 log = "^0.4"
 regex = "^1.5"
 tokio =  {version = "^1.32", features = ["full"]}
