@@ -428,7 +428,7 @@ mod test {
 
     use super::super::*;
     use super::*;
-    use std::{io::ErrorKind, time::Duration};
+    use std::io::ErrorKind;
     use tokio::sync::mpsc;
 
     async fn request_handler(

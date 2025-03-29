@@ -450,7 +450,7 @@ impl UdpCoAPClient {
     /// you have to call send_all_coap for each of the segments.
     pub async fn send_all_coap(
         &self,
-        request: &CoapRequest<SocketAddr>,
+        request: &mut CoapRequest<SocketAddr>,
         segment: u8,
     ) -> IoResult<()> {
         assert!(segment <= 0xf);
@@ -479,9 +479,12 @@ impl UdpCoAPClient {
     /// Send a multicast request to multiple devices.
     pub async fn send_multicast(
         &self,
-        request: &CoapRequest<SocketAddr>,
+        request: &mut CoapRequest<SocketAddr>,
         addr: &SocketAddr,
     ) -> IoResult<()> {
+        if 0 == request.message.header.message_id {
+            request.message.header.message_id = self.gen_message_id();
+        }
         match request.message.to_bytes() {
             Ok(bytes) => {
                 let size = self
@@ -521,13 +524,13 @@ impl UdpCoAPClient {
     ///   let client = UdpCoAPClient::new_udp("127.0.0.1:5683")
     ///          .await
     ///          .unwrap();
-    ///   let request = RequestBuilder::new("test-echo", RequestType::Get)
+    ///   let mut request = RequestBuilder::new("test-echo", RequestType::Get)
     ///       .data(Some(vec![0x51, 0x55, 0x77, 0xE8]))
     ///       .confirmable(true)
     ///       .build();
     ///
     ///   let mut receiver = client.create_receiver_for(&request).await;
-    ///   client.send_all_coap(&request, segment).await.unwrap();
+    ///   client.send_all_coap(&mut request, segment).await.unwrap();
     ///   loop {
     ///      let recv_packet = receiver.receive().await.unwrap();
     ///      assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
@@ -1005,11 +1008,9 @@ mod test {
 
     use super::super::*;
     use super::*;
-    use std::io::ErrorKind;
     use std::ops::DerefMut;
     use std::str;
     use std::sync::atomic::{AtomicU32, Ordering};
-    use std::time::Duration;
     #[test]
     fn test_parse_coap_url_good_url() {
         assert!(UdpCoAPClient::parse_coap_url("coap://127.0.0.1").is_ok());
@@ -1203,7 +1204,7 @@ mod test {
         request.message.payload = b"Discovery".to_vec();
 
         let client = UdpCoAPClient::new_udp(("127.0.0.1", 5683)).await.unwrap();
-        client.send_all_coap(&request, 0).await.unwrap();
+        client.send_all_coap(&mut request, 0).await.unwrap();
     }
     #[tokio::test]
     async fn test_change_block_option() {
@@ -1257,7 +1258,7 @@ mod test {
         request.message.payload = b"Discovery".to_vec();
 
         let client = UdpCoAPClient::new_udp(("::1", 5683)).await.unwrap();
-        client.send_all_coap(&request, 0x4).await.unwrap();
+        client.send_all_coap(&mut request, 0x4).await.unwrap();
     }
 
     struct FaultyUdp {

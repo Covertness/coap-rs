@@ -187,7 +187,7 @@ mod test {
     use rcgen::KeyPair;
     use std::fs::File;
     use std::io::{BufReader, Read};
-    use std::net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
+    use std::net::{IpAddr, Ipv4Addr, ToSocketAddrs};
     use std::sync::atomic::AtomicBool;
     use tokio::sync::mpsc;
     use tokio::time::sleep;
@@ -616,19 +616,19 @@ mod test {
     #[async_trait]
     impl Conn for SocketWrapper {
         async fn connect(&self, addr: SocketAddr) -> WebrtcResult<()> {
-            self.0.connect(addr).await;
+            let _ = self.0.connect(addr).await;
             Ok(())
         }
         async fn recv(&self, buf: &mut [u8]) -> WebrtcResult<usize> {
             Ok(self.0.recv(buf).await?)
         }
-        async fn recv_from(&self, buf: &mut [u8]) -> WebrtcResult<(usize, SocketAddr)> {
+        async fn recv_from(&self, _buf: &mut [u8]) -> WebrtcResult<(usize, SocketAddr)> {
             todo!("not needed")
         }
         async fn send(&self, buf: &[u8]) -> WebrtcResult<usize> {
             Ok(self.0.send(buf).await?)
         }
-        async fn send_to(&self, buf: &[u8], target: SocketAddr) -> WebrtcResult<usize> {
+        async fn send_to(&self, _buf: &[u8], _target: SocketAddr) -> WebrtcResult<usize> {
             todo!("not needed");
         }
         fn local_addr(&self) -> WebrtcResult<SocketAddr> {
