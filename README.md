@@ -24,8 +24,8 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.19"
-coap-lite = "0.11.3"
+coap = "0.20"
+coap-lite = "0.13.1"
 tokio = {version = "^1.32", features = ["full"]}
 ```
 
