@@ -2,7 +2,6 @@ use async_trait::async_trait;
 use coap_lite::{BlockHandler, BlockHandlerConfig, CoapRequest, CoapResponse, Packet};
 use log::debug;
 use std::{
-    self,
     future::Future,
     io::ErrorKind,
     net::{self, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},

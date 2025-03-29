@@ -1,8 +1,6 @@
 #[cfg(feature = "dtls")]
 use crate::dtls::{DtlsConnection, UdpDtlsConfig};
 use crate::request::RequestBuilder;
-use alloc::string::String;
-use alloc::vec::Vec;
 use coap_lite::{
     block_handler::{extending_splice, BlockValue},
     error::HandlingError,
