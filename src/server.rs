@@ -1,3 +1,5 @@
+#[cfg(feature = "router")]
+use crate::router::{request::Request, Router};
 use async_trait::async_trait;
 use coap_lite::{BlockHandler, BlockHandlerConfig, CoapOption, CoapRequest, CoapResponse, Packet};
 use log::debug;
@@ -453,6 +455,24 @@ impl Server {
             }
         }
     }
+
+    #[cfg(feature = "router")]
+    pub async fn serve<S>(self, router: Router<S>, state: S) -> Result<(), io::Error>
+    where
+        S: Clone + Send + Sync + 'static,
+    {
+        let router = Arc::new(router);
+        let handler = {
+            move |req| {
+                let r = router.clone();
+                let s = state.clone();
+                let req = Request::new(req);
+                async move { r.handle(req, s).await.req }
+            }
+        };
+        self.run(handler).await
+    }
+
     async fn respond_to_request(req: Box<CoapRequest<SocketAddr>>, responder: Arc<dyn Responder>) {
         // if we have some reponse to send, send it
         if let Some(Ok(b)) = req.response.map(|resp| resp.message.to_bytes()) {
