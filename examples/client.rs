@@ -24,7 +24,7 @@ async fn main() {
 }
 
 async fn example_get() {
-    let url = "coap://127.0.0.1:5683/hello/get";
+    let url = "coap://127.0.0.1:5683/temperature/kitchen";
     println!("Client request: {}", url);
 
     match UdpCoAPClient::get(url).await {
