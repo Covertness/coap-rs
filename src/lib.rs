@@ -98,4 +98,6 @@ pub mod client;
 pub mod dtls;
 mod observer;
 pub mod request;
+#[cfg(feature = "router")]
+pub mod router;
 pub mod server;
