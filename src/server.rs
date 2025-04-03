@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use coap_lite::{BlockHandler, BlockHandlerConfig, CoapRequest, CoapResponse, Packet};
 use log::debug;
 use std::{
-    self,
     future::Future,
     io::ErrorKind,
     net::{self, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
@@ -828,13 +827,13 @@ pub mod test {
         let client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
             .await
             .unwrap();
-        let request = RequestBuilder::new("test-echo", RequestType::Get)
+        let mut request = RequestBuilder::new("test-echo", RequestType::Get)
             .data(Some(vec![0x51, 0x55, 0x77, 0xE8]))
             .confirmable(true)
             .build();
 
         let mut receiver = client.create_receiver_for(&request).await;
-        client.send_all_coap(&request, segment).await.unwrap();
+        client.send_all_coap(&mut request, segment).await.unwrap();
         let recv_packet = receiver.receive().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
@@ -889,7 +888,7 @@ pub mod test {
             .message
             .add_option(CoapOption::UriPath, b"test-echo".to_vec());
         let mut receiver = client.create_receiver_for(&request).await;
-        client.send_all_coap(&request, segment).await.unwrap();
+        client.send_all_coap(&mut request, segment).await.unwrap();
         let recv_packet = receiver.receive().await.unwrap();
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
     }
