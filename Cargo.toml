@@ -1,6 +1,6 @@
 [package]
 name = "coap"
-version = "0.20.0"
+version = "0.20.1"
 description = "A CoAP library"
 readme = "README.md"
 documentation = "https://docs.rs/coap/"
@@ -18,7 +18,7 @@ tokio =  {version = "^1.32", features = ["full"]}
 tokio-util = {version = "^0.6", features = ["codec","net"]}
 tokio-stream = {version = "^0.1", features = ["time"]}
 futures = "^0.3"
-coap-lite = "0.13.1"
+coap-lite = "0.13.2"
 async-trait = "0.1.74"
 
 # dependencies for dtls
