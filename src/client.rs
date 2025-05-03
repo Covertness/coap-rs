@@ -169,21 +169,18 @@ async fn receive_loop<T: ClientTransport + 'static>(
             transport_instance.send(&ack).await?;
         }
 
-        let MessageClass::Response(_) = packet.message.header.code else {
-            continue;
-        };
-
-        let token = packet.message.get_token();
-        let Some(sender) = transport_sync.get_sender(token).await else {
-            info!("received unexpected response for token {:?}", &token);
-            continue;
-        };
         match packet.message.header.code {
             MessageClass::Response(_) => {}
             m => {
                 debug!("unknown message type {}", m);
                 continue;
             }
+        };
+
+        let token = packet.message.get_token();
+        let Some(sender) = transport_sync.get_sender(token).await else {
+            info!("received unexpected response for token {:?}", &token);
+            continue;
         };
         let Ok(_) = sender.send(Ok(packet)) else {
             debug!("unexpected drop of sender");
