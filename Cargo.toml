@@ -14,30 +14,55 @@ edition = "2021"
 url = "^2.5"
 log = "^0.4"
 regex = "^1.5"
-tokio =  {version = "^1.32", features = ["full"]}
-tokio-util = {version = "^0.6", features = ["codec","net"]}
-tokio-stream = {version = "^0.1", features = ["time"]}
+tokio = { version = "^1.32", features = ["full"] }
+tokio-util = { version = "^0.7", features = ["codec", "net"] }
+tokio-stream = { version = "^0.1", features = ["time"] }
 futures = "^0.3"
 coap-lite = "0.13.2"
 async-trait = "0.1.74"
 
 # dependencies for dtls
-webrtc-dtls = {version = "0.8.0", optional = true}
-webrtc-util = {version = "0.8.0", optional = true}
-rustls  = {version = "^0.21.1", optional = true}
-rustls-pemfile  = {version = "2.0.0", optional = true}
-rcgen  = {version = "^0.11.0", optional = true}
-pkcs8  = {version = "0.10.2", optional = true}
-sec1 = { version = "0.7.3", features = ["pem", "pkcs8", "std"], optional = true}
-rand = "0.8.5"
+webrtc-dtls = { version = "0.8.0", optional = true }
+webrtc-util = { version = "0.8.0", optional = true }
+rustls = { version = "^0.21.1", optional = true }
+rustls-pemfile = { version = "2.0.0", optional = true }
+rcgen = { version = "^0.11.0", optional = true }
+pkcs8 = { version = "0.10.2", optional = true }
+sec1 = { version = "0.7.3", features = [
+    "pem",
+    "pkcs8",
+    "std",
+], optional = true }
+rand = "0.9.0"
+
+# dependencies for extractor
+percent-encoding = { version = "2.1", optional = true}
+serde = { version = "1.0", optional = true }
+serde_html_form = { version = "0.2.7", optional = true }
+serde_path_to_error = { version = "0.1.9", optional = true }
+serde_json = { version = "1.0", optional = true }
 
 [features]
-default = ["dtls"]
-dtls = ["dep:webrtc-dtls", "dep:webrtc-util", "dep:rustls", "dep:rustls-pemfile", "dep:rcgen", "dep:pkcs8", "dep:sec1"]
+default = ["dtls", "router"]
+dtls = [
+    "dep:webrtc-dtls",
+    "dep:webrtc-util",
+    "dep:rustls",
+    "dep:rustls-pemfile",
+    "dep:rcgen",
+    "dep:pkcs8",
+    "dep:sec1",
+]
+router = [
+    "dep:percent-encoding",
+    "dep:serde",
+    "dep:serde_html_form",
+    "dep:serde_path_to_error",
+    "dep:serde_json",
+]
 
 
 [dev-dependencies]
-quickcheck = "0.8.2"
+quickcheck = "1.0"
 socket2 = "0.5"
 tokio-test = "0.4.4"
-
