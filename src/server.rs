@@ -435,8 +435,13 @@ impl Server {
             responder.respond(b).await;
         }
     }
+    #[deprecated(since = "0.21.0", note = "Use 'coap::Server::automatic_observe_handling' instead.")]
     /// disable auto-observe handling in server
     pub async fn disable_observe_handling(&mut self, value: bool) {
+        self.automatic_observe_handling(value).await
+    }
+    /// set auto-observe handling in server, defaults to enabled
+    pub async fn automatic_observe_handling(&mut self, value: bool) {
         let mut coap_state = self.coap_state.lock().await;
         coap_state.disable_observe_handling(value)
     }
