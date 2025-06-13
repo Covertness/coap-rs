@@ -10,7 +10,7 @@ pub struct RequestBuilder<'a> {
     path: &'a str,
     method: Method,
     data: Option<Vec<u8>>,
-    queries: Option<Vec<u8>>,
+    queries: Vec<Vec<u8>>,
     domain: String,
     confirmable: bool,
     token: Option<Vec<u8>>,
@@ -22,7 +22,7 @@ impl<'a> RequestBuilder<'a> {
             path,
             method,
             data: None,
-            queries: None,
+            queries: vec![],
             token: None,
             domain: "".to_string(),
             confirmable: true,
@@ -36,7 +36,7 @@ impl<'a> RequestBuilder<'a> {
         path: &'a str,
         method: Method,
         payload: Option<Vec<u8>>,
-        query: Option<Vec<u8>>,
+        query: Vec<Vec<u8>>,
         domain: Option<String>,
     ) -> Self {
         let new_self = Self::new(path, method);
@@ -54,7 +54,7 @@ impl<'a> RequestBuilder<'a> {
         self
     }
     /// set the queries of the request.
-    pub fn queries(mut self, queries: Option<Vec<u8>>) -> Self {
+    pub fn queries(mut self, queries: Vec<Vec<u8>>) -> Self {
         self.queries = queries;
         self
     }
@@ -83,8 +83,8 @@ impl<'a> RequestBuilder<'a> {
         let mut request = CoapRequest::new();
         request.set_method(self.method);
         request.set_path(self.path);
-        if let Some(queries) = self.queries {
-            request.message.add_option(CoapOption::UriQuery, queries);
+        for query in self.queries {
+            request.message.add_option(CoapOption::UriQuery, query);
         }
         for (opt, opt_data) in self.options {
             assert_ne!(opt, CoapOption::UriQuery, "Use queries instead");
@@ -119,7 +119,7 @@ pub mod test {
             "/",
             Method::Put,
             Some(b"hello, world!".to_vec()),
-            None,
+            vec![],
             None,
         )
         .build();
@@ -131,7 +131,7 @@ pub mod test {
             "/",
             Method::Put,
             None,
-            None,
+            vec![],
             Some("example.com".to_string()),
         )
         .build();
@@ -151,7 +151,7 @@ pub mod test {
             "/",
             Method::Put,
             None,
-            b"query=hello".to_vec().into(),
+            vec![b"query=hello".to_vec()],
             Some("example.com".to_string()),
         )
         .options(options)
