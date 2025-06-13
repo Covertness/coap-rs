@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::{IpAddr, SocketAddr}, str::FromStr};
 
 pub use coap_lite::{
     CoapOption, CoapRequest, MessageClass, MessageType, ObserveOption, Packet,
@@ -90,7 +90,7 @@ impl<'a> RequestBuilder<'a> {
             assert_ne!(opt, CoapOption::UriQuery, "Use queries instead");
             request.message.add_option(opt, opt_data);
         }
-        if self.domain.len() != 0 {
+        if self.domain.len() != 0 && IpAddr::from_str(&self.domain).is_err() {
             request.message.add_option(
                 CoapOption::UriHost,
                 self.domain.as_str().as_bytes().to_vec(),
