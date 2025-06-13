@@ -373,7 +373,7 @@ mod test {
                     "/hello",
                     Method::Get,
                     None,
-                    None,
+                    vec![],
                     Some(domain.to_string()),
                 )
                 .build(),
@@ -409,7 +409,7 @@ mod test {
                     "/hello",
                     Method::Get,
                     None,
-                    None,
+                    vec![],
                     Some(domain.to_string()),
                 )
                 .build(),
@@ -478,7 +478,7 @@ mod test {
                     "/hello",
                     Method::Get,
                     None,
-                    None,
+                    vec![],
                     Some(domain.to_string()),
                 )
                 .build(),
@@ -534,7 +534,7 @@ mod test {
                     "/hello_dtls",
                     Method::Get,
                     None,
-                    None,
+                    vec![],
                     Some(domain.to_string()),
                 )
                 .build(),
@@ -593,7 +593,7 @@ mod test {
                         "/hello",
                         Method::Get,
                         None,
-                        None,
+                        vec![],
                         Some(domain.to_string()),
                     )
                     .build(),
@@ -676,7 +676,7 @@ mod test {
                     "/hello",
                     Method::Get,
                     None,
-                    None,
+                    vec![],
                     Some(domain.to_string()),
                 )
                 .build(),

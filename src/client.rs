@@ -902,7 +902,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         self.block1_size = block1_max_bytes;
     }
 
-    fn parse_coap_url(url: &str) -> IoResult<(String, u16, String, Option<Vec<u8>>)> {
+    fn parse_coap_url(url: &str) -> IoResult<(String, u16, String, Vec<Vec<u8>>)> {
         let url_params = match Url::parse(url) {
             Ok(url_params) => url_params,
             Err(_) => return Err(Error::new(ErrorKind::InvalidInput, "url error")),
@@ -925,7 +925,10 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
 
         let path = url_params.path().to_string();
 
-        let queries = url_params.query().map(|q| q.as_bytes().to_vec());
+        let queries = url_params
+            .query()
+            .map(|q| q.split("&").map(|qi| qi.as_bytes().to_vec()).collect())
+            .unwrap_or(vec![]);
 
         return Ok((host.to_string(), port, path, queries));
     }
@@ -1034,10 +1037,16 @@ mod test {
 
     #[test]
     fn test_parse_queries() {
-        if let Ok((_, _, _, Some(queries))) =
+        if let Ok((_, _, _, queries)) =
             UdpCoAPClient::parse_coap_url("coap://127.0.0.1/?hello=world&test1=test2")
         {
-            assert_eq!("hello=world&test1=test2".as_bytes().to_vec(), queries);
+            assert_eq!(
+                vec![
+                    "hello=world".as_bytes().to_vec(),
+                    "test1=test2".as_bytes().to_vec()
+                ],
+                queries
+            );
         } else {
             error!("Parse Queries failed");
         }
@@ -1077,7 +1086,7 @@ mod test {
                     "/hello",
                     Method::Get,
                     None,
-                    None,
+                    vec![],
                     Some(domain.to_string()),
                 )
                 .build(),
@@ -1108,7 +1117,7 @@ mod test {
                     "/validate",
                     Method::Post,
                     Some(b"world".to_vec()),
-                    None,
+                    vec![],
                     Some(domain.to_string()),
                 )
                 .build(),
