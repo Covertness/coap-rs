@@ -8,6 +8,7 @@
 //! - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
 //! - *Too Many Requests* Response Code [RFC 8516](https://tools.ietf.org/html/rfc8516)
 //! - Block-Wise Transfers [RFC 7959](https://tools.ietf.org/html/rfc7959)
+//! - CoAP over TCP, TLS, and WebSocket [RFC 8323](https://tools.ietf.org/html/rfc8323)
 //! - DTLS support via [webrtc-rs](https://github.com/webrtc-rs/webrtc)
 //! - Option to provide custom transports for client and server
 //! - Client can perform multiple concurrent requests, like observing and sending requests using
@@ -54,11 +55,11 @@
 //!                 &Method::Put => println!("request by put {}", String::from_utf8(request.message.payload.clone()).unwrap()),
 //!                 _ => println!("request by other method"),
 //!             };
-
+//!
 //!             match request.response {
 //!                 Some(ref mut message) => {
 //!                     message.message.payload = b"OK".to_vec();
-
+//
 //!                 },
 //!                 _ => {}
 //!             };
@@ -99,3 +100,5 @@ pub mod dtls;
 mod observer;
 pub mod request;
 pub mod server;
+mod transport;
+pub use transport::Transport;
