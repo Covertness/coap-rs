@@ -711,9 +711,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
             register_packet.message.header.message_id = self.gen_message_id();
         }
         if register_packet.message.get_token().is_empty() {
-            register_packet
-                .message
-                .set_token(self.gen_message_id().to_be_bytes().to_vec());
+            register_packet.message.set_token(self.gen_token());
         }
         register_packet.set_observe_flag(ObserveOption::Register);
 
@@ -843,9 +841,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                         });
                         // Use a different token for the short-lived blockwise continuation to avoid
                         // interfering with the long-lived observe mapping keyed by the original token.
-                        request
-                            .message
-                            .set_token(self.gen_message_id().to_be_bytes().to_vec());
+                        request.message.set_token(self.gen_token());
                         request.message.header.message_id = self.gen_message_id();
                         request.message.clear_option(CoapOption::Observe);
                         request.message.clear_option(CoapOption::Block2);
@@ -1030,6 +1026,10 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
     fn gen_message_id(&self) -> u16 {
         self.message_id
             .fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    }
+
+    fn gen_token(&self) -> Vec<u8> {
+        rand::random::<u16>().to_be_bytes().to_vec()
     }
 
     fn intercept_response(
