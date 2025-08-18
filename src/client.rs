@@ -1373,6 +1373,14 @@ mod test {
                             }
                         }
                     }
+                    ("delayed_observe", _) => {
+                        // Simulate a slow connection to enforce a timeout
+                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        if let Some(resp) = req.response.as_mut() {
+                            resp.message.header.code = MessageClass::Response(Status::Content);
+                            resp.message.payload = b"delayed_observe".to_vec();
+                        }
+                    }
                     _ => {
                         if let Some(resp) = req.response.as_mut() {
                             resp.message.header.code = MessageClass::Response(Status::NotFound);
@@ -1418,8 +1426,80 @@ mod test {
     }
 
     #[tokio::test]
+    async fn test_observe_with_timeout() {
+        // Spawn server with automatic observe handling disabled so that we can write a specific test in the handler.
+        // Note: Port 0 is used to prevent port conflicts during concurrent test execution.
+        // Real servers should use port 5683.
+        let server_port = server::test::spawn_server_disable_observe(
+            "127.0.0.1:0",
+            make_fake_blockwise_observe_server_handler(),
+        )
+        .recv()
+        .await
+        .unwrap();
+
+        let mut client = UdpCoAPClient::new_udp(("127.0.0.1", server_port))
+            .await
+            .unwrap();
+        client.set_transport_retries(1);
+
+        let expect_no_timely_response_handler = move |_m: Message| {
+            // This handler should never be called because we have
+            // a short timeout and the server is slow.
+            assert!(false);
+        };
+
+        // Set up arc to know when the handler is called
+        let client_handler_called = Arc::new(std::sync::Mutex::new(false));
+        let client_handler_called_clone = client_handler_called.clone();
+
+        let expect_timely_response_handler = move |_m: Message| {
+            let mut client_handler_called = client_handler_called_clone.lock().unwrap();
+            *client_handler_called = true;
+        };
+
+        // Execute the observe with a short timeout
+        let short_timeout = Duration::from_millis(1);
+        let unsubscriber = client
+            .observe_with_timeout(
+                "/delayed_observe",
+                expect_no_timely_response_handler,
+                short_timeout,
+            )
+            .await;
+        tokio::time::sleep(Duration::from_millis(200)).await; // Sleep longer than the server delay
+        assert!(unsubscriber.is_err());
+
+        // Execute the observe with a sufficient timeout
+        let sufficient_timeout = Duration::from_millis(200);
+        let unsubscriber = client
+            .observe_with_timeout(
+                "/delayed_observe",
+                expect_timely_response_handler,
+                sufficient_timeout,
+            )
+            .await;
+
+        // Wait for the handler to be called
+        let test_deadline = tokio::time::Instant::now() + sufficient_timeout * 2;
+        while tokio::time::Instant::now() < test_deadline {
+            if *client_handler_called.lock().unwrap() {
+                // The handler was called, we can terminate the observation
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(*client_handler_called.lock().unwrap());
+
+        // Terminate observation
+        let _ = unsubscriber.unwrap().send(ObserveMessage::Terminate);
+    }
+
+    #[tokio::test]
     async fn test_observe_blockwise_notification_is_assembled() {
         // Spawn server with automatic observe handling disabled so that we can write a specific test in the handler.
+        // Note: Port 0 is used to prevent port conflicts during concurrent test execution.
+        // Real servers should use port 5683.
         let server_port = server::test::spawn_server_disable_observe(
             "127.0.0.1:0",
             make_fake_blockwise_observe_server_handler(),
@@ -1444,10 +1524,16 @@ mod test {
 
         let terminator = client.observe("/observe_me", handler).await.unwrap();
 
-        //Wait for the handler to be called
-        while !*client_handler_called.lock().unwrap() {
+        // Wait for the handler to be called (limit execution time to 1 sec)
+        let test_deadline = tokio::time::Instant::now() + Duration::from_secs(1);
+        while tokio::time::Instant::now() < test_deadline {
+            if *client_handler_called.lock().unwrap() {
+                // The handler was called, we can terminate the observation
+                break;
+            }
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
+        assert!(*client_handler_called.lock().unwrap());
 
         // Terminate observation
         let _ = terminator.send(ObserveMessage::Terminate);
