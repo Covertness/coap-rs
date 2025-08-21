@@ -194,4 +194,11 @@ pub mod test {
             .build();
         assert_eq!(build.message.header.get_type(), MessageType::Confirmable);
     }
+    #[test]
+    fn test_non_confirmable_request() {
+        let build = RequestBuilder::new("/", Method::Put)
+            .confirmable(false)
+            .build();
+        assert_eq!(build.message.header.get_type(), MessageType::NonConfirmable);
+    }
 }

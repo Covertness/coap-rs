@@ -554,6 +554,22 @@ pub mod test {
     }
 
     #[tokio::test]
+    async fn test_listener_instantiation() {
+        let listener = UdpCoapListener::new("127.0.0.1:0").unwrap();
+        assert!(
+            listener.socket.local_addr().unwrap().ip() == IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
+        );
+        // assert!(listener.socket.blocking() == false);
+
+        let explicit_socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let another_listener = UdpCoapListener::from_socket(explicit_socket);
+        assert!(
+            another_listener.socket.local_addr().unwrap().ip()
+                == IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
+        );
+    }
+
+    #[tokio::test]
     async fn test_echo_server() {
         let server_port = spawn_server("127.0.0.1:0", request_handler)
             .recv()
