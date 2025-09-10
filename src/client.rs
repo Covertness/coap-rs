@@ -1069,6 +1069,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
 
             if Self::contains_more_blocks(&packet) {
                 // Prepare request for requesting next block
+                request.message.clear_option(CoapOption::Block1);
                 request.message.clear_option(CoapOption::Block2);
                 let mut next_block2 = block2.clone();
                 next_block2.num += 1;
