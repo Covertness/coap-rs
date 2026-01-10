@@ -390,7 +390,7 @@ impl UdpCoAPClient {
         Self::new_with_tokio_socket(socket, peer_addr).await
     }
 
-    pub async fn new_udp<A: ToSocketAddrs>(addr: A) -> IoResult<Self> {
+    pub async fn new<A: ToSocketAddrs>(addr: A) -> IoResult<Self> {
         let sock_addr = lookup_host(addr).await?.next().ok_or(Error::new(
             ErrorKind::InvalidInput,
             "could not get socket address",
@@ -518,7 +518,7 @@ impl UdpCoAPClient {
     ///
     /// async fn foo() {
     ///   let segment = 0x0;
-    ///   let client = UdpCoAPClient::new_udp("127.0.0.1:5683")
+    ///   let client = UdpCoAPClient::new("127.0.0.1:5683")
     ///          .await
     ///          .unwrap();
     ///   let mut request = RequestBuilder::new("test-echo", RequestType::Get)
@@ -630,7 +630,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         data: Option<Vec<u8>>,
     ) -> IoResult<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
-        let client = UdpCoAPClient::new_udp((domain.as_str(), port)).await?;
+        let client = UdpCoAPClient::new((domain.as_str(), port)).await?;
         let request = RequestBuilder::new(&path, method)
             .queries(queries)
             .domain(domain)
@@ -648,7 +648,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         timeout: Duration,
     ) -> IoResult<CoapResponse> {
         let (domain, port, path, queries) = Self::parse_coap_url(url)?;
-        let mut client = UdpCoAPClient::new_udp((domain.as_str(), port)).await?;
+        let mut client = UdpCoAPClient::new((domain.as_str(), port)).await?;
         client.set_receive_timeout(timeout);
         let request = RequestBuilder::new(&path, method)
             .queries(queries)
@@ -1192,7 +1192,7 @@ mod test {
     #[tokio::test]
     async fn test_get() {
         let domain = "coap.me";
-        let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let client = UdpCoAPClient::new((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::request_path(
@@ -1223,7 +1223,7 @@ mod test {
     #[tokio::test]
     async fn test_post() {
         let domain = "coap.me";
-        let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let client = UdpCoAPClient::new((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::request_path(
@@ -1255,7 +1255,7 @@ mod test {
     #[tokio::test]
     async fn test_put() {
         let domain = "coap.me";
-        let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let client = UdpCoAPClient::new((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::new("/create1", Method::Put)
@@ -1283,7 +1283,7 @@ mod test {
     #[tokio::test]
     async fn test_delete() {
         let domain = "coap.me";
-        let client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let client = UdpCoAPClient::new((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::new("/validate", Method::Delete)
@@ -1297,7 +1297,7 @@ mod test {
 
     #[tokio::test]
     async fn test_set_broadcast() {
-        let client = UdpCoAPClient::new_udp(("127.0.0.1", 5683)).await.unwrap();
+        let client = UdpCoAPClient::new(("127.0.0.1", 5683)).await.unwrap();
         assert!(client.set_broadcast(true).is_ok());
         assert!(client.set_broadcast(false).is_ok());
     }
@@ -1305,7 +1305,7 @@ mod test {
     #[tokio::test]
     #[ignore]
     async fn test_set_broadcast_v6() {
-        let client = UdpCoAPClient::new_udp(("::1", 5683)).await.unwrap();
+        let client = UdpCoAPClient::new(("::1", 5683)).await.unwrap();
         assert!(client.set_broadcast(true).is_ok());
         assert!(client.set_broadcast(false).is_ok());
     }
@@ -1407,7 +1407,7 @@ mod test {
         .await
         .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(("127.0.0.1", server_port))
+        let mut client = UdpCoAPClient::new(("127.0.0.1", server_port))
             .await
             .unwrap();
         client.set_receive_timeout(Duration::from_secs(1));
@@ -1439,7 +1439,7 @@ mod test {
         .await
         .unwrap();
 
-        let mut client = UdpCoAPClient::new_udp(("127.0.0.1", server_port))
+        let mut client = UdpCoAPClient::new(("127.0.0.1", server_port))
             .await
             .unwrap();
         client.set_transport_retries(1);
@@ -1509,7 +1509,7 @@ mod test {
         .await
         .unwrap();
 
-        let client = UdpCoAPClient::new_udp(("127.0.0.1", server_port))
+        let client = UdpCoAPClient::new(("127.0.0.1", server_port))
             .await
             .unwrap();
 
@@ -1552,7 +1552,7 @@ mod test {
             .set_type(coap_lite::MessageType::NonConfirmable);
         request.message.payload = b"Discovery".to_vec();
 
-        let client = UdpCoAPClient::new_udp(("127.0.0.1", 5683)).await.unwrap();
+        let client = UdpCoAPClient::new(("127.0.0.1", 5683)).await.unwrap();
         client.send_all_coap(&mut request, 0).await.unwrap();
     }
     #[tokio::test]
@@ -1568,7 +1568,7 @@ mod test {
             large_payload.extend_from_slice(PAYLOAD_STR.as_bytes());
         }
         let domain = "coap.me";
-        let mut client = UdpCoAPClient::new_udp((domain, 5683)).await.unwrap();
+        let mut client = UdpCoAPClient::new((domain, 5683)).await.unwrap();
         let resp = client
             .send(
                 RequestBuilder::new("/large-create", Method::Put)
@@ -1606,7 +1606,7 @@ mod test {
             .set_type(coap_lite::MessageType::NonConfirmable);
         request.message.payload = b"Discovery".to_vec();
 
-        let client = UdpCoAPClient::new_udp(("::1", 5683)).await.unwrap();
+        let client = UdpCoAPClient::new(("::1", 5683)).await.unwrap();
         client.send_all_coap(&mut request, 0x4).await.unwrap();
     }
 
@@ -1756,7 +1756,7 @@ mod test {
             .unwrap();
 
         let client = Arc::new(
-            UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+            UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
                 .await
                 .unwrap(),
         );

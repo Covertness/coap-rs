@@ -435,7 +435,10 @@ impl Server {
             responder.respond(b).await;
         }
     }
-    #[deprecated(since = "0.21.0", note = "Use 'coap::Server::automatic_observe_handling' instead.")]
+    #[deprecated(
+        since = "0.21.0",
+        note = "Use 'coap::Server::automatic_observe_handling' instead."
+    )]
     /// disable auto-observe handling in server
     pub async fn disable_observe_handling(&mut self, value: bool) {
         self.automatic_observe_handling(value).await
@@ -576,7 +579,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -610,7 +613,7 @@ pub mod test {
         }
         let payload_size = v.len();
         let server_string = format!("127.0.0.1:{}", server_port);
-        let client = UdpCoAPClient::new_udp(server_string.clone()).await.unwrap();
+        let client = UdpCoAPClient::new(server_string.clone()).await.unwrap();
 
         let request = RequestBuilder::new("/large", RequestType::Put)
             .data(Some(v))
@@ -637,7 +640,7 @@ pub mod test {
     async fn test_echo_server_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().await.unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -664,7 +667,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut packet = CoapRequest::new();
@@ -687,7 +690,7 @@ pub mod test {
     async fn test_echo_server_no_token_v6() {
         let server_port = spawn_server("::1:0", request_handler).recv().await.unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut packet = CoapRequest::new();
@@ -720,7 +723,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
 
@@ -756,7 +759,7 @@ pub mod test {
         step = 2;
         tx.send(step).unwrap();
         request.message.payload = payload2.clone();
-        let client2 = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client2 = UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let _ = client2.send(request).await.unwrap();
@@ -778,7 +781,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
 
@@ -807,7 +810,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -826,7 +829,7 @@ pub mod test {
 
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
-        let client = UdpCoAPClient::new_udp(format!("224.0.1.187:{}", server_port))
+        let client = UdpCoAPClient::new(format!("224.0.1.187:{}", server_port))
             .await
             .unwrap();
         let mut request = RequestBuilder::new("test-echo", RequestType::Get)
@@ -853,7 +856,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("::1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("::1:{}", server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -874,7 +877,7 @@ pub mod test {
         assert_eq!(recv_packet.message.payload, b"test-echo".to_vec());
 
         // use 0xff02 to keep it within this network
-        let client = UdpCoAPClient::new_udp(format!("ff0{}::fd:{}", segment, server_port))
+        let client = UdpCoAPClient::new(format!("ff0{}::fd:{}", segment, server_port))
             .await
             .unwrap();
         let mut request = CoapRequest::new();
@@ -978,7 +981,7 @@ pub mod test {
             .await
             .unwrap();
 
-        let client = UdpCoAPClient::new_udp(format!("127.0.0.1:{}", server_port))
+        let client = UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
         let resp = client

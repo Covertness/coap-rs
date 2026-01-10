@@ -110,7 +110,7 @@ async fn example_delete() {
 }
 
 async fn example_observe() {
-    let client = UdpCoAPClient::new_udp("127.0.0.1:5683").await.unwrap();
+    let client = UdpCoAPClient::new("127.0.0.1:5683").await.unwrap();
     let observe_channel = client
         .observe("/hello/put", |msg| {
             println!(
