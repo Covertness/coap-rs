@@ -212,3 +212,60 @@ impl Route {
         self.match_path(&req.path())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic(
+        expected = "Nested parameters are not allowed in route pattern: /sensors/{id{nested}}"
+    )]
+    fn test_nested_parameters() {
+        let _route = Route::new(Method::Get, "/sensors/{id{nested}}");
+    }
+
+    #[test]
+    #[should_panic(expected = "Unmatched closing brace in route pattern: /sensors/{id}}")]
+    fn test_unmatched_closing_brace() {
+        let _route = Route::new(Method::Get, "/sensors/{id}}");
+    }
+
+    #[test]
+    #[should_panic(expected = "Unclosed parameter in route pattern: /sensors/{id")]
+    fn test_unclosed_parameter() {
+        let _route = Route::new(Method::Get, "/sensors/{id");
+    }
+
+    #[test]
+    fn test_build_regex() {
+        let route = Route::new(Method::Get, "/sensors/{id}/readings/{type}");
+        assert_eq!(route.param_names, vec!["id", "type"]);
+        assert!(route.regex.is_match("sensors/123/readings/temperature"));
+        assert!(route.regex.is_match("sensors/abc/readings/humidity"));
+        assert!(!route.regex.is_match("sensors/123/readings"));
+        assert!(!route
+            .regex
+            .is_match("sensors/123/readings/temperature/extra"));
+    }
+
+    #[test]
+    fn test_match_method() {
+        let route = Route::new(Method::Get, "/sensors/{id}");
+        assert!(route.match_method(Method::Get).is_ok());
+        assert!(route.match_method(Method::Post).is_err());
+    }
+
+    #[test]
+    fn test_match_path() {
+        let route = Route::new(Method::Get, "/sensors/{id}/readings/{type}");
+        let params = route
+            .match_path("sensors/123/readings/temperature")
+            .expect("Path should match");
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].0.as_ref(), "id");
+        assert_eq!(params[0].1.as_str(), "123");
+        assert_eq!(params[1].0.as_ref(), "type");
+        assert_eq!(params[1].1.as_str(), "temperature");
+    }
+}
