@@ -147,9 +147,6 @@ impl Route {
         // Add end anchor
         pattern.push('$');
 
-        println!("Regex pattern: {}", pattern);
-        println!("Parameter names: {:?}", param_names);
-
         // Compile the regex pattern
         let regex = match Regex::new(&pattern) {
             Ok(re) => re,

@@ -5,7 +5,7 @@ use crate::router::{
     request::Request,
     response::{IntoResponse, Response, Status},
 };
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 use std::ops::{Deref, DerefMut};
 
 /// Error types that can occur when extracting data from the request body.
@@ -57,6 +57,18 @@ where
         serde_json::from_str::<T>(&body_str)
             .map(Body)
             .map_err(|_| BodyRejection::DeserializationError)
+    }
+}
+
+impl<T: Serialize> IntoResponse for Body<T> {
+    fn into_response(self) -> Response {
+        // Serialize the inner value to JSON string
+        match serde_json::to_string(&self.0) {
+            Ok(json_str) => Response::new().set_payload(json_str.into_bytes()),
+            Err(_) => Response::new()
+                .set_response_type(Status::InternalServerError)
+                .set_payload(b"Failed to serialize response body".to_vec()),
+        }
     }
 }
 

@@ -71,6 +71,12 @@ impl IntoResponse for () {
     }
 }
 
+impl IntoResponse for Status {
+    fn into_response(self) -> Response {
+        Response::new().set_response_type(self)
+    }
+}
+
 impl IntoResponse for Infallible {
     fn into_response(self) -> Response {
         match self {}
@@ -125,5 +131,12 @@ impl IntoResponse for &str {
 impl<T: IntoResponse> IntoResponse for Box<T> {
     fn into_response(self) -> Response {
         (*self).into_response()
+    }
+}
+
+impl<T: IntoResponse> IntoResponse for (Status, T) {
+    fn into_response(self) -> Response {
+        let (status, payload) = self;
+        payload.into_response().set_response_type(status)
     }
 }
