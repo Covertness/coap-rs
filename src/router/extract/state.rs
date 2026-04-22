@@ -1,3 +1,5 @@
+//! Extractor for application state, allowing handlers to access shared state data.
+
 use crate::router::{
     extract::{FromRef, FromRequest},
     request::Request,
@@ -7,6 +9,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+/// Extractor for application state, allowing handlers to access shared state data.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct State<S>(pub S);
 

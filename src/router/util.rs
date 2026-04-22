@@ -1,3 +1,5 @@
+//! Utility types and functions for the router module.
+
 use std::{ops::Deref, sync::Arc};
 
 /// A wrapper around a percent-decoded string.
@@ -6,6 +8,8 @@ pub(crate) struct PercentDecodedStr(Arc<str>);
 
 impl PercentDecodedStr {
     /// Creates a new `PercentDecodedStr` from a percent-encoded string.
+    /// Returns `None` if the input string is not valid UTF-8 after decoding.
+    ///
     /// Usually, this is used to decode URI path segments or query parameters.
     pub(crate) fn new<S: AsRef<str>>(s: S) -> Option<Self> {
         percent_encoding::percent_decode(s.as_ref().as_bytes())

@@ -3,67 +3,12 @@ use crate::router::{
 };
 use std::{future::Future, pin::Pin};
 
-// Type-erased handler trait (no T parameter)
-pub trait BoxableHandler<S>: Send + Sync + 'static {
-    fn call(&self, req: Request, state: S) -> Pin<Box<dyn Future<Output = Request> + Send>>;
-    fn clone_box(&self) -> Box<dyn BoxableHandler<S>>;
-}
-
-// Enable cloning of boxed handlers
-impl<S: 'static> Clone for Box<dyn BoxableHandler<S>> {
-    fn clone(&self) -> Self {
-        self.clone_box()
-    }
-}
-
-impl<T, S, H> BoxableHandler<S> for HandlerWrapper<T, S, H>
-where
-    T: Sync + Send + 'static,
-    S: Send + Sync + 'static,
-    H: Handler<T, S> + Clone + Send + Sync + 'static,
-{
-    fn call(&self, req: Request, state: S) -> Pin<Box<dyn Future<Output = Request> + Send>> {
-        let clone = self.clone();
-        Box::pin(H::call(clone.handler, req, state))
-    }
-    fn clone_box(&self) -> Box<dyn BoxableHandler<S>> {
-        Box::new(self.clone())
-    }
-}
-
-// Updated BoxedHandler type
-pub type BoxedHandler<S> = Box<dyn BoxableHandler<S>>;
-
-pub struct HandlerWrapper<T, S, H: Handler<T, S>> {
-    handler: H,
-    _marker: std::marker::PhantomData<(T, S)>,
-}
-
-impl<T, S, H> HandlerWrapper<T, S, H>
-where
-    H: Handler<T, S> + 'static,
-    T: 'static,
-{
-    pub fn new(handler: H) -> Self {
-        Self {
-            handler,
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<T, S, H> Clone for HandlerWrapper<T, S, H>
-where
-    H: Handler<T, S> + Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            handler: self.handler.clone(),
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
+/// Trait for request handlers.
+///
+/// # Generics
+///
+/// - `T`: The type of parameters extracted from the request (e.g. path parameters, query parameters, etc.).
+/// - `S`: The type of the router shared state that can be accessed by the handler.
 pub trait Handler<T, S>: Clone + Send + Sync + 'static {
     /// The type of future calling this handler returns.
     type Future: Future<Output = Request> + Send + 'static;
@@ -89,6 +34,73 @@ where
     }
 }
 
+/// A wrapper struct to allow cloning of handlers that implement the `Handler` trait.
+pub struct HandlerWrapper<T, S, H: Handler<T, S>> {
+    handler: H,
+    _marker: std::marker::PhantomData<(T, S)>,
+}
+
+impl<T, S, H> HandlerWrapper<T, S, H>
+where
+    H: Handler<T, S> + 'static,
+    T: 'static,
+{
+    /// Creates a new `HandlerWrapper` from a handler that implements the `Handler` trait.
+    pub fn new(handler: H) -> Self {
+        Self {
+            handler,
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<T, S, H> Clone for HandlerWrapper<T, S, H>
+where
+    H: Handler<T, S> + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            handler: self.handler.clone(),
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+/// Type-erased trait for [handlers](Handler) (no `T` parameter)
+pub trait BoxableHandler<S>: Send + Sync + 'static {
+    /// Call the handler with the given request and state.
+    fn call(&self, req: Request, state: S) -> Pin<Box<dyn Future<Output = Request> + Send>>;
+
+    /// Clone the handler into a boxed trait object.
+    fn clone_box(&self) -> Box<dyn BoxableHandler<S>>;
+}
+
+// Enable cloning of boxed handlers
+impl<S: 'static> Clone for Box<dyn BoxableHandler<S>> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+impl<T, S, H> BoxableHandler<S> for HandlerWrapper<T, S, H>
+where
+    T: Sync + Send + 'static,
+    S: Send + Sync + 'static,
+    H: Handler<T, S> + Clone + Send + Sync + 'static,
+{
+    fn call(&self, req: Request, state: S) -> Pin<Box<dyn Future<Output = Request> + Send>> {
+        let clone = self.clone();
+        Box::pin(H::call(clone.handler, req, state))
+    }
+    fn clone_box(&self) -> Box<dyn BoxableHandler<S>> {
+        Box::new(self.clone())
+    }
+}
+
+/// Type alias for a boxed, type-erased [`Handler`].
+pub type BoxedHandler<S> = Box<dyn BoxableHandler<S>>;
+
+// Macro to implement Handler for tuples of parameters extracted from the request
 macro_rules! impl_handler {
     (
         [$($ty:ident),*], $last:ident

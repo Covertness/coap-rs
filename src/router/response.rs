@@ -1,14 +1,20 @@
+//! Response types and traits for the router.
+
 use crate::router::request::Request;
 pub use coap_lite::ResponseType as Status;
 use std::convert::Infallible;
 
+/// The response type returned by handlers.
 #[derive(Debug, Clone, Default)]
 pub struct Response {
+    /// The CoAP response type (e.g. `Content`, `BadRequest`, etc.) to set in the response message.
     pub response_type: Option<Status>,
+    /// The payload to include in the response message, if any.
     pub payload: Option<Vec<u8>>,
 }
 
 impl Response {
+    /// Creates a new empty response with no response type or payload.
     pub fn new() -> Self {
         Self {
             response_type: None,
@@ -16,16 +22,21 @@ impl Response {
         }
     }
 
+    /// Sets the response type for this response.
     pub fn set_response_type(mut self, response_type: Status) -> Self {
         self.response_type = Some(response_type);
         self
     }
 
+    /// Sets the payload for this response.
     pub fn set_payload(mut self, payload: Vec<u8>) -> Self {
         self.payload = Some(payload);
         self
     }
 
+    /// Fills the given request's response with the response type and payload from this `Response`.
+    ///
+    /// This method consumes the `Response` and modifies the request's response in-place.
     pub fn fill_response(self, request: &mut Request) {
         if let Some(response) = request.response_mut() {
             if let Some(response_type) = self.response_type {
@@ -45,6 +56,8 @@ pub trait IntoResponse {
     /// Create a response.
     fn into_response(self) -> Response;
 }
+
+// Implement IntoResponse for common types to allow easy response generation from handlers.
 
 impl IntoResponse for Response {
     fn into_response(self) -> Response {

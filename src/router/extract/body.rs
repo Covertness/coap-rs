@@ -1,3 +1,5 @@
+//! Extractors for request body data.
+
 use crate::router::{
     extract::FromRequest,
     request::Request,
@@ -6,10 +8,14 @@ use crate::router::{
 use serde::de::DeserializeOwned;
 use std::ops::{Deref, DerefMut};
 
+/// Error types that can occur when extracting data from the request body.
 #[derive(Debug, Clone, Copy)]
 pub enum BodyRejection {
+    /// The request body has an invalid format.
     InvalidBody,
+    /// Failed to deserialize the JSON body.
     DeserializationError,
+    /// The body contains invalid UTF-8.
     InvalidUtf8,
 }
 
@@ -32,6 +38,7 @@ impl IntoResponse for BodyRejection {
     }
 }
 
+/// Extractor for deserializing JSON body data into a specified type `T`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Body<T>(pub T);
 
@@ -46,7 +53,7 @@ where
         // Convert payload bytes to UTF-8 string
         let body_str = String::from_utf8(req.payload()).map_err(|_| BodyRejection::InvalidUtf8)?;
 
-        // Deserialize JSON
+        // Deserialize JSON string into type T
         serde_json::from_str::<T>(&body_str)
             .map(Body)
             .map_err(|_| BodyRejection::DeserializationError)

@@ -1,3 +1,5 @@
+//! Deserialization logic for path parameters in the router extractors.
+
 use crate::router::{extract::path::PathDeserializationError, util::PercentDecodedStr};
 use serde::{
     de::{self, DeserializeSeed, EnumAccess, Error, MapAccess, SeqAccess, VariantAccess, Visitor},

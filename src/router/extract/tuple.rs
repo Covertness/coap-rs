@@ -1,3 +1,5 @@
+//! Helpers for extracting multiple values from a request using tuples.
+
 use crate::router::{
     extract::FromRequest,
     macros::all_the_tuples,

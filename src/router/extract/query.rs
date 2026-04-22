@@ -1,3 +1,5 @@
+//! Extractors for query string data.
+
 use crate::router::{
     extract::FromRequest,
     request::Request,
@@ -6,9 +8,12 @@ use crate::router::{
 use serde::de::DeserializeOwned;
 use std::ops::{Deref, DerefMut};
 
+/// Error types that can occur when extracting data from the query string.
 #[derive(Debug, Clone, Copy)]
 pub enum QueryRejection {
+    /// The query string has an invalid format.
     InvalidQuery,
+    /// The query string contains invalid UTF-8.
     InvalidUtf8,
 }
 
@@ -30,6 +35,7 @@ impl IntoResponse for QueryRejection {
     }
 }
 
+/// Extractor for deserializing query string data into a specified type `T`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Query<T>(pub T);
 

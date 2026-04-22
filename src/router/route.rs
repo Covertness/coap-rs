@@ -1,3 +1,5 @@
+//! Route matching and error types for the CoAP router.
+
 use crate::router::{
     request::Request,
     response::{IntoResponse, Response, Status},
@@ -7,11 +9,16 @@ use coap_lite::RequestType as Method;
 use regex::Regex;
 use std::{hash::Hash, sync::Arc};
 
+/// Route matching and error types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RouteError {
+    /// The request method does not match the route's method.
     DifferentMethod,
+    /// The request does not have a URI path.
     NoUriPath,
+    /// The request URI path does not match the route's path.
     DifferentPath,
+    /// The requested route was not found.
     NotFound,
 }
 
@@ -35,15 +42,21 @@ impl IntoResponse for RouteError {
     }
 }
 
+/// A route definition, including the HTTP method, the route pattern, and the compiled regex for matching.
 #[derive(Debug, Clone)]
 pub struct Route {
+    /// The HTTP method (e.g. GET, POST) that this route matches.
     method: Method,
+    /// The original route pattern string (e.g. `"/sensors/{id}"`).
     route: String,
+    /// The compiled regex pattern for matching request paths against this route.
     regex: Regex,
+    /// The names of the path parameters in the order they appear in the route pattern.
     param_names: Vec<String>,
 }
 
 impl Route {
+    /// Creates a new `Route` from the given method and route pattern string.
     pub fn new<S: ToString>(method: Method, route: S) -> Self {
         let route = route.to_string();
         let (regex, param_names) = Self::build_regex(&route);
@@ -146,10 +159,13 @@ impl Route {
         (regex, param_names)
     }
 
+    /// Returns the pattern string for this route.
+    #[inline]
     pub fn route(&self) -> &str {
         &self.route
     }
 
+    /// Checks if the given method matches this route's method.
     #[inline]
     pub fn match_method(&self, method: Method) -> Result<(), RouteError> {
         match self.method == method {
@@ -158,6 +174,9 @@ impl Route {
         }
     }
 
+    /// Checks if the given path matches this route's path pattern and extracts any path parameters.
+    ///
+    /// Returns a vector of (parameter name, parameter value) pairs if the path matches, or a `RouteError` if it does not.
     #[inline]
     pub(crate) fn match_path(
         &self,
@@ -182,6 +201,9 @@ impl Route {
         }
     }
 
+    /// Checks if the given request matches this route's method and path pattern.
+    ///
+    /// Returns a vector of (parameter name, parameter value) pairs if the request matches, or a `RouteError` if it does not.
     pub(crate) fn match_request(
         &self,
         req: &mut Request,

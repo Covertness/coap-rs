@@ -1,3 +1,5 @@
+//! Extractors for deserializing path parameters from the request URI into a specified type `T`.
+
 use crate::router::{
     extract::FromRequest,
     request::Request,
@@ -8,6 +10,7 @@ use std::ops::{Deref, DerefMut};
 
 mod de;
 
+/// Extractor for deserializing path parameters from the request URI into a specified type `T`.
 #[derive(Debug)]
 pub struct Path<T>(pub T);
 
@@ -40,6 +43,7 @@ where
     }
 }
 
+/// Error type for path deserialization failures.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PathDeserializationError {
     /// The URI contained the wrong number of parameters.
