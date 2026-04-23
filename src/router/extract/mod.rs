@@ -3,13 +3,13 @@
 use crate::router::{request::Request, response::IntoResponse};
 use std::future::Future;
 
-mod body;
+mod json;
 mod path;
 mod query;
 mod state;
 mod tuple;
 
-pub use body::Body;
+pub use json::Json;
 pub use path::Path;
 pub use query::Query;
 pub use state::State;

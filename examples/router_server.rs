@@ -2,7 +2,7 @@ extern crate coap;
 
 use coap::{
     router::{
-        extract::{Body, Path, Query, State},
+        extract::{Json, Path, Query, State},
         Router,
     },
     Server,
@@ -38,7 +38,7 @@ async fn get_temperature(
 
 async fn set_temperature(
     Path(room): Path<String>,
-    Body(temp): Body<f64>,
+    Json(temp): Json<f64>,
     State(state): State<RoomMutex>,
 ) -> String {
     println!("set_temperature: {:?}", room);

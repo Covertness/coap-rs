@@ -1,4 +1,4 @@
-//! Extractors for request body data.
+//! Extractors for request JSON body data.
 
 use crate::router::{
     extract::FromRequest,
@@ -8,28 +8,28 @@ use crate::router::{
 use serde::{de::DeserializeOwned, Serialize};
 use std::ops::{Deref, DerefMut};
 
-/// Error types that can occur when extracting data from the request body.
+/// Error types that can occur when extracting data from the request JSON body.
 #[derive(Debug, Clone, Copy)]
-pub enum BodyRejection {
-    /// The request body has an invalid format.
+pub enum JsonRejection {
+    /// The request JSON body has an invalid format.
     InvalidBody,
     /// Failed to deserialize the JSON body.
     DeserializationError,
-    /// The body contains invalid UTF-8.
+    /// The JSON body contains invalid UTF-8.
     InvalidUtf8,
 }
 
-impl std::fmt::Display for BodyRejection {
+impl std::fmt::Display for JsonRejection {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BodyRejection::InvalidBody => write!(f, "Invalid body string"),
-            BodyRejection::DeserializationError => write!(f, "Failed to deserialize JSON body"),
-            BodyRejection::InvalidUtf8 => write!(f, "Invalid UTF-8 in body"),
+            JsonRejection::InvalidBody => write!(f, "Invalid JSON body string"),
+            JsonRejection::DeserializationError => write!(f, "Failed to deserialize JSON body"),
+            JsonRejection::InvalidUtf8 => write!(f, "Invalid UTF-8 in JSON body"),
         }
     }
 }
 
-impl IntoResponse for BodyRejection {
+impl IntoResponse for JsonRejection {
     fn into_response(self) -> Response {
         let error_message = self.to_string();
         Response::new()
@@ -40,27 +40,27 @@ impl IntoResponse for BodyRejection {
 
 /// Extractor for deserializing JSON body data into a specified type `T`.
 #[derive(Debug, Clone, Copy, Default)]
-pub struct Body<T>(pub T);
+pub struct Json<T>(pub T);
 
-impl<S, T> FromRequest<S> for Body<T>
+impl<S, T> FromRequest<S> for Json<T>
 where
     S: Sync,
     T: DeserializeOwned,
 {
-    type Rejection = BodyRejection;
+    type Rejection = JsonRejection;
 
     async fn from_request(req: &Request, _state: &S) -> Result<Self, Self::Rejection> {
         // Convert payload bytes to UTF-8 string
-        let body_str = String::from_utf8(req.payload()).map_err(|_| BodyRejection::InvalidUtf8)?;
+        let body_str = String::from_utf8(req.payload()).map_err(|_| JsonRejection::InvalidUtf8)?;
 
         // Deserialize JSON string into type T
         serde_json::from_str::<T>(&body_str)
-            .map(Body)
-            .map_err(|_| BodyRejection::DeserializationError)
+            .map(Json)
+            .map_err(|_| JsonRejection::DeserializationError)
     }
 }
 
-impl<T: Serialize> IntoResponse for Body<T> {
+impl<T: Serialize> IntoResponse for Json<T> {
     fn into_response(self) -> Response {
         // Serialize the inner value to JSON string
         match serde_json::to_string(&self.0) {
@@ -72,7 +72,7 @@ impl<T: Serialize> IntoResponse for Body<T> {
     }
 }
 
-impl<T> Deref for Body<T> {
+impl<T> Deref for Json<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -80,7 +80,7 @@ impl<T> Deref for Body<T> {
     }
 }
 
-impl<T> DerefMut for Body<T> {
+impl<T> DerefMut for Json<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
