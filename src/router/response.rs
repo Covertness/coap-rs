@@ -1,14 +1,14 @@
 //! Response types and traits for the router.
 
 use crate::router::request::Request;
-pub use coap_lite::ResponseType as Status;
+pub use coap_lite::ResponseType as StatusCode;
 use std::convert::Infallible;
 
 /// The response type returned by handlers.
 #[derive(Debug, Clone, Default)]
 pub struct Response {
     /// The CoAP response type (e.g. `Content`, `BadRequest`, etc.) to set in the response message.
-    pub response_type: Option<Status>,
+    pub status_code: Option<StatusCode>,
     /// The payload to include in the response message, if any.
     pub payload: Option<Vec<u8>>,
 }
@@ -17,14 +17,14 @@ impl Response {
     /// Creates a new empty response with no response type or payload.
     pub fn new() -> Self {
         Self {
-            response_type: None,
+            status_code: None,
             payload: None,
         }
     }
 
-    /// Sets the response type for this response.
-    pub fn set_response_type(mut self, response_type: Status) -> Self {
-        self.response_type = Some(response_type);
+    /// Sets the status code for this response.
+    pub fn set_status_code(mut self, status_code: StatusCode) -> Self {
+        self.status_code = Some(status_code);
         self
     }
 
@@ -39,8 +39,8 @@ impl Response {
     /// This method consumes the `Response` and modifies the request's response in-place.
     pub fn fill_response(self, request: &mut Request) {
         if let Some(response) = request.response_mut() {
-            if let Some(response_type) = self.response_type {
-                response.set_status(response_type);
+            if let Some(status_code) = self.status_code {
+                response.set_status(status_code);
             }
             if let Some(payload) = &self.payload {
                 response.message.payload = payload.clone();
@@ -71,9 +71,9 @@ impl IntoResponse for () {
     }
 }
 
-impl IntoResponse for Status {
+impl IntoResponse for StatusCode {
     fn into_response(self) -> Response {
-        Response::new().set_response_type(self)
+        Response::new().set_status_code(self)
     }
 }
 
@@ -134,9 +134,9 @@ impl<T: IntoResponse> IntoResponse for Box<T> {
     }
 }
 
-impl<T: IntoResponse> IntoResponse for (Status, T) {
+impl<T: IntoResponse> IntoResponse for (StatusCode, T) {
     fn into_response(self) -> Response {
         let (status, payload) = self;
-        payload.into_response().set_response_type(status)
+        payload.into_response().set_status_code(status)
     }
 }

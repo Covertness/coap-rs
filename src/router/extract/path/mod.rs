@@ -3,7 +3,7 @@
 use crate::router::{
     extract::FromRequest,
     request::Request,
-    response::{IntoResponse, Response, Status},
+    response::{IntoResponse, Response, StatusCode},
 };
 use serde::de::DeserializeOwned;
 use std::ops::{Deref, DerefMut};
@@ -168,7 +168,7 @@ impl IntoResponse for PathDeserializationError {
     fn into_response(self) -> Response {
         let error_message = self.to_string();
         Response::new()
-            .set_response_type(Status::BadRequest)
+            .set_status_code(StatusCode::BadRequest)
             .set_payload(error_message.into_bytes())
     }
 }

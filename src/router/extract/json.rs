@@ -3,7 +3,7 @@
 use crate::router::{
     extract::FromRequest,
     request::Request,
-    response::{IntoResponse, Response, Status},
+    response::{IntoResponse, Response, StatusCode},
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::ops::{Deref, DerefMut};
@@ -33,7 +33,7 @@ impl IntoResponse for JsonRejection {
     fn into_response(self) -> Response {
         let error_message = self.to_string();
         Response::new()
-            .set_response_type(Status::BadRequest)
+            .set_status_code(StatusCode::BadRequest)
             .set_payload(error_message.into_bytes())
     }
 }
@@ -66,7 +66,7 @@ impl<T: Serialize> IntoResponse for Json<T> {
         match serde_json::to_string(&self.0) {
             Ok(json_str) => Response::new().set_payload(json_str.into_bytes()),
             Err(_) => Response::new()
-                .set_response_type(Status::InternalServerError)
+                .set_status_code(StatusCode::InternalServerError)
                 .set_payload(b"Failed to serialize response body".to_vec()),
         }
     }
