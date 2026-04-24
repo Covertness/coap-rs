@@ -11,6 +11,7 @@ use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
+#[derive(Debug, Clone, Default)]
 pub struct RoomState {
     rooms: HashMap<String, f64>,
 }
@@ -58,10 +59,11 @@ async fn main() {
 
     let router = Router::new()
         .get("/temperature", get_temperature)
-        .post("/temperature/{room}", set_temperature);
+        .post("/temperature/{room}", set_temperature)
+        .with_state(state);
 
     let server = Server::new_udp(addr).unwrap();
     println!("Server up on {addr}");
 
-    server.serve(router, state).await.unwrap();
+    server.serve(router).await.unwrap();
 }

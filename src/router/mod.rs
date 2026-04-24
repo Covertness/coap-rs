@@ -21,15 +21,30 @@ pub struct Router<S = ()> {
     routes: Vec<(Route, BoxedHandler<S>)>,
     /// Optional fallback handler that is called when no routes match.
     fallback: Option<BoxedHandler<S>>,
+    /// Shared application state available to handlers through the `State` extractor.
+    state: S,
+}
+
+impl<S: Clone + Default + Send + Sync + 'static> Router<S> {
+    /// Creates a new empty router with default state.
+    pub fn new() -> Self {
+        Self::from_state(Default::default())
+    }
 }
 
 impl<S: Clone + Send + Sync + 'static> Router<S> {
-    /// Creates a new empty router.
-    pub fn new() -> Self {
+    /// Creates a new empty router with the given state.
+    pub fn from_state(state: S) -> Self {
         Self {
             routes: Vec::new(),
             fallback: None,
+            state,
         }
+    }
+
+    /// Attaches shared application state to the router.
+    pub fn with_state(self, state: S) -> Self {
+        Self { state, ..self }
     }
 
     /// Registers a new route with the given method, path, and handler.
@@ -105,17 +120,17 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
     /// Handles an incoming request by matching it against the registered routes and calling the appropriate handler.
     ///
     /// If no routes match, the fallback handler will be called if it is set, otherwise a Not Found response will be returned.
-    pub(crate) async fn handle(&self, mut req: Request, state: S) -> Request {
+    pub(crate) async fn handle(&self, mut req: Request) -> Request {
         // routes are explored in order of registration
         for (route, handler) in &self.routes {
             if let Ok(path) = route.match_request(&mut req) {
                 req.path = path;
-                return handler.call(req, state).await;
+                return handler.call(req, self.state.clone()).await;
             }
         }
         // No route matched, use fallback or return not found
         match self.fallback {
-            Some(ref fallback) => fallback.call(req, state).await,
+            Some(ref fallback) => fallback.call(req, self.state.clone()).await,
             None => {
                 RouteError::NotFound.into_response().fill_response(&mut req);
                 req

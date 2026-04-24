@@ -457,7 +457,7 @@ impl Server {
     }
 
     #[cfg(feature = "router")]
-    pub async fn serve<S>(self, router: Router<S>, state: S) -> Result<(), io::Error>
+    pub async fn serve<S>(self, router: Router<S>) -> Result<(), io::Error>
     where
         S: Clone + Send + Sync + 'static,
     {
@@ -465,9 +465,8 @@ impl Server {
         let handler = {
             move |req| {
                 let r = router.clone();
-                let s = state.clone();
                 let req = Request::new(req);
-                async move { r.handle(req, s).await.req }
+                async move { r.handle(req).await.req }
             }
         };
         self.run(handler).await
