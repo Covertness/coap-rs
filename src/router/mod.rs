@@ -3,6 +3,7 @@
 pub mod extract;
 pub mod handler;
 pub mod macros;
+pub mod method_routing;
 pub mod request;
 pub mod response;
 pub mod route;
@@ -10,6 +11,8 @@ pub mod util;
 
 pub use coap_lite::RequestType as Method;
 use handler::{BoxedHandler, Handler, HandlerWrapper};
+use method_routing::MethodRouter;
+pub use method_routing::{delete, fallback, get, post, put};
 pub use request::Request;
 use response::IntoResponse;
 use route::{Route, RouteError};
@@ -18,7 +21,7 @@ use route::{Route, RouteError};
 #[derive(Default)]
 pub struct Router<S = ()> {
     /// Registered routes, stored in the order they were added. The first matching route will be used.
-    routes: Vec<(Route, BoxedHandler<S>)>,
+    routes: Vec<(Route, MethodRouter<S>)>,
     /// Optional fallback handler that is called when no routes match.
     fallback: Option<BoxedHandler<S>>,
     /// Shared application state available to handlers through the `State` extractor.
@@ -47,63 +50,22 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
         Self { state, ..self }
     }
 
-    /// Registers a new route with the given method, path, and handler.
+    /// Registers a new route with the given path, and method router.
     ///
     /// # Arguments
     ///
-    /// - `method`: The CoAP [request type](Method) (e.g. GET, POST) to match.
     /// - `path`: The path pattern to match (e.g. `"/sensors/{id}"`).
     ///   Path parameters can be defined using `{param}` syntax.
-    /// - `handler`: The handler function that will be called when a request matches this route.
+    /// - `method_router`: The method router containing handlers for different CoAP methods.
     ///
     /// # Note
     ///
     /// Routes are matched in the order they are added.
     /// If multiple routes could match a request, the first one will be used.
-    pub fn route(mut self, method: Method, path: impl ToString, handler: BoxedHandler<S>) -> Self {
-        let route = Route::new(method, path);
-        self.routes.push((route, handler));
+    pub fn route(mut self, path: impl ToString, method_router: MethodRouter<S>) -> Self {
+        let route = Route::new(path);
+        self.routes.push((route, method_router));
         self
-    }
-
-    /// Convenience method for registering a GET route. See [`route`](Self::route) for details.
-    pub fn get<H, T>(self, path: impl ToString, handler: H) -> Self
-    where
-        T: Send + Sync + 'static,
-        H: Handler<T, S>,
-    {
-        let handler = Box::new(HandlerWrapper::new(handler));
-        self.route(Method::Get, path, handler)
-    }
-
-    /// Convenience method for registering a POST route. See [`route`](Self::route) for details.
-    pub fn post<H, T>(self, path: impl ToString, handler: H) -> Self
-    where
-        T: Send + Sync + 'static,
-        H: Handler<T, S>,
-    {
-        let handler = Box::new(HandlerWrapper::new(handler));
-        self.route(Method::Post, path, handler)
-    }
-
-    /// Convenience method for registering a PUT route. See [`route`](Self::route) for details.
-    pub fn put<H, T>(self, path: impl ToString, handler: H) -> Self
-    where
-        T: Send + Sync + 'static,
-        H: Handler<T, S>,
-    {
-        let handler = Box::new(HandlerWrapper::new(handler));
-        self.route(Method::Put, path, handler)
-    }
-
-    /// Convenience method for registering a DELETE route. See [`route`](Self::route) for details.
-    pub fn delete<H, T>(self, path: impl ToString, handler: H) -> Self
-    where
-        T: Send + Sync + 'static,
-        H: Handler<T, S>,
-    {
-        let handler = Box::new(HandlerWrapper::new(handler));
-        self.route(Method::Delete, path, handler)
     }
 
     /// Sets a fallback handler that will be called when no registered routes match an incoming request.
@@ -123,12 +85,25 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
     pub(crate) async fn handle(&self, mut req: Request) -> Request {
         // routes are explored in order of registration
         for (route, handler) in &self.routes {
-            if let Ok(path) = route.match_request(&mut req) {
+            if let Ok(path) = route.match_path(&req.path()) {
                 req.path = path;
-                return handler.call(req, self.state.clone()).await;
+                match handler.try_handle(req, self.state.clone()).await {
+                    Ok(req) => return req,
+                    Err(req) => {
+                        return self.handle_fallback(req).await;
+                    }
+                }
             }
         }
         // No route matched, use fallback or return not found
+        self.handle_fallback(req).await
+    }
+
+    /// Handler for when no routes match an incoming request.
+    ///
+    /// If a fallback handler is set, it will be called with the request.
+    /// Otherwise, a Not Found response will be generated and returned.
+    async fn handle_fallback(&self, mut req: Request) -> Request {
         match self.fallback {
             Some(ref fallback) => fallback.call(req, self.state.clone()).await,
             None => {

@@ -1,11 +1,9 @@
 //! Route matching and error types for the CoAP router.
 
 use crate::router::{
-    request::Request,
     response::{IntoResponse, Response, StatusCode},
     util::PercentDecodedStr,
 };
-use coap_lite::RequestType as Method;
 use regex::Regex;
 use std::{hash::Hash, sync::Arc};
 
@@ -45,8 +43,6 @@ impl IntoResponse for RouteError {
 /// A route definition, including the HTTP method, the route pattern, and the compiled regex for matching.
 #[derive(Debug, Clone)]
 pub struct Route {
-    /// The HTTP method (e.g. GET, POST) that this route matches.
-    method: Method,
     /// The original route pattern string (e.g. `"/sensors/{id}"`).
     route: String,
     /// The compiled regex pattern for matching request paths against this route.
@@ -56,13 +52,12 @@ pub struct Route {
 }
 
 impl Route {
-    /// Creates a new `Route` from the given method and route pattern string.
-    pub fn new<S: ToString>(method: Method, route: S) -> Self {
+    /// Creates a new `Route` from the given route pattern string.
+    pub fn new<S: ToString>(route: S) -> Self {
         let route = route.to_string();
         let (regex, param_names) = Self::build_regex(&route);
 
         Route {
-            method,
             route,
             regex,
             param_names,
@@ -162,15 +157,6 @@ impl Route {
         &self.route
     }
 
-    /// Checks if the given method matches this route's method.
-    #[inline]
-    pub fn match_method(&self, method: Method) -> Result<(), RouteError> {
-        match self.method == method {
-            true => Ok(()),
-            false => Err(RouteError::DifferentMethod),
-        }
-    }
-
     /// Checks if the given path matches this route's path pattern and extracts any path parameters.
     ///
     /// Returns a vector of (parameter name, parameter value) pairs if the path matches, or a `RouteError` if it does not.
@@ -197,17 +183,6 @@ impl Route {
             Err(RouteError::DifferentPath)
         }
     }
-
-    /// Checks if the given request matches this route's method and path pattern.
-    ///
-    /// Returns a vector of (parameter name, parameter value) pairs if the request matches, or a `RouteError` if it does not.
-    pub(crate) fn match_request(
-        &self,
-        req: &mut Request,
-    ) -> Result<Vec<(Arc<str>, PercentDecodedStr)>, RouteError> {
-        self.match_method(req.method())?;
-        self.match_path(&req.path())
-    }
 }
 
 #[cfg(test)]
@@ -219,24 +194,24 @@ mod tests {
         expected = "Nested parameters are not allowed in route pattern: /sensors/{id{nested}}"
     )]
     fn test_nested_parameters() {
-        let _route = Route::new(Method::Get, "/sensors/{id{nested}}");
+        let _route = Route::new("/sensors/{id{nested}}");
     }
 
     #[test]
     #[should_panic(expected = "Unmatched closing brace in route pattern: /sensors/{id}}")]
     fn test_unmatched_closing_brace() {
-        let _route = Route::new(Method::Get, "/sensors/{id}}");
+        let _route = Route::new("/sensors/{id}}");
     }
 
     #[test]
     #[should_panic(expected = "Unclosed parameter in route pattern: /sensors/{id")]
     fn test_unclosed_parameter() {
-        let _route = Route::new(Method::Get, "/sensors/{id");
+        let _route = Route::new("/sensors/{id");
     }
 
     #[test]
     fn test_build_regex() {
-        let route = Route::new(Method::Get, "/sensors/{id}/readings/{type}");
+        let route = Route::new("/sensors/{id}/readings/{type}");
         assert_eq!(route.param_names, vec!["id", "type"]);
         assert!(route.regex.is_match("sensors/123/readings/temperature"));
         assert!(route.regex.is_match("sensors/abc/readings/humidity"));
@@ -247,15 +222,8 @@ mod tests {
     }
 
     #[test]
-    fn test_match_method() {
-        let route = Route::new(Method::Get, "/sensors/{id}");
-        assert!(route.match_method(Method::Get).is_ok());
-        assert!(route.match_method(Method::Post).is_err());
-    }
-
-    #[test]
     fn test_match_path() {
-        let route = Route::new(Method::Get, "/sensors/{id}/readings/{type}");
+        let route = Route::new("/sensors/{id}/readings/{type}");
         let params = route
             .match_path("sensors/123/readings/temperature")
             .expect("Path should match");

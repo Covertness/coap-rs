@@ -3,7 +3,7 @@ extern crate coap;
 use coap::{
     router::{
         extract::{Json, Path, Query, State},
-        Router,
+        get, post, Router,
     },
     Server,
 };
@@ -58,8 +58,8 @@ async fn main() {
     }));
 
     let router = Router::new()
-        .get("/temperature", get_temperature)
-        .post("/temperature/{room}", set_temperature)
+        .route("/temperature", get(get_temperature))
+        .route("/temperature/{room}", post(set_temperature))
         .with_state(state);
 
     let server = Server::new_udp(addr).unwrap();
