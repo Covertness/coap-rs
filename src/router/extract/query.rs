@@ -6,7 +6,7 @@ use crate::router::{
     response::{IntoResponse, Response, StatusCode},
 };
 use serde::de::DeserializeOwned;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 /// Error types that can occur when extracting data from the query string.
 #[derive(Debug, Clone, Copy)]
@@ -61,11 +61,5 @@ impl<T> Deref for Query<T> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl<T> DerefMut for Query<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }

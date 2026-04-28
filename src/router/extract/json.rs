@@ -6,7 +6,7 @@ use crate::router::{
     response::{IntoResponse, Response, StatusCode},
 };
 use serde::{de::DeserializeOwned, Serialize};
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 /// Error types that can occur when extracting data from the request JSON body.
 #[derive(Debug, Clone, Copy)]
@@ -80,8 +80,58 @@ impl<T> Deref for Json<T> {
     }
 }
 
-impl<T> DerefMut for Json<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_into_response() {
+        let rejection = JsonRejection::InvalidBody;
+        let response = rejection.into_response();
+
+        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert!(response.payload.is_some());
+        let payload_str = String::from_utf8(response.payload.unwrap()).unwrap();
+        assert_eq!(payload_str, "Invalid JSON body string");
+
+        let rejection = JsonRejection::DeserializationError;
+        let response = rejection.into_response();
+        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert!(response.payload.is_some());
+        let payload_str = String::from_utf8(response.payload.unwrap()).unwrap();
+        assert_eq!(payload_str, "Failed to deserialize JSON body");
+
+        let rejection = JsonRejection::InvalidUtf8;
+        let response = rejection.into_response();
+        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert!(response.payload.is_some());
+        let payload_str = String::from_utf8(response.payload.unwrap()).unwrap();
+        assert_eq!(payload_str, "Invalid UTF-8 in JSON body");
+
+        let json = Json(vec![1, 2, 3]);
+        let response = json.into_response();
+        assert_eq!(response.status_code, None);
+        let payload_str = String::from_utf8(response.payload.unwrap()).unwrap();
+        assert_eq!(payload_str, "[1,2,3]");
+
+        let json = Json(vec![1, 2, 3]);
+        let response = json.into_response();
+        assert_eq!(response.status_code, None);
+        let payload_str = String::from_utf8(response.payload.unwrap()).unwrap();
+        assert_eq!(payload_str, "[1,2,3]");
+
+        let mut payload = HashMap::new();
+        payload.insert("key".to_string(), "value".to_string());
+        payload.insert("number".to_string(), "42".to_string());
+
+        let json = Json(payload);
+        let response = json.into_response();
+        assert_eq!(response.status_code, None);
+        let payload_str = String::from_utf8(response.payload.unwrap()).unwrap();
+        assert!(
+            payload_str == r#"{"key":"value","number":"42"}"#
+                || payload_str == r#"{"number":"42","key":"value"}"#
+        );
     }
 }

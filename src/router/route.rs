@@ -43,8 +43,6 @@ impl IntoResponse for RouteError {
 /// A route definition, including the HTTP method, the route pattern, and the compiled regex for matching.
 #[derive(Debug, Clone)]
 pub struct Route {
-    /// The original route pattern string (e.g. `"/sensors/{id}"`).
-    route: String,
     /// The compiled regex pattern for matching request paths against this route.
     regex: Regex,
     /// The names of the path parameters in the order they appear in the route pattern.
@@ -57,11 +55,7 @@ impl Route {
         let route = route.to_string();
         let (regex, param_names) = Self::build_regex(&route);
 
-        Route {
-            route,
-            regex,
-            param_names,
-        }
+        Route { regex, param_names }
     }
 
     /// Build a regex pattern from a route string
@@ -151,12 +145,6 @@ impl Route {
         (regex, param_names)
     }
 
-    /// Returns the pattern string for this route.
-    #[inline]
-    pub fn route(&self) -> &str {
-        &self.route
-    }
-
     /// Checks if the given path matches this route's path pattern and extracts any path parameters.
     ///
     /// Returns a vector of (parameter name, parameter value) pairs if the path matches, or a `RouteError` if it does not.
@@ -188,6 +176,29 @@ impl Route {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_into_response() {
+        let error = RouteError::DifferentMethod;
+        let response = error.into_response();
+        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert_eq!(response.payload, Some(b"Different method".to_vec()));
+
+        let error = RouteError::NoUriPath;
+        let response = error.into_response();
+        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert_eq!(response.payload, Some(b"No URI path".to_vec()));
+
+        let error = RouteError::DifferentPath;
+        let response = error.into_response();
+        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert_eq!(response.payload, Some(b"Different path".to_vec()));
+
+        let error = RouteError::NotFound;
+        let response = error.into_response();
+        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert_eq!(response.payload, Some(b"Not found".to_vec()));
+    }
 
     #[test]
     #[should_panic(
@@ -226,6 +237,50 @@ mod tests {
         let route = Route::new("/sensors/{id}/readings/{type}");
         let params = route
             .match_path("sensors/123/readings/temperature")
+            .expect("Path should match");
+        assert_eq!(params.len(), 2);
+        assert_eq!(params[0].0.as_ref(), "id");
+        assert_eq!(params[0].1.as_str(), "123");
+        assert_eq!(params[1].0.as_ref(), "type");
+        assert_eq!(params[1].1.as_str(), "temperature");
+    }
+
+    #[test]
+    fn test_no_match_path() {
+        let route = Route::new("/sensors/{id}/readings/{type}");
+        assert!(route.match_path("sensors/123/readings").is_err());
+        assert!(route
+            .match_path("sensors/123/readings/temperature/extra")
+            .is_err());
+        assert!(route
+            .match_path("devices/123/readings/temperature")
+            .is_err());
+    }
+
+    #[test]
+    fn test_preceding_literal_text() {
+        let route = Route::new("/sensors/{id}abc");
+        let params = route
+            .match_path("sensors/123abc")
+            .expect("Path should match");
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0].0.as_ref(), "id");
+        assert_eq!(params[0].1.as_str(), "123");
+
+        let route = Route::new("/sensors/abc{id}");
+        let params = route
+            .match_path("sensors/abc123")
+            .expect("Path should match");
+        assert_eq!(params.len(), 1);
+        assert_eq!(params[0].0.as_ref(), "id");
+        assert_eq!(params[0].1.as_str(), "123");
+    }
+
+    #[test]
+    fn test_empty_segments() {
+        let route = Route::new("/sensors/{id}//readings/{type}/");
+        let params = route
+            .match_path("/sensors/123//readings/temperature/")
             .expect("Path should match");
         assert_eq!(params.len(), 2);
         assert_eq!(params[0].0.as_ref(), "id");

@@ -22,11 +22,6 @@ impl Request {
         }
     }
 
-    /// Returns a reference to the CoAP response associated with this request, if it exists.
-    pub fn response(&self) -> Option<&coap_lite::CoapResponse> {
-        self.req.response.as_ref()
-    }
-
     /// Returns a mutable reference to the CoAP response associated with this request, if it exists.
     pub fn response_mut(&mut self) -> Option<&mut coap_lite::CoapResponse> {
         self.req.response.as_mut()

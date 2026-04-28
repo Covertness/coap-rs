@@ -98,15 +98,15 @@ impl IntoResponse for Vec<u8> {
     }
 }
 
-impl<const N: usize> IntoResponse for [u8; N] {
+impl<const N: usize> IntoResponse for &[u8; N] {
     fn into_response(self) -> Response {
         self.to_vec().into_response()
     }
 }
 
-impl<const N: usize> IntoResponse for &[u8; N] {
+impl<const N: usize> IntoResponse for [u8; N] {
     fn into_response(self) -> Response {
-        self.to_vec().into_response()
+        (&self).into_response()
     }
 }
 
@@ -116,15 +116,15 @@ impl IntoResponse for &[u8] {
     }
 }
 
-impl IntoResponse for String {
-    fn into_response(self) -> Response {
-        self.into_bytes().into_response()
-    }
-}
-
 impl IntoResponse for &str {
     fn into_response(self) -> Response {
         self.as_bytes().into_response()
+    }
+}
+
+impl IntoResponse for String {
+    fn into_response(self) -> Response {
+        self.as_str().into_response()
     }
 }
 
@@ -138,5 +138,65 @@ impl<T: IntoResponse> IntoResponse for (StatusCode, T) {
     fn into_response(self) -> Response {
         let (status, payload) = self;
         payload.into_response().set_status_code(status)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use crate::router::route::RouteError;
+
+    #[test]
+    fn test_response() {
+        let response = IntoResponse::into_response(());
+        assert_eq!(response.status_code, None);
+        assert_eq!(response.payload, None);
+        let response = IntoResponse::into_response(response);
+        assert_eq!(response.status_code, None);
+        assert_eq!(response.payload, None);
+    }
+
+    #[test]
+    fn test_status_code() {
+        let status = StatusCode::NotFound;
+        let response = IntoResponse::into_response(status);
+        assert_eq!(response.status_code, Some(StatusCode::NotFound));
+        assert_eq!(response.payload, None);
+    }
+
+    #[test]
+    fn test_result() {
+        let response: Result<StatusCode, RouteError> = Ok(StatusCode::Content);
+        let response = IntoResponse::into_response(response);
+        assert_eq!(response.status_code, Some(StatusCode::Content));
+        assert_eq!(response.payload, None);
+
+        let response: Result<StatusCode, RouteError> = Err(RouteError::NotFound);
+        let response = IntoResponse::into_response(response);
+        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert_eq!(response.payload, b"Not found".to_vec().into());
+    }
+
+    #[test]
+    fn test_array() {
+        let payload = [1, 2, 3];
+        let response = IntoResponse::into_response(payload);
+
+        assert_eq!(response.status_code, None);
+        assert_eq!(response.payload, Some(vec![1, 2, 3]));
+
+        let response = IntoResponse::into_response(payload.as_slice());
+        assert_eq!(response.status_code, None);
+        assert_eq!(response.payload, Some(vec![1, 2, 3]));
+    }
+
+    #[test]
+    fn test_string() {
+        let status = StatusCode::Content;
+        let payload = Box::new(String::from("Hello, world!"));
+        let response = IntoResponse::into_response((status, payload));
+        assert_eq!(response.status_code, Some(StatusCode::Content));
+        assert_eq!(response.payload, Some(b"Hello, world!".to_vec()));
     }
 }

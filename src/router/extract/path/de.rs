@@ -619,3 +619,503 @@ enum KeyOrIdx<'de> {
     Key(&'de str),
     Idx { idx: usize, key: &'de str },
 }
+
+#[cfg(test)]
+mod tests {
+    use super::PathDeserializer;
+    use crate::router::{extract::path::PathDeserializationError, util::PercentDecodedStr};
+    use serde::{de::Visitor, Deserialize, Deserializer};
+    use std::fmt;
+    use std::{collections::HashMap, sync::Arc};
+
+    fn params(input: &[(&str, &str)]) -> Vec<(Arc<str>, PercentDecodedStr)> {
+        input
+            .iter()
+            .map(|(k, v)| {
+                (
+                    Arc::<str>::from(*k),
+                    PercentDecodedStr::new(*v).expect("invalid encoded value in test"),
+                )
+            })
+            .collect()
+    }
+
+    #[derive(Debug, Deserialize, PartialEq, Eq)]
+    struct UserPath {
+        id: u32,
+        name: String,
+    }
+
+    #[derive(Debug, Deserialize, PartialEq, Eq)]
+    enum UnitEnum {
+        Active,
+        Inactive,
+    }
+
+    #[allow(dead_code)]
+    #[derive(Debug, Deserialize)]
+    enum NewtypeEnum {
+        Active(u32),
+    }
+
+    #[allow(dead_code)]
+    #[derive(Debug, Deserialize)]
+    enum TupleEnum {
+        Active(u32, u32),
+    }
+
+    #[allow(dead_code)]
+    #[derive(Debug, Deserialize)]
+    enum StructEnum {
+        Active { id: u32 },
+    }
+
+    #[derive(Debug, Deserialize, PartialEq, Eq)]
+    struct UnitStruct;
+
+    #[derive(Debug, Deserialize, PartialEq, Eq)]
+    struct NewtypeStruct(String);
+
+    #[derive(Debug, Deserialize, PartialEq, Eq)]
+    struct PairStruct(String, u32);
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct AnyString(String);
+
+    impl<'de> Deserialize<'de> for AnyString {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct AnyStringVisitor;
+
+            impl<'de> Visitor<'de> for AnyStringVisitor {
+                type Value = AnyString;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    formatter.write_str("a path value")
+                }
+
+                fn visit_borrowed_str<E>(self, value: &'de str) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    Ok(AnyString(value.to_string()))
+                }
+
+                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    Ok(AnyString(value.to_string()))
+                }
+            }
+
+            deserializer.deserialize_any(AnyStringVisitor)
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct ForceBytes;
+
+    impl<'de> Deserialize<'de> for ForceBytes {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct BytesVisitor;
+
+            impl<'de> Visitor<'de> for BytesVisitor {
+                type Value = ForceBytes;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    formatter.write_str("bytes")
+                }
+
+                fn visit_borrowed_bytes<E>(self, _value: &'de [u8]) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    Ok(ForceBytes)
+                }
+            }
+
+            deserializer.deserialize_bytes(BytesVisitor)
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct ForceIdentifier;
+
+    impl<'de> Deserialize<'de> for ForceIdentifier {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct IdentifierVisitor;
+
+            impl<'de> Visitor<'de> for IdentifierVisitor {
+                type Value = ForceIdentifier;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+                    formatter.write_str("identifier")
+                }
+
+                fn visit_str<E>(self, _value: &str) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    Ok(ForceIdentifier)
+                }
+            }
+
+            deserializer.deserialize_identifier(IdentifierVisitor)
+        }
+    }
+
+    #[test]
+    fn deserialize_single_string_ok() {
+        let p = params(&[("name", "alice")]);
+        let value = String::deserialize(PathDeserializer::new(&p)).unwrap();
+        assert_eq!(value, "alice");
+    }
+
+    #[test]
+    fn deserialize_single_bool_wrong_number_of_params() {
+        let p = params(&[("a", "true"), ("b", "false")]);
+        let err = bool::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::WrongNumberOfParameters {
+                got: 2,
+                expected: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_struct_ok() {
+        let p = params(&[("id", "42"), ("name", "alice")]);
+        let value = UserPath::deserialize(PathDeserializer::new(&p)).unwrap();
+
+        assert_eq!(
+            value,
+            UserPath {
+                id: 42,
+                name: "alice".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_struct_parse_error_at_key() {
+        let p = params(&[("id", "abc"), ("name", "alice")]);
+        let err = UserPath::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::ParseErrorAtKey {
+                key: "id".to_string(),
+                value: "abc".to_string(),
+                expected_type: "u32",
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_tuple_ok() {
+        let p = params(&[("id", "7"), ("name", "bob")]);
+        let value = <(u32, String)>::deserialize(PathDeserializer::new(&p)).unwrap();
+
+        assert_eq!(value, (7, "bob".to_string()));
+    }
+
+    #[test]
+    fn deserialize_tuple_parse_error_at_index() {
+        let p = params(&[("id", "nope"), ("name", "bob")]);
+        let err = <(u32, String)>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::ParseErrorAtIndex {
+                index: 0,
+                value: "nope".to_string(),
+                expected_type: "u32",
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_tuple_wrong_number_of_params() {
+        let p = params(&[("id", "7")]);
+        let err = <(u32, String)>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::WrongNumberOfParameters {
+                got: 1,
+                expected: 2,
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_unit_enum_ok() {
+        let p = params(&[("status", "Active")]);
+        let value = UnitEnum::deserialize(PathDeserializer::new(&p)).unwrap();
+
+        assert_eq!(value, UnitEnum::Active);
+    }
+
+    #[test]
+    fn deserialize_enum_wrong_number_of_params() {
+        let p = params(&[("status", "Active"), ("extra", "x")]);
+        let err = UnitEnum::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::WrongNumberOfParameters {
+                got: 2,
+                expected: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_enum_newtype_variant_is_unsupported() {
+        let p = params(&[("status", "Active")]);
+        let err = NewtypeEnum::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::UnsupportedType {
+                name: "newtype enum variant",
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_enum_tuple_variant_is_unsupported() {
+        let p = params(&[("status", "Active")]);
+        let err = TupleEnum::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::UnsupportedType {
+                name: "tuple enum variant",
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_enum_struct_variant_is_unsupported() {
+        let p = params(&[("status", "Active")]);
+        let err = StructEnum::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::UnsupportedType {
+                name: "struct enum variant",
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_map_with_non_string_key_is_rejected() {
+        let p = params(&[("1", "alice")]);
+        let err = HashMap::<u32, String>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::Message("Unexpected key type".to_string())
+        );
+    }
+
+    #[test]
+    fn deserialize_option_is_unsupported() {
+        let p = params(&[("name", "alice")]);
+        let err = Option::<String>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+
+        assert_eq!(
+            err,
+            PathDeserializationError::UnsupportedType {
+                name: "core::option::Option<alloc::string::String>",
+            }
+        );
+    }
+
+    #[test]
+    fn deserialize_primitives_and_char_succeed() {
+        let p = params(&[("value", "-5")]);
+        assert_eq!(i8::deserialize(PathDeserializer::new(&p)).unwrap(), -5);
+
+        let p = params(&[("value", "32767")]);
+        assert_eq!(i16::deserialize(PathDeserializer::new(&p)).unwrap(), 32767);
+
+        let p = params(&[("value", "2147483647")]);
+        assert_eq!(
+            i32::deserialize(PathDeserializer::new(&p)).unwrap(),
+            2147483647
+        );
+
+        let p = params(&[("value", "255")]);
+        assert_eq!(u8::deserialize(PathDeserializer::new(&p)).unwrap(), 255);
+
+        let p = params(&[("value", "18446744073709551615")]);
+        assert_eq!(
+            u64::deserialize(PathDeserializer::new(&p)).unwrap(),
+            u64::MAX
+        );
+
+        let p = params(&[("value", "3.5")]);
+        assert_eq!(f32::deserialize(PathDeserializer::new(&p)).unwrap(), 3.5);
+
+        let p = params(&[("value", "x")]);
+        assert_eq!(char::deserialize(PathDeserializer::new(&p)).unwrap(), 'x');
+    }
+
+    #[test]
+    fn deserialize_remaining_primitives_succeed() {
+        let p = params(&[("value", "-42")]);
+        assert_eq!(i64::deserialize(PathDeserializer::new(&p)).unwrap(), -42);
+
+        let p = params(&[("value", "-123456789012345678")]);
+        assert_eq!(
+            i128::deserialize(PathDeserializer::new(&p)).unwrap(),
+            -123456789012345678
+        );
+
+        let p = params(&[("value", "65535")]);
+        assert_eq!(
+            u16::deserialize(PathDeserializer::new(&p)).unwrap(),
+            u16::MAX
+        );
+
+        let p = params(&[("value", "4294967295")]);
+        assert_eq!(
+            u32::deserialize(PathDeserializer::new(&p)).unwrap(),
+            u32::MAX
+        );
+
+        let p = params(&[("value", "340282366920938463463374607431768211455")]);
+        assert_eq!(
+            u128::deserialize(PathDeserializer::new(&p)).unwrap(),
+            u128::MAX
+        );
+
+        let p = params(&[("value", "2.5")]);
+        assert_eq!(f64::deserialize(PathDeserializer::new(&p)).unwrap(), 2.5);
+    }
+
+    #[test]
+    fn deserialize_any_unit_and_newtype_struct_succeed() {
+        let p = params(&[("value", "abc")]);
+        let any = AnyString::deserialize(PathDeserializer::new(&p)).unwrap();
+        assert_eq!(any, AnyString("abc".to_string()));
+
+        let p = params(&[("value", "whatever")]);
+        assert_eq!(<()>::deserialize(PathDeserializer::new(&p)).unwrap(), ());
+
+        let p = params(&[("value", "whatever")]);
+        assert_eq!(
+            UnitStruct::deserialize(PathDeserializer::new(&p)).unwrap(),
+            UnitStruct
+        );
+
+        let p = params(&[("value", "wrapped")]);
+        assert_eq!(
+            NewtypeStruct::deserialize(PathDeserializer::new(&p)).unwrap(),
+            NewtypeStruct("wrapped".to_string())
+        );
+    }
+
+    #[test]
+    fn unsupported_path_methods_are_reported() {
+        let p = params(&[("value", "abc")]);
+        let err = ForceBytes::deserialize(PathDeserializer::new(&p)).unwrap_err();
+        assert!(matches!(
+            err,
+            PathDeserializationError::UnsupportedType { name }
+            if name.ends_with("ForceBytes")
+        ));
+
+        let p = params(&[("value", "abc")]);
+        let err = ForceIdentifier::deserialize(PathDeserializer::new(&p)).unwrap_err();
+        assert!(matches!(
+            err,
+            PathDeserializationError::UnsupportedType { name }
+            if name.ends_with("ForceIdentifier")
+        ));
+    }
+
+    #[test]
+    fn deserialize_seq_and_tuple_struct_succeed() {
+        let p = params(&[("a", "10"), ("b", "20")]);
+        let vec_values = Vec::<u32>::deserialize(PathDeserializer::new(&p)).unwrap();
+        assert_eq!(vec_values, vec![10, 20]);
+
+        let p = params(&[("key", "42")]);
+        let pairs = Vec::<(String, u32)>::deserialize(PathDeserializer::new(&p)).unwrap();
+        assert_eq!(pairs, vec![("key".to_string(), 42)]);
+    }
+
+    #[test]
+    fn value_deserializer_unsupported_paths_are_reported() {
+        let p = params(&[("key", "42")]);
+        let err =
+            HashMap::<String, Vec<String>>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+        assert!(matches!(
+            err,
+            PathDeserializationError::UnsupportedType { .. }
+        ));
+
+        let p = params(&[("key", "42")]);
+        let err =
+            HashMap::<String, PairStruct>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+        assert!(matches!(
+            err,
+            PathDeserializationError::UnsupportedType { .. }
+        ));
+
+        let p = params(&[("key", "42")]);
+        let err = HashMap::<String, UserPath>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+        assert!(matches!(
+            err,
+            PathDeserializationError::UnsupportedType { .. }
+        ));
+    }
+
+    #[test]
+    fn value_deserializer_key_and_plain_parse_errors_are_distinct() {
+        let p = params(&[("key", "abc")]);
+        let err =
+            HashMap::<String, (String, u32)>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+        assert_eq!(
+            err,
+            PathDeserializationError::Message("array types are not supported".to_string())
+        );
+
+        let p = params(&[("key", "abc")]);
+        let err = Vec::<(String, u32)>::deserialize(PathDeserializer::new(&p)).unwrap_err();
+        assert_eq!(
+            err,
+            PathDeserializationError::ParseError {
+                value: "abc".to_string(),
+                expected_type: "u32",
+            }
+        );
+    }
+
+    #[test]
+    fn value_deserializer_option_and_enum_succeed() {
+        let p = params(&[("status", "Active")]);
+        let enum_map = HashMap::<String, UnitEnum>::deserialize(PathDeserializer::new(&p)).unwrap();
+        assert_eq!(enum_map.get("status"), Some(&UnitEnum::Active));
+
+        let p = params(&[("maybe", "hello")]);
+        let option_map =
+            HashMap::<String, Option<String>>::deserialize(PathDeserializer::new(&p)).unwrap();
+        assert_eq!(option_map.get("maybe"), Some(&Some("hello".to_string())));
+    }
+}

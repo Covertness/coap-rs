@@ -50,6 +50,6 @@ mod tests {
         let decoded = PercentDecodedStr::new(encoded);
         assert!(decoded.is_some());
         let decoded = decoded.unwrap();
-        assert_eq!(decoded.as_str(), "Hello World!");
+        assert_eq!(&*decoded, "Hello World!");
     }
 }

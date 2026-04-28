@@ -4,10 +4,7 @@ use crate::router::{
     extract::{FromRef, FromRequest},
     request::Request,
 };
-use std::{
-    convert::Infallible,
-    ops::{Deref, DerefMut},
-};
+use std::{convert::Infallible, ops::Deref};
 
 /// Extractor for application state, allowing handlers to access shared state data.
 #[derive(Debug, Default, Clone, Copy)]
@@ -31,11 +28,5 @@ impl<S> Deref for State<S> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl<S> DerefMut for State<S> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
