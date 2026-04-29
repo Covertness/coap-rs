@@ -761,7 +761,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                     observe = &mut rx_pinned => {
                         match observe {
                             Ok(ObserveMessage::Terminate) => {
-                                this.terminate_observe(&observe_path, req_token).await;
+                                this.terminate_observe(&observe_path, req_token, continuation_template.message.clone()).await;
                                 break;
                             }
                             // if the receiver is dropped, we change the future to wait forever
@@ -813,12 +813,15 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         Ok(())
     }
 
-    async fn terminate_observe(&self, observe_path: &str, req_token: Vec<u8>) {
+    async fn terminate_observe(&self, observe_path: &str, req_token: Vec<u8>, template: Message) {
         let mut deregister_packet = CoapRequest::<SocketAddr>::new();
+        deregister_packet.message = template;
         deregister_packet.message.header.message_id = self.gen_message_id();
         deregister_packet.set_observe_flag(ObserveOption::Deregister);
         deregister_packet.set_path(observe_path);
         deregister_packet.message.set_token(req_token);
+        // clear any Block2 options left from blockwise bookkeeping
+        deregister_packet.message.clear_option(CoapOption::Block2);
 
         let _ = self
             .transport
@@ -1600,6 +1603,70 @@ mod test {
 
         // Terminate observation
         let _ = terminator.send(ObserveMessage::Terminate);
+    }
+
+    #[tokio::test]
+    async fn test_observe_deregister_includes_uri_query() {
+        // Arrange: Create a channel to receive the deregister result from the server handler task
+        let (deregister_tx, deregister_rx) = tokio::sync::oneshot::channel::<bool>();
+        let deregister_tx = Arc::new(std::sync::Mutex::new(Some(deregister_tx)));
+
+        // Spawn server with automatic observe handling disabled so that we can write a specific test in the handler.
+        // Note: Port 0 is used to prevent port conflicts during concurrent test execution.
+        // Real servers should use port 5683.
+        let server_port = {
+            let deregister_tx = deregister_tx.clone();
+            server::test::spawn_server_disable_observe(
+                "127.0.0.1:0",
+                move |mut req: Box<CoapRequest<SocketAddr>>| {
+                    let deregister_tx = deregister_tx.clone();
+                    Box::pin(async move {
+                        if req.get_observe_flag() == Some(Ok(ObserveOption::Deregister)) {
+                            let uri_query_present = req
+                                .message
+                                .get_option(CoapOption::UriQuery)
+                                .map_or(false, |opts| opts.contains(&b"q=uery".to_vec()));
+                            if let Some(tx) = deregister_tx.lock().unwrap().take() {
+                                let _ = tx.send(uri_query_present);
+                            }
+                        }
+                        if let Some(resp) = req.response.as_mut() {
+                            resp.message.header.code = MessageClass::Response(Status::Content);
+                        }
+                        req
+                    })
+                },
+            )
+        }
+        .recv()
+        .await
+        .unwrap();
+
+        let client = UdpCoAPClient::new(("127.0.0.1", server_port))
+            .await
+            .unwrap();
+
+        let mut request = CoapRequest::new();
+        request.set_path("/observe_me");
+        request.message.set_option(
+            CoapOption::UriQuery,
+            std::iter::once("q=uery".as_bytes().to_vec()).collect(),
+        );
+        request.set_method(Method::Get);
+
+        // Act
+        let terminator = client.observe_with(request, |_| {}).await.unwrap();
+        let _ = terminator.send(ObserveMessage::Terminate);
+
+        // Assert: wait for the server to receive the deregister and report the result
+        let uri_query_in_deregister = tokio::time::timeout(Duration::from_secs(1), deregister_rx)
+            .await
+            .expect("deregister request not received within 1 second")
+            .expect("deregister sender was dropped");
+        assert!(
+            uri_query_in_deregister,
+            "deregister request did not include URI query 'q=uery'"
+        );
     }
 
     #[tokio::test]
