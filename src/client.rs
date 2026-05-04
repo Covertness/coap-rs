@@ -70,10 +70,10 @@ impl<T: ClientTransport> TransportExt for T {
     async fn receive_packet(&self) -> IoResult<Option<Packet>> {
         let mut buf = [0; 1500];
         let (nread, address) = self.recv(&mut buf).await?;
-        return match Message::from_bytes(&buf[..nread]).ok() {
+        match Message::from_bytes(&buf[..nread]).ok() {
             Some(message) => Ok(Some(Packet { address, message })),
             None => Ok(None),
-        };
+        }
     }
 }
 
@@ -85,6 +85,12 @@ type PacketRegistry = BTreeMap<Token, UnboundedSender<IoResult<Packet>>>;
 pub struct TransportSynchronizer {
     pub(crate) outgoing: Arc<Mutex<PacketRegistry>>,
     fail_error: Arc<RwLock<Option<std::io::Error>>>,
+}
+
+impl Default for TransportSynchronizer {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TransportSynchronizer {
@@ -123,11 +129,7 @@ impl TransportSynchronizer {
     }
 
     pub async fn get_sender(&self, key: &[u8]) -> Option<UnboundedSender<IoResult<Packet>>> {
-        self.outgoing
-            .lock()
-            .await
-            .get(key)
-            .map(UnboundedSender::clone)
+        self.outgoing.lock().await.get(key).cloned()
     }
     /// Sets the sender of a given key,
     /// returns the previous key if it was set
@@ -195,7 +197,7 @@ async fn receive_loop<T: ClientTransport + 'static>(
 
     let e = Err(Error::new(err.kind(), err.to_string()));
     transport_sync.fail(err).await;
-    return e;
+    e
 }
 
 pub fn parse_for_ack(packet: &Packet) -> Option<Vec<u8>> {
@@ -210,7 +212,7 @@ pub fn make_ack(packet: &Packet) -> Vec<u8> {
     ack.header.set_type(MessageType::Acknowledgement);
     ack.header.message_id = packet.message.header.message_id;
     ack.header.code = MessageClass::Empty;
-    return ack.to_bytes().unwrap();
+    ack.to_bytes().unwrap()
 }
 
 /// a wrapper for transports responsible for retries and timeouts
@@ -226,8 +228,8 @@ impl<T: ClientTransport> Clone for CoapClientTransport<T> {
         Self {
             transport: self.transport.clone(),
             synchronizer: self.synchronizer.clone(),
-            retries: self.retries.clone(),
-            timeout: self.timeout.clone(),
+            retries: self.retries,
+            timeout: self.timeout,
         }
     }
 }
@@ -238,7 +240,7 @@ impl<T: ClientTransport> CoapClientTransport<T> {
         let (tx, rx) = unbounded_channel();
         let token = packet.message.get_token().to_owned();
         self.synchronizer.set_sender(token, tx).await;
-        return rx;
+        rx
     }
 
     /// tries to send a confirmable message with retries and timeouts
@@ -249,12 +251,12 @@ impl<T: ClientTransport> CoapClientTransport<T> {
     ) -> IoResult<Packet> {
         let mut res = Err(Error::new(ErrorKind::InvalidData, "not enough retries"));
         for _ in 0..self.retries {
-            res = self.try_send_non_confirmable_message(&msg, receiver).await;
+            res = self.try_send_non_confirmable_message(msg, receiver).await;
             if res.is_ok() {
                 return res;
             }
         }
-        return res;
+        res
     }
 
     fn encode_message(message: &Message) -> IoResult<Vec<u8>> {
@@ -284,10 +286,10 @@ impl<T: ClientTransport> CoapClientTransport<T> {
         receiver: &mut UnboundedReceiver<IoResult<Packet>>,
     ) -> IoResult<Packet> {
         if packet.message.header.get_type() == MessageType::Confirmable {
-            return self.try_send_confirmable_message(&packet, receiver).await;
+            return self.try_send_confirmable_message(packet, receiver).await;
         } else {
             return self
-                .try_send_non_confirmable_message(&packet, receiver)
+                .try_send_non_confirmable_message(packet, receiver)
                 .await;
         }
     }
@@ -304,12 +306,12 @@ impl<T: ClientTransport> CoapClientTransport<T> {
     }
 
     pub fn from_transport(transport: Arc<T>, synchronizer: TransportSynchronizer) -> Self {
-        return Self {
+        Self {
             transport,
             synchronizer,
             retries: Self::DEFAULT_NUM_RETRIES,
             timeout: Duration::from_secs(DEFAULT_RECEIVE_TIMEOUT_SECONDS),
-        };
+        }
     }
 }
 
@@ -341,7 +343,7 @@ impl<T: ClientTransport> Clone for CoAPClient<T> {
     fn clone(&self) -> Self {
         Self {
             transport: self.transport.clone(),
-            block1_size: self.block1_size.clone(),
+            block1_size: self.block1_size,
             message_id: self.message_id.clone(),
         }
     }
@@ -359,10 +361,7 @@ impl MessageReceiver {
         match self.receiver.recv().await {
             Some(Ok(packet)) => Ok(packet),
             Some(Err(e)) => Err(e),
-            None => Err(Error::new(
-                ErrorKind::Other,
-                "sender dropped by synchronizer",
-            )),
+            None => Err(Error::other("sender dropped by synchronizer")),
         }
     }
     pub fn new(
@@ -447,9 +446,9 @@ impl UdpCoAPClient {
     /// Send a request to all CoAP devices.
     /// - IPv4 AllCoAP multicast address is '224.0.1.187'
     /// - IPv6 AllCoAp multicast addresses are 'ff0?::fd'
-    /// Parameter segment is used with IPv6 to determine the first octet.
-    /// It's value can be between 0x0 and 0xf. To address multiple segments,
-    /// you have to call send_all_coap for each of the segments.
+    ///   Parameter segment is used with IPv6 to determine the first octet.
+    ///   It's value can be between 0x0 and 0xf. To address multiple segments,
+    ///   you have to call send_all_coap for each of the segments.
     pub async fn send_all_coap(
         &self,
         request: &mut CoapRequest<SocketAddr>,
@@ -498,7 +497,7 @@ impl UdpCoAPClient {
                 if size == bytes.len() {
                     Ok(())
                 } else {
-                    Err(Error::new(ErrorKind::Other, "send length error"))
+                    Err(Error::other("send length error"))
                 }
             }
             Err(_) => Err(Error::new(ErrorKind::InvalidInput, "packet error")),
@@ -539,16 +538,15 @@ impl UdpCoAPClient {
     ///   }
     /// }
     /// ```
-
     pub async fn create_receiver_for(&self, request: &CoapRequest<SocketAddr>) -> MessageReceiver {
         let (tx, rx) = unbounded_channel();
         let key = request.message.get_token().to_vec();
         self.transport.synchronizer.set_sender(key, tx).await;
-        return MessageReceiver::new(
+        MessageReceiver::new(
             self.transport.synchronizer.clone(),
             rx,
             request.message.get_token(),
-        );
+        )
     }
 }
 
@@ -563,8 +561,8 @@ impl CoAPClient<DtlsConnection> {
 
 impl<T: ClientTransport + 'static> CoAPClient<T> {
     const MAX_PAYLOAD_BLOCK: usize = 1024;
-    /// Create a CoAP client with a chosen transport type
 
+    /// Create a CoAP client with a chosen transport type
     pub fn from_transport(transport: T) -> Self {
         let synchronizer = TransportSynchronizer::new();
         let transport_arc = Arc::new(transport);
@@ -739,7 +737,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         }
 
         let (tx, rx) = oneshot::channel();
-        let observe_path = String::from(resource_path);
+        let observe_path = resource_path;
 
         tokio::spawn(async move {
             // Template used to create a fresh continuation request per notification
@@ -776,7 +774,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
             }
             Some(())
         });
-        return Ok(tx);
+        Ok(tx)
     }
 
     async fn send_observe_registration<H: FnMut(Message) + Send + 'static>(
@@ -920,12 +918,12 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         }
         let payload = std::mem::take(&mut request.message.payload);
         let mut it = payload.chunks(self.block1_size).enumerate().peekable();
-        let mut result = Err(Error::new(ErrorKind::Other, "unknown error occurred"));
+        let mut result = Err(Error::other("unknown error occurred"));
 
         while let Some((idx, elem)) = it.next() {
             let more_blocks = it.peek().is_some();
             let block = BlockValue::new(idx, more_blocks, self.block1_size)
-                .map_err(|_| Error::new(ErrorKind::Other, "could not set block size"))?;
+                .map_err(|_| Error::other("could not set block size"))?;
 
             request.message.clear_option(CoapOption::Block1);
             request
@@ -960,7 +958,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
             }
             result = Ok(resp);
         }
-        return result;
+        result
     }
 
     /// Receive a response support block-wise.
@@ -1070,13 +1068,10 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         };
         let host = Regex::new(r"^\[(.*?)]$")
             .unwrap()
-            .replace(&host, "$1")
+            .replace(host, "$1")
             .to_string();
 
-        let port = match url_params.port() {
-            Some(p) => p,
-            None => 5683,
-        };
+        let port = url_params.port().unwrap_or(5683);
 
         let path = url_params.path().to_string();
 
@@ -1085,7 +1080,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
             .map(|q| q.split("&").map(|qi| qi.as_bytes().to_vec()).collect())
             .unwrap_or(vec![]);
 
-        return Ok((host.to_string(), port, path, queries));
+        Ok((host.to_string(), port, path, queries))
     }
 
     fn gen_message_id(&self) -> u16 {

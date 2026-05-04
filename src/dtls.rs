@@ -28,7 +28,7 @@ impl<L: WebRtcListener + Send + 'static> Listener for L {
                 if let Ok((dtls_conn, remote_addr)) = res {
                     tokio::spawn(spawn_webrtc_conn(dtls_conn, remote_addr, sender.clone()));
                 } else {
-                    return Err(std::io::Error::new(ErrorKind::Other, "could not accept"));
+                    return Err(std::io::Error::other("could not accept"));
                 }
             }
         }))
@@ -43,19 +43,12 @@ pub struct DtlsResponse {
 #[async_trait]
 impl ClientTransport for DtlsConnection {
     async fn recv(&self, buf: &mut [u8]) -> IoResult<(usize, Option<SocketAddr>)> {
-        let read = self
-            .conn
-            .read(buf, None)
-            .await
-            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let read = self.conn.read(buf, None).await.map_err(Error::other)?;
         return Ok((read, self.conn.remote_addr()));
     }
 
     async fn send(&self, buf: &[u8]) -> IoResult<usize> {
-        self.conn
-            .write(buf, None)
-            .await
-            .map_err(|e| Error::new(ErrorKind::Other, e))
+        self.conn.write(buf, None).await.map_err(Error::other)
     }
 }
 #[async_trait]
@@ -78,8 +71,7 @@ pub async fn spawn_webrtc_conn(
 ) {
     const VECTOR_LENGTH: usize = 1600;
     loop {
-        let mut vec_buf = Vec::with_capacity(VECTOR_LENGTH);
-        unsafe { vec_buf.set_len(VECTOR_LENGTH) };
+        let mut vec_buf = vec![0u8; VECTOR_LENGTH];
         let Ok(rx) = conn.recv(&mut vec_buf).await else {
             break;
         };
@@ -133,26 +125,24 @@ impl DtlsConnection {
                 "Received no response on DTLS handshake",
             )
         })?
-        .map_err(|e| Error::new(ErrorKind::Other, e))?;
-        return Ok(DtlsConnection {
+        .map_err(Error::other)?;
+        Ok(DtlsConnection {
             conn: Arc::new(dtls_conn),
             on_drop,
-        });
+        })
     }
 
     pub async fn try_new(dtls_config: UdpDtlsConfig) -> IoResult<DtlsConnection> {
-        let conn = UdpSocket::bind("0.0.0.0:0")
-            .await
-            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let conn = UdpSocket::bind("0.0.0.0:0").await.map_err(Error::other)?;
         conn.connect(dtls_config.dest_addr).await?;
-        return Self::try_from_connection(
+        Self::try_from_connection(
             Arc::new(conn),
             dtls_config.config,
             Duration::new(30, 0),
             None,
             None,
         )
-        .await;
+        .await
     }
 }
 pub struct UdpDtlsConfig {

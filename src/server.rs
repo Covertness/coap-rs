@@ -5,7 +5,6 @@ use coap_lite::{BlockHandler, BlockHandlerConfig, CoapOption, CoapRequest, CoapR
 use log::debug;
 use std::{
     future::Future,
-    io::ErrorKind,
     net::{self, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
     sync::Arc,
 };
@@ -123,21 +122,21 @@ impl UdpCoapListener {
     /// - To join multiple segments, you have to call enable_discovery for each of the segments.
     ///
     /// Some Multicast address scope
-    /// IPv6        IPv4 equivalent[16]	        Scope	            Purpose
-    /// ffx1::/16	127.0.0.0/8	                Interface-local	    Packets with this destination address may not be sent over any network link, but must remain within the current node; this is the multicast equivalent of the unicast loopback address.
-    /// ffx2::/16	224.0.0.0/24	            Link-local	        Packets with this destination address may not be routed anywhere.
-    /// ffx3::/16	239.255.0.0/16	            IPv4 local scope
-    /// ffx4::/16	            	            Admin-local	        The smallest scope that must be administratively configured.
-    /// ffx5::/16		                        Site-local	        Restricted to the local physical network.
-    /// ffx8::/16	239.192.0.0/14	            Organization-local	Restricted to networks used by the organization administering the local network. (For example, these addresses might be used over VPNs; when packets for this group are routed over the public internet (where these addresses are not valid), they would have to be encapsulated in some other protocol.)
-    /// ffxe::/16	224.0.1.0-238.255.255.255	Global scope	    Eligible to be routed over the public internet.
+    /// IPv6        IPv4 equivalent[16]            Scope                Purpose
+    /// ffx1::/16    127.0.0.0/8                    Interface-local        Packets with this destination address may not be sent over any network link, but must remain within the current node; this is the multicast equivalent of the unicast loopback address.
+    /// ffx2::/16    224.0.0.0/24                Link-local            Packets with this destination address may not be routed anywhere.
+    /// ffx3::/16    239.255.0.0/16                IPv4 local scope
+    /// ffx4::/16                                Admin-local            The smallest scope that must be administratively configured.
+    /// ffx5::/16                                Site-local            Restricted to the local physical network.
+    /// ffx8::/16    239.192.0.0/14                Organization-local    Restricted to networks used by the organization administering the local network. (For example, these addresses might be used over VPNs; when packets for this group are routed over the public internet (where these addresses are not valid), they would have to be encapsulated in some other protocol.)
+    /// ffxe::/16    224.0.1.0-238.255.255.255    Global scope        Eligible to be routed over the public internet.
     ///
     /// Notable addresses:
-    /// ff02::1	    All nodes on the local network segment
-    /// ff0x::c	    Simple Service Discovery Protocol
-    /// ff0x::fb	Multicast DNS
-    /// ff0x::fb	Multicast CoAP
-    /// ff0x::114	Used for experiments
+    /// ff02::1        All nodes on the local network segment
+    /// ff0x::c        Simple Service Discovery Protocol
+    /// ff0x::fb    Multicast DNS
+    /// ff0x::fb    Multicast CoAP
+    /// ff0x::114    Used for experiments
     //    pub fn join_multicast(&mut self, addr: IpAddr) {
     //        self.udp_server.join_multicast(addr);
     //    }
@@ -149,7 +148,7 @@ impl UdpCoapListener {
             SocketAddr::V4(val) => {
                 match addr {
                     IpAddr::V4(ipv4) => {
-                        let i = val.ip().clone();
+                        let i = *val.ip();
                         self.socket.join_multicast_v4(ipv4, i).unwrap();
                         self.multicast_addresses.push(addr);
                     }
@@ -178,7 +177,7 @@ impl UdpCoapListener {
             SocketAddr::V4(val) => {
                 match addr {
                     IpAddr::V4(ipv4) => {
-                        let i = val.ip().clone();
+                        let i = *val.ip();
                         self.socket.leave_multicast_v4(ipv4, i).unwrap();
                         let index = self
                             .multicast_addresses
@@ -267,7 +266,7 @@ impl UdpCoapListener {
                 message =self.socket.recv_buf_from(&mut recv_vec)=> {
                     match message {
                         Ok((_size, from)) => {
-                            sender.send((recv_vec, Arc::new(UdpResponder{address: from, tx: self.response_sender.clone()}))).map_err( |_| std::io::Error::new(ErrorKind::Other, "server channel error"))?;
+                            sender.send((recv_vec, Arc::new(UdpResponder{address: from, tx: self.response_sender.clone()}))).map_err( |_| std::io::Error::other("server channel error"))?;
                         }
                         Err(e) => {
                             return Err(e);
@@ -326,9 +325,9 @@ impl ServerCoapState {
 
         let should_be_forwarded = self.observer.request_handler(request, responder).await;
         if should_be_forwarded {
-            return ShouldForwardToHandler::True;
+            ShouldForwardToHandler::True
         } else {
-            return ShouldForwardToHandler::False;
+            ShouldForwardToHandler::False
         }
     }
 
@@ -409,7 +408,7 @@ impl Server {
             let handle = listener.listen(sender.clone()).await?;
             handles.push(handle);
         }
-        return Ok(handles);
+        Ok(handles)
     }
 
     /// run the server.
@@ -419,10 +418,11 @@ impl Server {
         let handler_arc = Arc::new(handler);
         // receive an input, sync our cache / states, then call custom handler
         loop {
-            let (bytes, respond) =
-                self.new_packet_receiver.recv().await.ok_or_else(|| {
-                    std::io::Error::new(ErrorKind::Other, "listen channel closed")
-                })?;
+            let (bytes, respond) = self
+                .new_packet_receiver
+                .recv()
+                .await
+                .ok_or_else(|| std::io::Error::other("listen channel closed"))?;
             if let Ok(packet) = Packet::from_bytes(&bytes) {
                 let mut request = Box::new(CoapRequest::<SocketAddr>::from_packet(
                     packet,
@@ -591,7 +591,7 @@ pub mod test {
             let addr = sock.local_addr().unwrap();
             let listener = Box::new(UdpCoapListener::from_socket(sock));
             let mut server = Server::from_listeners(vec![listener]);
-            server.disable_observe_handling(true).await;
+            server.automatic_observe_handling(false).await;
             tx.send(addr.port()).unwrap();
             server.run(request_handler).await.unwrap();
         });
