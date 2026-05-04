@@ -8,8 +8,10 @@ install:
 build: false
 
 environment:
+  RUSTFLAGS: "-D warnings"
   RUST_TEST_THREADS: 1
 
 test_script:
+  - cargo check
   - cargo test --verbose
-  - cargo clippy -- -Dwarnings
+  - cargo clippy

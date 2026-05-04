@@ -591,7 +591,7 @@ pub mod test {
             let addr = sock.local_addr().unwrap();
             let listener = Box::new(UdpCoapListener::from_socket(sock));
             let mut server = Server::from_listeners(vec![listener]);
-            server.automatic_observe_handling(false).await;
+            server.automatic_observe_handling(true).await;
             tx.send(addr.port()).unwrap();
             server.run(request_handler).await.unwrap();
         });
