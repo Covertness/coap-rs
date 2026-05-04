@@ -16,26 +16,23 @@ fn main() {
 
         server
             .run(|mut request: Box<CoapRequest<SocketAddr>>| async move {
-                match request.get_method() {
-                    &Method::Get => println!("request by get {}", request.get_path()),
-                    &Method::Post => println!(
+                match *request.get_method() {
+                    Method::Get => println!("request by get {}", request.get_path()),
+                    Method::Post => println!(
                         "request by post {}",
                         String::from_utf8(request.message.payload.clone()).unwrap()
                     ),
-                    &Method::Put => println!(
+                    Method::Put => println!(
                         "request by put {}",
                         String::from_utf8(request.message.payload.clone()).unwrap()
                     ),
                     _ => println!("request by other method"),
                 };
 
-                match request.response {
-                    Some(ref mut message) => {
-                        message.message.payload = b"OK".to_vec();
-                    }
-                    _ => {}
+                if let Some(ref mut message) = request.response {
+                    message.message.payload = b"OK".to_vec();
                 };
-                return request;
+                request
             })
             .await
             .unwrap();

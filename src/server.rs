@@ -275,7 +275,7 @@ impl UdpCoapListener {
                 },
                 response = self.response_receiver.recv() => {
                     if let Some((bytes, to)) = response{
-                        debug!("sending {:?} to {:?}", &bytes,  &to);
+                        debug!("sending {:?} to {:?}", bytes, to);
                         self.socket.send_to(&bytes, to).await?;
                     }
                     else {
@@ -532,13 +532,10 @@ pub mod test {
         let uri_path_list = req.message.get_option(CoapOption::UriPath).unwrap().clone();
         assert_eq!(uri_path_list.len(), 1);
 
-        match req.response {
-            Some(ref mut response) => {
-                response.message.payload = uri_path_list.front().unwrap().clone();
-            }
-            _ => {}
+        if let Some(ref mut response) = req.response {
+            response.message.payload = uri_path_list.front().unwrap().clone();
         }
-        return req;
+        req
     }
 
     pub fn spawn_server_with_all_coap<
@@ -782,9 +779,8 @@ pub mod test {
         let payload2_clone = payload2.clone();
         client
             .observe(path, move |msg| {
-                match rx.try_recv() {
-                    Ok(n) => receive_step = n,
-                    _ => (),
+                if let Ok(n) = rx.try_recv() {
+                    receive_step = n
                 }
 
                 match receive_step {
@@ -1000,7 +996,7 @@ pub mod test {
     fn get_expected_response() -> Vec<u8> {
         let mut resp = vec![];
         for c in b'a'..=b'z' {
-            resp.extend(std::iter::repeat(c).take(1024));
+            resp.extend(std::iter::repeat_n(c, 1024));
         }
         resp
     }
@@ -1009,13 +1005,10 @@ pub mod test {
     ) -> Box<CoapRequest<SocketAddr>> {
         // vec should contain 'a' 1024 times, then 'b' 1024, up to ascii 'z'
 
-        match req.response {
-            Some(ref mut response) => {
-                response.message.payload = get_expected_response();
-            }
-            _ => {}
+        if let Some(ref mut response) = req.response {
+            response.message.payload = get_expected_response();
         }
-        return req;
+        req
     }
     #[tokio::test]
     async fn test_block2_server_response() {

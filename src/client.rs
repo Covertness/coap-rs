@@ -186,7 +186,7 @@ async fn receive_loop<T: ClientTransport + 'static>(
 
         let token = packet.message.get_token();
         let Some(sender) = transport_sync.get_sender(token).await else {
-            info!("received unexpected response for token {:?}", &token);
+            info!("received unexpected response for token {:?}", token);
             continue;
         };
         let Ok(_) = sender.send(Ok(packet)) else {
@@ -1370,10 +1370,7 @@ mod test {
         assert!(client.set_broadcast(false).is_ok());
     }
 
-    // Build a server that fakes observe behavior for a single response (it doesn't send regular notifications).
-    // Upon "/observe_me" registration, it returns a single notification split into two blocks.
-    // First block Block2 option: num=0 more=true, payload: "a" 1024 times, second block: num=1 more=false, payload: "b" 1024 times.
-    fn make_fake_blockwise_observe_server_handler() -> Box<
+    type FakeObserveHandlerFn = Box<
         dyn Fn(
                 Box<CoapRequest<SocketAddr>>,
             ) -> std::pin::Pin<
@@ -1381,13 +1378,18 @@ mod test {
             > + Send
             + Sync
             + 'static,
-    > {
+    >;
+
+    // Build a server that fakes observe behavior for a single response (it doesn't send regular notifications).
+    // Upon "/observe_me" registration, it returns a single notification split into two blocks.
+    // First block Block2 option: num=0 more=true, payload: "a" 1024 times, second block: num=1 more=false, payload: "b" 1024 times.
+    fn make_fake_blockwise_observe_server_handler() -> FakeObserveHandlerFn {
         let prev_block_num = Arc::new(std::sync::Mutex::new(0u8));
         Box::new(move |mut req: Box<CoapRequest<SocketAddr>>| {
             let prev_block_num = prev_block_num.clone();
             Box::pin(async move {
                 let path = req.get_path().to_string();
-                let method = req.get_method().clone();
+                let method = *req.get_method();
 
                 let mut send_block = |num: u16, more: bool, data: &[u8]| {
                     if let Some(resp) = req.response.as_mut() {
@@ -1507,7 +1509,7 @@ mod test {
         let expect_no_timely_response_handler = move |_m: Message| {
             // This handler should never be called because we have
             // a short timeout and the server is slow.
-            assert!(false);
+            unreachable!("handler should not be called: timeout shorter than server delay");
         };
 
         // Set up arc to know when the handler is called
@@ -1756,7 +1758,7 @@ mod test {
             if self.current_fails.load(Ordering::Relaxed) == 0 {
                 return self.udp.send(buf).await;
             }
-            Err(Error::new(ErrorKind::Other, "fails this time"))
+            Err(Error::other("fails this time"))
         }
     }
 
@@ -1778,13 +1780,13 @@ mod test {
             current_fails: 0.into(),
         };
 
-        return CoAPClient::from_transport(transport);
+        CoAPClient::from_transport(transport)
     }
     #[tokio::test]
     async fn test_retries() {
         let server_port = server::test::spawn_server("127.0.0.1:0", |mut req| async {
             req.response.as_mut().unwrap().message.payload = b"Rust".to_vec();
-            return req;
+            req
         })
         .recv()
         .await
@@ -1815,7 +1817,7 @@ mod test {
     async fn test_non_confirmable_no_retries() {
         let server_port = server::test::spawn_server("127.0.0.1:0", |mut req| async {
             req.response.as_mut().unwrap().message.payload = b"Rust".to_vec();
-            return req;
+            req
         })
         .recv()
         .await
@@ -1862,13 +1864,10 @@ mod test {
         let to_wait_ms: u64 = payload.parse().unwrap();
         time::sleep(Duration::from_millis(to_wait_ms)).await;
 
-        match req.response {
-            Some(ref mut response) => {
-                response.message.payload = uri_path_list.front().unwrap().clone();
-            }
-            _ => {}
+        if let Some(ref mut response) = req.response {
+            response.message.payload = uri_path_list.front().unwrap().clone();
         }
-        return req;
+        req
     }
     /// run 2 clients using the same transport and receive an answer
     /// in the expected order without interference
@@ -1946,7 +1945,7 @@ mod test {
             should_fail: Mutex::new(rx),
         };
 
-        return (tx, CoAPClient::from_transport(transport));
+        (tx, CoAPClient::from_transport(transport))
     }
     #[tokio::test(flavor = "multi_thread")]
     async fn test_synchronizer_receive_error() {
@@ -1967,7 +1966,7 @@ mod test {
         }
         //wait for all futures to advance
         tokio::time::sleep(Duration::from_millis(200)).await;
-        flag.send(Error::new(ErrorKind::Other, "fail")).unwrap();
+        flag.send(Error::other("fail")).unwrap();
 
         //all handles should fail now because of the error
         for h in handles {

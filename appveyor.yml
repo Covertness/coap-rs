@@ -12,6 +12,6 @@ environment:
   RUST_TEST_THREADS: 1
 
 test_script:
-  - cargo check
+  - cargo check --all-targets
   - cargo test --verbose
-  - cargo clippy
+  - cargo clippy --all-targets

@@ -186,10 +186,10 @@ mod test {
     use webrtc_dtls::crypto::{Certificate, CryptoPrivateKey};
     use webrtc_dtls::listener::listen;
 
-    const SERVER_CERTIFICATE_PRIVATE_KEY: &'static str = "tests/test_certs/coap_server.pem";
-    const SERVER_CERTIFICATE: &'static str = "tests/test_certs/coap_server.pub.pem";
-    const CLIENT_CERTIFICATE_PRIVATE_KEY: &'static str = "tests/test_certs/coap_client.pem";
-    const CLIENT_CERTIFICATE: &'static str = "tests/test_certs/coap_client.pub.pem";
+    const SERVER_CERTIFICATE_PRIVATE_KEY: &str = "tests/test_certs/coap_server.pem";
+    const SERVER_CERTIFICATE: &str = "tests/test_certs/coap_server.pub.pem";
+    const CLIENT_CERTIFICATE_PRIVATE_KEY: &str = "tests/test_certs/coap_client.pem";
+    const CLIENT_CERTIFICATE: &str = "tests/test_certs/coap_client.pub.pem";
 
     async fn request_handler(
         mut req: Box<CoapRequest<SocketAddr>>,
@@ -197,13 +197,10 @@ mod test {
         let uri_path_list = req.message.get_option(CoapOption::UriPath).unwrap().clone();
         assert_eq!(uri_path_list.len(), 1);
 
-        match req.response {
-            Some(ref mut response) => {
-                response.message.payload = uri_path_list.front().unwrap().clone();
-            }
-            _ => {}
+        if let Some(ref mut response) = req.response {
+            response.message.payload = uri_path_list.front().unwrap().clone();
         }
-        return req;
+        req
     }
     pub fn spawn_dtls_server<
         F: Fn(Box<CoapRequest<SocketAddr>>) -> HandlerRet + Send + Sync + 'static,
@@ -241,15 +238,15 @@ mod test {
             cert_iter.next().is_none(),
             "there should only be 1 certificate in this file"
         );
-        return rustls::Certificate(cert.to_vec());
+        rustls::Certificate(cert.to_vec())
     }
 
     pub fn server_certificate() -> rustls::Certificate {
-        return get_certificate(SERVER_CERTIFICATE);
+        get_certificate(SERVER_CERTIFICATE)
     }
 
     pub fn client_certificate() -> rustls::Certificate {
-        return get_certificate(CLIENT_CERTIFICATE);
+        get_certificate(CLIENT_CERTIFICATE)
     }
     pub fn convert_to_pkcs8(s: &str) -> String {
         let pkdoc: SecretDocument =
@@ -258,7 +255,7 @@ mod test {
         let pkcs8_pem = pkdoc
             .to_pem("PRIVATE_KEY", LineEnding::LF)
             .expect("could not encode ec key to PEM");
-        return pkcs8_pem.to_string();
+        pkcs8_pem.to_string()
     }
 
     pub fn get_private_key(name: &str) -> CryptoPrivateKey {
@@ -275,11 +272,11 @@ mod test {
     }
 
     pub fn server_key() -> CryptoPrivateKey {
-        return get_private_key(SERVER_CERTIFICATE_PRIVATE_KEY);
+        get_private_key(SERVER_CERTIFICATE_PRIVATE_KEY)
     }
 
     pub fn client_key() -> CryptoPrivateKey {
-        return get_private_key(CLIENT_CERTIFICATE_PRIVATE_KEY);
+        get_private_key(CLIENT_CERTIFICATE_PRIVATE_KEY)
     }
 
     pub fn get_psk_config() -> Config {

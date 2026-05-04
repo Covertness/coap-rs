@@ -568,7 +568,7 @@ impl Observer {
         }
 
         if let Ok(b) = message.to_bytes() {
-            debug!("notify register with newest resource {:?}", &b);
+            debug!("notify register with newest resource {:?}", b);
             register_resource.registered_responder.respond(b).await;
         }
     }
@@ -598,22 +598,19 @@ mod test {
     async fn request_handler(
         mut req: Box<CoapRequest<SocketAddr>>,
     ) -> Box<CoapRequest<SocketAddr>> {
-        match req.get_method() {
-            &coap_lite::RequestType::Get => {
+        match *req.get_method() {
+            coap_lite::RequestType::Get => {
                 let observe_option = req.get_observe_flag().unwrap().unwrap();
                 assert_eq!(observe_option, ObserveOption::Deregister);
             }
-            &coap_lite::RequestType::Put => {}
+            coap_lite::RequestType::Put => {}
             _ => panic!("unexpected request"),
         }
 
-        match req.response {
-            Some(ref mut response) => {
-                response.message.payload = b"OK".to_vec();
-            }
-            _ => {}
+        if let Some(ref mut response) = req.response {
+            response.message.payload = b"OK".to_vec();
         };
-        return req;
+        req
     }
 
     fn decode_uint(data: &[u8]) -> usize {
@@ -660,7 +657,7 @@ mod test {
                     Ok(n) => receive_step = n,
                     _ => debug!("receive_step rx error"),
                 }
-                debug!("receive on client: {:?}", &msg);
+                debug!("receive on client: {:?}", msg);
 
                 match receive_step {
                     1 => assert_eq!(msg.payload, payload1_clone),
