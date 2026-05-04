@@ -19,31 +19,11 @@ macro_rules! composite_rejection {
             ),+
         }
 
-        impl $crate::extractor::response::IntoResponse for $name {
-            fn into_response(self) -> $crate::extractor::response::Response {
+        impl $crate::router::response::IntoResponse for $name {
+            fn into_response(self) -> $crate::router::response::Response {
                 match self {
                     $(
                         Self::$variant(inner) => inner.into_response(),
-                    )+
-                }
-            }
-        }
-
-        impl $name {
-            /// Get the response body text used for this rejection.
-            pub fn body_text(&self) -> String {
-                match self {
-                    $(
-                        Self::$variant(inner) => inner.body_text(),
-                    )+
-                }
-            }
-
-            /// Get the status code used for this rejection.
-            pub fn status(&self) -> http::StatusCode {
-                match self {
-                    $(
-                        Self::$variant(inner) => inner.status(),
                     )+
                 }
             }

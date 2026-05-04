@@ -324,7 +324,7 @@ pub(crate) mod test_utils {
     pub(crate) async fn run_router<S: ToString>(addr: S) {
         let router = build_router();
         let server = Server::new_udp(addr.to_string()).unwrap();
-        server.serve(router).await;
+        server.serve(router).await.unwrap();
     }
 
     pub(crate) fn encode_payload(payload: &str) -> Vec<u8> {

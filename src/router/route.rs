@@ -16,6 +16,8 @@ pub enum RouteError {
     NoUriPath,
     /// The request URI path does not match the route's path.
     DifferentPath,
+    /// The server failed to decode the URI path parameters.
+    FailedToDecodePath,
     /// The requested route was not found.
     NotFound,
 }
@@ -26,6 +28,7 @@ impl std::fmt::Display for RouteError {
             RouteError::DifferentMethod => write!(f, "Different method"),
             RouteError::NoUriPath => write!(f, "No URI path"),
             RouteError::DifferentPath => write!(f, "Different path"),
+            RouteError::FailedToDecodePath => write!(f, "Failed to decode path"),
             RouteError::NotFound => write!(f, "Not found"),
         }
     }
@@ -34,8 +37,12 @@ impl std::fmt::Display for RouteError {
 impl IntoResponse for RouteError {
     fn into_response(self) -> Response {
         let error_message = self.to_string();
+        let status_code = match self {
+            RouteError::NotFound => StatusCode::NotFound,
+            _ => StatusCode::BadRequest,
+        };
         Response::new()
-            .set_status_code(StatusCode::BadRequest)
+            .set_status_code(status_code)
             .set_payload(error_message.into_bytes())
     }
 }
@@ -84,42 +91,34 @@ impl Route {
             let mut param_start = 0;
 
             // Process the segment character by character
-            let chars: Vec<char> = segment.chars().collect();
-            for i in 0..chars.len() {
-                match chars[i] {
+            for (byte_idx, ch) in segment.char_indices() {
+                match ch {
                     '{' => {
                         if in_param {
-                            // Nested parameter start, which is invalid
                             panic!("Nested parameters are not allowed in route pattern: {route}");
                         }
 
-                        // Start of parameter
                         in_param = true;
-                        param_start = i;
+                        param_start = byte_idx;
 
-                        // Add preceding literal text with proper escaping
-                        if i > pos {
-                            pattern.push_str(&regex::escape(&segment[pos..i]));
+                        if byte_idx > pos {
+                            pattern.push_str(&regex::escape(&segment[pos..byte_idx]));
                         }
                     }
                     '}' => {
                         if !in_param {
-                            // Unmatched closing brace, which is invalid
-                            panic!("Unmatched closing brace in route pattern: {route}",);
+                            panic!("Unmatched closing brace in route pattern: {route}");
                         }
-                        // End of parameter
+
                         in_param = false;
 
-                        // Extract parameter name
-                        let param_name = &segment[param_start + 1..i];
+                        let param_name = &segment[param_start + '{'.len_utf8()..byte_idx];
                         param_names.push(param_name.to_string());
-                        // Add capture group to pattern
                         pattern.push_str("([^/]+)");
 
-                        // Update position
-                        pos = i + 1;
+                        pos = byte_idx + ch.len_utf8();
                     }
-                    _ => {} // Skip other characters
+                    _ => {}
                 }
             }
             // If we ended in an unclosed parameter, that's an error
@@ -162,7 +161,7 @@ impl Route {
                     if let Some(decoded) = PercentDecodedStr::new(value) {
                         params.push((name.clone().into(), decoded));
                     } else {
-                        return Err(RouteError::NoUriPath);
+                        return Err(RouteError::FailedToDecodePath);
                     }
                 }
             }
@@ -196,7 +195,7 @@ mod tests {
 
         let error = RouteError::NotFound;
         let response = error.into_response();
-        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert_eq!(response.status_code, Some(StatusCode::NotFound));
         assert_eq!(response.payload, Some(b"Not found".to_vec()));
     }
 

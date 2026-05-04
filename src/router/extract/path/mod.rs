@@ -90,8 +90,8 @@ pub enum PathDeserializationError {
 
     /// Tried to serialize into an unsupported type such as nested maps.
     ///
-    /// This error kind is caused by programmer errors and thus gets converted into a `500 Internal
-    /// Server Error` response.
+    /// This error kind is caused by programmer errors and thus gets converted into a
+    /// `Internal Server Error` response.
     UnsupportedType {
         /// The name of the unsupported type.
         name: &'static str,
@@ -161,8 +161,12 @@ impl std::fmt::Display for PathDeserializationError {
 impl IntoResponse for PathDeserializationError {
     fn into_response(self) -> Response {
         let error_message = self.to_string();
+        let status_code = match self {
+            PathDeserializationError::UnsupportedType { .. } => StatusCode::InternalServerError,
+            _ => StatusCode::BadRequest,
+        };
         Response::new()
-            .set_status_code(StatusCode::BadRequest)
+            .set_status_code(status_code)
             .set_payload(error_message.into_bytes())
     }
 }
@@ -228,7 +232,7 @@ mod tests {
     async fn run_router<S: ToString>(addr: S) {
         let router = build_router();
         let server = Server::new_udp(addr.to_string()).unwrap();
-        server.serve(router).await;
+        server.serve(router).await.unwrap();
     }
 
     #[test]
@@ -247,7 +251,7 @@ mod tests {
 
         let error = PathDeserializationError::UnsupportedType { name: "HashMap" };
         let response = error.into_response();
-        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert_eq!(response.status_code, Some(StatusCode::InternalServerError));
         let payload_str = String::from_utf8(response.payload.unwrap()).unwrap();
         assert_eq!(payload_str, "Unsupported type `HashMap`");
 

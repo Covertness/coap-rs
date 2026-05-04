@@ -174,7 +174,7 @@ mod tests {
 
         let response: Result<StatusCode, RouteError> = Err(RouteError::NotFound);
         let response = IntoResponse::into_response(response);
-        assert_eq!(response.status_code, Some(StatusCode::BadRequest));
+        assert_eq!(response.status_code, Some(StatusCode::NotFound));
         assert_eq!(response.payload, b"Not found".to_vec().into());
     }
 

@@ -43,21 +43,20 @@ impl Request {
     }
 
     /// Returns the query parameters of the request as a vector of strings.
-    pub fn query_as_vec(&self) -> Vec<String> {
+    pub fn query_as_vec(&self) -> Result<Vec<String>, core::str::Utf8Error> {
         let mut vec = Vec::new();
         if let Some(options) = self.req.message.get_option(CoapOption::UriQuery) {
             for option in options.iter() {
-                if let Ok(seg) = core::str::from_utf8(option) {
-                    vec.push(seg.to_string());
-                }
+                let seg = core::str::from_utf8(option)?;
+                vec.push(seg.to_string());
             }
         };
-        vec
+        Ok(vec)
     }
 
     /// Returns the query parameters of the request as a single string, with parameters joined by "&".
-    pub fn query(&self) -> String {
-        self.query_as_vec().join("&")
+    pub fn query(&self) -> Result<String, core::str::Utf8Error> {
+        self.query_as_vec().map(|v| v.join("&"))
     }
 
     /// Returns the payload of the request as a vector of bytes.

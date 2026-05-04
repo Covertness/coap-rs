@@ -47,7 +47,7 @@ where
     type Rejection = QueryRejection;
 
     async fn from_request(req: &Request, _state: &S) -> Result<Self, Self::Rejection> {
-        let query = req.query();
+        let query = req.query().map_err(|_| QueryRejection::InvalidUtf8)?;
         let deserializer =
             serde_html_form::Deserializer::new(url::form_urlencoded::parse(query.as_bytes()));
         let value = serde_path_to_error::deserialize(deserializer)
