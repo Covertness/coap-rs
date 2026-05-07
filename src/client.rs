@@ -81,7 +81,7 @@ impl<T: ClientTransport> TransportExt for T {
 type Token = Vec<u8>;
 type PacketRegistry = BTreeMap<Token, UnboundedSender<IoResult<Packet>>>;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TransportSynchronizer {
     pub(crate) outgoing: Arc<Mutex<PacketRegistry>>,
     fail_error: Arc<RwLock<Option<std::io::Error>>>,
@@ -214,6 +214,7 @@ pub fn make_ack(packet: &Packet) -> Vec<u8> {
 }
 
 /// a wrapper for transports responsible for retries and timeouts
+#[derive(Debug)]
 struct CoapClientTransport<T: ClientTransport> {
     pub(crate) transport: Arc<T>,
     pub(crate) synchronizer: TransportSynchronizer,
@@ -331,6 +332,7 @@ impl ClientTransport for UdpTransport {
 /// A CoAP client over UDP. This client can send multicast and broadcasts
 pub type UdpCoAPClient = CoAPClient<UdpTransport>;
 
+#[derive(Debug)]
 pub struct CoAPClient<T: ClientTransport> {
     transport: CoapClientTransport<T>,
     block1_size: usize,
