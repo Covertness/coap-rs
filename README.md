@@ -24,7 +24,7 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.25"
+coap = "0.26"
 coap-lite = "0.13.3"
 tokio = {version = "^1.32", features = ["full"]}
 ```
@@ -33,50 +33,83 @@ tokio = {version = "^1.32", features = ["full"]}
 
 ### Server:
 ```rust
- use coap_lite::{RequestType as Method, CoapRequest};
- use coap::Server;
- use tokio::runtime::Runtime;
- use std::net::SocketAddr;
- fn main() {
-     let addr = "127.0.0.1:5683";
- 	Runtime::new().unwrap().block_on(async move {
-         let mut server = Server::new_udp(addr).unwrap();
-         println!("Server up on {}", addr);
+use coap::{
+    router::{
+        extract::{Json, Path, Query, State},
+        get, post, Router,
+    },
+    Server,
+};
+use serde::Deserialize;
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
 
-         server.run(|mut request: Box<CoapRequest<SocketAddr>>| async {
-             match request.get_method() {
-                 &Method::Get => println!("request by get {}", request.get_path()),
-                 &Method::Post => println!("request by post {}", String::from_utf8(request.message.payload.clone()).unwrap()),
-                 &Method::Put => println!("request by put {}", String::from_utf8(request.message.payload.clone()).unwrap()),
-                 _ => println!("request by other method"),
-             };
+#[derive(Debug, Clone, Default)]
+pub struct RoomState {
+    rooms: HashMap<String, f64>,
+}
 
-             match request.response {
-                 Some(ref mut message) => {
-                     message.message.payload = b"OK".to_vec();
+pub type RoomMutex = Arc<Mutex<RoomState>>;
 
-                 },
-                 _ => {}
-             };
-             return request
-         }).await.unwrap();
-     });
- }
+#[derive(Debug, Deserialize)]
+pub struct QueryArgs {
+    room: String,
+}
+
+async fn get_temperature(
+    Query(QueryArgs { room }): Query<QueryArgs>,
+    state: State<RoomMutex>,
+) -> String {
+    let state = state.lock().await;
+    if let Some(temp) = state.rooms.get(&room) {
+        format!("Temperature in {room}: {temp}")
+    } else {
+        format!("Room {} not found", room)
+    }
+}
+
+async fn set_temperature(
+    Path(room): Path<String>,
+    Json(temp): Json<f64>,
+    State(state): State<RoomMutex>,
+) -> String {
+    let mut state = state.lock().await;
+    state.rooms.insert(room, temp);
+    "OK".to_string()
+}
+
+#[tokio::main]
+async fn main() {
+    let addr = "127.0.0.1:5683";
+
+    let state = Arc::new(Mutex::new(RoomState {
+        rooms: HashMap::new(),
+    }));
+
+    let router = Router::new()
+        .route("/temperature", get(get_temperature))
+        .route("/temperature/{room}", post(set_temperature))
+        .with_state(state);
+
+    let server = Server::new_udp(addr).unwrap();
+    println!("Server up on {addr}");
+
+    server.serve(router).await.unwrap();
+}
 ```
 
 ### Client:
 ```rust
- use coap_lite::{RequestType as Method, CoapRequest};
- use coap::{UdpCoAPClient};
- use tokio::main;
- #[tokio::main]
- async fn main() {
-     let url = "coap://127.0.0.1:5683/Rust";
-     println!("Client request: {}", url);
+use coap::UdpCoAPClient;
 
-     let response = UdpCoAPClient::get(url).await.unwrap();
-     println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
- }
+#[tokio::main]
+async fn main() {
+    let url = "coap://127.0.0.1:5683/temperature?room=kitchen";
+    println!("Client request: {}", url);
+
+    let response = UdpCoAPClient::get(url).await.unwrap();
+    println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
+}
 ```
 
 ## Benchmark
