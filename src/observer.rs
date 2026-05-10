@@ -1020,7 +1020,7 @@ mod test {
 
     #[test]
     fn test_encode_coap_uint() {
-        assert_eq!(encode_coap_uint(0), vec![]);
+        assert_eq!(encode_coap_uint(0), vec![] as Vec<u8>);
         assert_eq!(encode_coap_uint(1), vec![0x01]);
         assert_eq!(encode_coap_uint(255), vec![0xFF]);
         assert_eq!(encode_coap_uint(256), vec![0x01, 0x00]);
