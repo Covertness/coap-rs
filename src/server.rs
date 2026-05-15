@@ -1002,7 +1002,7 @@ pub mod test {
     fn get_expected_response() -> Vec<u8> {
         let mut resp = vec![];
         for c in b'a'..=b'z' {
-            resp.extend(std::iter::repeat_n(c, 1024));
+            resp.resize(resp.len() + 1024, c);
         }
         resp
     }
