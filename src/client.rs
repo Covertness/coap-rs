@@ -1622,7 +1622,7 @@ mod test {
                             let uri_query_present = req
                                 .message
                                 .get_option(CoapOption::UriQuery)
-                                .map_or(false, |opts| opts.contains(&b"q=uery".to_vec()));
+                                .is_some_and(|opts| opts.contains(&b"q=uery".to_vec()));
                             if let Some(tx) = deregister_tx.lock().unwrap().take() {
                                 let _ = tx.send(uri_query_present);
                             }
