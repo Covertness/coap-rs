@@ -486,10 +486,14 @@ impl Server {
     pub async fn disable_observe_handling(&mut self, value: bool) {
         self.automatic_observe_handling(value).await
     }
-    /// set auto-observe handling in server, defaults to enabled
-    pub async fn automatic_observe_handling(&mut self, value: bool) {
+    /// Controls whether the server automatically handles observe options.
+    /// Automatic handling is on by default.
+    ///
+    /// Set `bypass` to `true` when your handler needs full control over
+    /// observe — the server will skip its built-in processing.
+    pub async fn automatic_observe_handling(&mut self, bypass: bool) {
         let mut coap_state = self.coap_state.lock().await;
-        coap_state.disable_observe_handling(value)
+        coap_state.disable_observe_handling(bypass)
     }
 }
 
@@ -588,6 +592,8 @@ pub mod test {
             let addr = sock.local_addr().unwrap();
             let listener = Box::new(UdpCoapListener::from_socket(sock));
             let mut server = Server::from_listeners(vec![listener]);
+            // `bypass = true` sets the internal `disable_observe` flag,
+            // so the server skips its built-in observe handling.
             server.automatic_observe_handling(true).await;
             tx.send(addr.port()).unwrap();
             server.run(request_handler).await.unwrap();
