@@ -11,7 +11,7 @@
 //! - DTLS support via [webrtc-rs](https://github.com/webrtc-rs/webrtc)
 //! - Option to provide custom transports for client and server
 //! - Client can perform multiple concurrent requests, like observing and sending requests using
-//! the same underlying socket
+//!   the same underlying socket
 //!
 //!
 //! # Installation
@@ -43,7 +43,7 @@
 //! use std::net::SocketAddr;
 //! fn main() {
 //!     let addr = "127.0.0.1:5683";
-//! 	Runtime::new().unwrap().block_on(async move {
+//!     Runtime::new().unwrap().block_on(async move {
 //!         let mut server = Server::new_udp(addr).unwrap();
 //!         println!("Server up on {}", addr);
 //!

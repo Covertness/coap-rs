@@ -1,4 +1,4 @@
-#![feature(test, async_closure)]
+#![feature(test)]
 extern crate test;
 
 use std::net::SocketAddr;
@@ -24,13 +24,10 @@ fn bench_server_with_request(b: &mut test::Bencher) {
             .run(move |mut request: Box<CoapRequest<SocketAddr>>| async {
                 let uri_path = request.get_path().to_string();
 
-                match request.response {
-                    Some(ref mut response) => {
-                        response.message.payload = uri_path.as_bytes().to_vec();
-                    }
-                    _ => {}
+                if let Some(ref mut response) = request.response {
+                    response.message.payload = uri_path.as_bytes().to_vec();
                 };
-                return request;
+                request
             })
             .await
             .unwrap();

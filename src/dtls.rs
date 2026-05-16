@@ -28,7 +28,7 @@ impl<L: WebRtcListener + Send + 'static> Listener for L {
                 if let Ok((dtls_conn, remote_addr)) = res {
                     tokio::spawn(spawn_webrtc_conn(dtls_conn, remote_addr, sender.clone()));
                 } else {
-                    return Err(std::io::Error::new(ErrorKind::Other, "could not accept"));
+                    return Err(std::io::Error::other("could not accept"));
                 }
             }
         }))
@@ -43,19 +43,12 @@ pub struct DtlsResponse {
 #[async_trait]
 impl ClientTransport for DtlsConnection {
     async fn recv(&self, buf: &mut [u8]) -> IoResult<(usize, Option<SocketAddr>)> {
-        let read = self
-            .conn
-            .read(buf, None)
-            .await
-            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let read = self.conn.read(buf, None).await.map_err(Error::other)?;
         return Ok((read, self.conn.remote_addr()));
     }
 
     async fn send(&self, buf: &[u8]) -> IoResult<usize> {
-        self.conn
-            .write(buf, None)
-            .await
-            .map_err(|e| Error::new(ErrorKind::Other, e))
+        self.conn.write(buf, None).await.map_err(Error::other)
     }
 }
 #[async_trait]
@@ -78,8 +71,7 @@ pub async fn spawn_webrtc_conn(
 ) {
     const VECTOR_LENGTH: usize = 1600;
     loop {
-        let mut vec_buf = Vec::with_capacity(VECTOR_LENGTH);
-        unsafe { vec_buf.set_len(VECTOR_LENGTH) };
+        let mut vec_buf = vec![0u8; VECTOR_LENGTH];
         let Ok(rx) = conn.recv(&mut vec_buf).await else {
             break;
         };
@@ -133,26 +125,24 @@ impl DtlsConnection {
                 "Received no response on DTLS handshake",
             )
         })?
-        .map_err(|e| Error::new(ErrorKind::Other, e))?;
-        return Ok(DtlsConnection {
+        .map_err(Error::other)?;
+        Ok(DtlsConnection {
             conn: Arc::new(dtls_conn),
             on_drop,
-        });
+        })
     }
 
     pub async fn try_new(dtls_config: UdpDtlsConfig) -> IoResult<DtlsConnection> {
-        let conn = UdpSocket::bind("0.0.0.0:0")
-            .await
-            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let conn = UdpSocket::bind("0.0.0.0:0").await.map_err(Error::other)?;
         conn.connect(dtls_config.dest_addr).await?;
-        return Self::try_from_connection(
+        Self::try_from_connection(
             Arc::new(conn),
             dtls_config.config,
             Duration::new(30, 0),
             None,
             None,
         )
-        .await;
+        .await
     }
 }
 pub struct UdpDtlsConfig {
@@ -196,10 +186,10 @@ mod test {
     use webrtc_dtls::crypto::{Certificate, CryptoPrivateKey};
     use webrtc_dtls::listener::listen;
 
-    const SERVER_CERTIFICATE_PRIVATE_KEY: &'static str = "tests/test_certs/coap_server.pem";
-    const SERVER_CERTIFICATE: &'static str = "tests/test_certs/coap_server.pub.pem";
-    const CLIENT_CERTIFICATE_PRIVATE_KEY: &'static str = "tests/test_certs/coap_client.pem";
-    const CLIENT_CERTIFICATE: &'static str = "tests/test_certs/coap_client.pub.pem";
+    const SERVER_CERTIFICATE_PRIVATE_KEY: &str = "tests/test_certs/coap_server.pem";
+    const SERVER_CERTIFICATE: &str = "tests/test_certs/coap_server.pub.pem";
+    const CLIENT_CERTIFICATE_PRIVATE_KEY: &str = "tests/test_certs/coap_client.pem";
+    const CLIENT_CERTIFICATE: &str = "tests/test_certs/coap_client.pub.pem";
 
     async fn request_handler(
         mut req: Box<CoapRequest<SocketAddr>>,
@@ -207,13 +197,10 @@ mod test {
         let uri_path_list = req.message.get_option(CoapOption::UriPath).unwrap().clone();
         assert_eq!(uri_path_list.len(), 1);
 
-        match req.response {
-            Some(ref mut response) => {
-                response.message.payload = uri_path_list.front().unwrap().clone();
-            }
-            _ => {}
+        if let Some(ref mut response) = req.response {
+            response.message.payload = uri_path_list.front().unwrap().clone();
         }
-        return req;
+        req
     }
     pub fn spawn_dtls_server<
         F: Fn(Box<CoapRequest<SocketAddr>>) -> HandlerRet + Send + Sync + 'static,
@@ -251,15 +238,15 @@ mod test {
             cert_iter.next().is_none(),
             "there should only be 1 certificate in this file"
         );
-        return rustls::Certificate(cert.to_vec());
+        rustls::Certificate(cert.to_vec())
     }
 
     pub fn server_certificate() -> rustls::Certificate {
-        return get_certificate(SERVER_CERTIFICATE);
+        get_certificate(SERVER_CERTIFICATE)
     }
 
     pub fn client_certificate() -> rustls::Certificate {
-        return get_certificate(CLIENT_CERTIFICATE);
+        get_certificate(CLIENT_CERTIFICATE)
     }
     pub fn convert_to_pkcs8(s: &str) -> String {
         let pkdoc: SecretDocument =
@@ -268,7 +255,7 @@ mod test {
         let pkcs8_pem = pkdoc
             .to_pem("PRIVATE_KEY", LineEnding::LF)
             .expect("could not encode ec key to PEM");
-        return pkcs8_pem.to_string();
+        pkcs8_pem.to_string()
     }
 
     pub fn get_private_key(name: &str) -> CryptoPrivateKey {
@@ -285,11 +272,11 @@ mod test {
     }
 
     pub fn server_key() -> CryptoPrivateKey {
-        return get_private_key(SERVER_CERTIFICATE_PRIVATE_KEY);
+        get_private_key(SERVER_CERTIFICATE_PRIVATE_KEY)
     }
 
     pub fn client_key() -> CryptoPrivateKey {
-        return get_private_key(CLIENT_CERTIFICATE_PRIVATE_KEY);
+        get_private_key(CLIENT_CERTIFICATE_PRIVATE_KEY)
     }
 
     pub fn get_psk_config() -> Config {
