@@ -799,7 +799,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         let coap_response = CoapResponse {
             message: response.message.clone(),
         };
-        if *coap_response.get_status() != Status::Content {
+        if coap_response.get_status().is_error() {
             return Err(Error::new(
                 ErrorKind::NotFound,
                 "the resource was not found",
