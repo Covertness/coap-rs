@@ -5,7 +5,7 @@ use coap_lite::{
     block_handler::{extending_splice, BlockValue},
     error::HandlingError,
     CoapOption, CoapRequest, CoapResponse, MessageClass, MessageType, ObserveOption,
-    Packet as Message, RequestType as Method, ResponseType as Status,
+    Packet as Message, RequestType as Method,
 };
 use core::mem;
 
@@ -1180,6 +1180,7 @@ mod test {
 
     use super::super::*;
     use super::*;
+    use coap_lite::ResponseType as Status;
     use std::ops::DerefMut;
     use std::str;
     use std::sync::atomic::{AtomicU32, Ordering};
