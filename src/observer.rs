@@ -652,7 +652,8 @@ mod test {
 
         let mut receive_step = 1;
         client
-            .observe(path, move |msg| {
+            .observe(path, move |result| {
+                let msg = result.unwrap();
                 match rx.try_recv() {
                     Ok(n) => receive_step = n,
                     _ => debug!("receive_step rx error"),
@@ -711,7 +712,8 @@ mod test {
 
         let payload1_clone = payload1.clone();
         let unobserve = client
-            .observe(path, move |msg| {
+            .observe(path, move |result| {
+                let msg = result.unwrap();
                 assert_eq!(msg.payload, payload1_clone);
             })
             .await
@@ -735,7 +737,7 @@ mod test {
         let client = UdpCoAPClient::new(format!("127.0.0.1:{}", server_port))
             .await
             .unwrap();
-        let error = client.observe(path, |_msg| {}).await.unwrap_err();
+        let error = client.observe(path, |_: std::io::Result<Packet>| {}).await.unwrap_err();
         assert_eq!(error.kind(), ErrorKind::NotFound);
     }
 
