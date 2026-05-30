@@ -783,6 +783,16 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         receiver: &mut UnboundedReceiver<IoResult<Packet>>,
         handler: &mut H,
     ) -> Result<(), std::io::Error> {
+        // Avoid sending packets with missing/invalid observe.
+        match register_packet.get_observe_flag() {
+            Some(Ok(ObserveOption::Register)) => {}
+            _ => {
+                return Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    "observe registration packet must have observe flag set to register",
+                ))
+            }
+        }
         // Bypass the first layer of "do_request_response_for_packet" to prevent the
         // long-lasting observe-receiver from being removed
         let response = self
