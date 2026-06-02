@@ -2174,4 +2174,42 @@ mod test {
 
         let _ = unsubscriber.send(ObserveMessage::Terminate);
     }
+
+    #[tokio::test]
+    async fn test_send_invalid_observe_registration() {
+        let server_port = server::test::spawn_server("127.0.0.1:0", large_resource_handler)
+            .recv()
+            .await
+            .unwrap();
+        let addr = format!("127.0.0.1:{}", server_port);
+        let client = UdpCoAPClient::new(&addr).await.unwrap();
+
+        let mut req = CoapRequest::new();
+        req.set_method(Method::Get);
+
+        // Not setting the observe flag.
+        let res = client
+            .observe_with(req.clone(), |_msg| {
+                unreachable!("Handler should not be called for invalid observe registration");
+            })
+            .await;
+
+        assert!(
+            res.is_err(),
+            "Expected error for invalid observe registration"
+        );
+
+        // A deregister flag cannot be used to register.
+        req.set_observe_flag(ObserveOption::Deregister);
+        let res = client
+            .observe_with(req, |_msg| {
+                unreachable!("Handler should not be called for invalid observe registration");
+            })
+            .await;
+
+        assert!(
+            res.is_err(),
+            "Expected error for invalid observe registration"
+        );
+    }
 }
