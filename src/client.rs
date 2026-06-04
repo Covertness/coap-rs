@@ -898,7 +898,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                 ErrorKind::WouldBlock => {
                     info!("Observe timeout");
                 }
-                _ => warn!("observe failed {:?}", e),
+                _ => handler(Err(e)),
             },
         }
     }
