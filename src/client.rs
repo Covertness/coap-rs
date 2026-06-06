@@ -5,7 +5,7 @@ use coap_lite::{
     block_handler::{extending_splice, BlockValue},
     error::HandlingError,
     CoapOption, CoapRequest, CoapResponse, MessageClass, MessageType, ObserveOption,
-    Packet as Message, RequestType as Method, ResponseType as Status,
+    Packet as Message, RequestType as Method,
 };
 use core::mem;
 
@@ -783,6 +783,16 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         receiver: &mut UnboundedReceiver<IoResult<Packet>>,
         handler: &mut H,
     ) -> Result<(), std::io::Error> {
+        // Avoid sending packets with missing/invalid observe.
+        match register_packet.get_observe_flag() {
+            Some(Ok(ObserveOption::Register)) => {}
+            _ => {
+                return Err(Error::new(
+                    ErrorKind::InvalidInput,
+                    "observe registration packet must have observe flag set to register",
+                ))
+            }
+        }
         // Bypass the first layer of "do_request_response_for_packet" to prevent the
         // long-lasting observe-receiver from being removed
         let response = self
@@ -799,7 +809,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         let coap_response = CoapResponse {
             message: response.message.clone(),
         };
-        if *coap_response.get_status() != Status::Content {
+        if coap_response.get_status().is_error() {
             return Err(Error::new(
                 ErrorKind::NotFound,
                 "the resource was not found",
@@ -1180,6 +1190,7 @@ mod test {
 
     use super::super::*;
     use super::*;
+    use coap_lite::ResponseType as Status;
     use std::ops::DerefMut;
     use std::str;
     use std::sync::atomic::{AtomicU32, Ordering};
@@ -2172,5 +2183,43 @@ mod test {
         );
 
         let _ = unsubscriber.send(ObserveMessage::Terminate);
+    }
+
+    #[tokio::test]
+    async fn test_send_invalid_observe_registration() {
+        let server_port = server::test::spawn_server("127.0.0.1:0", large_resource_handler)
+            .recv()
+            .await
+            .unwrap();
+        let addr = format!("127.0.0.1:{}", server_port);
+        let client = UdpCoAPClient::new(&addr).await.unwrap();
+
+        let mut req = CoapRequest::new();
+        req.set_method(Method::Get);
+
+        // Not setting the observe flag.
+        let res = client
+            .observe_with(req.clone(), |_msg| {
+                unreachable!("Handler should not be called for invalid observe registration");
+            })
+            .await;
+
+        assert!(
+            res.is_err(),
+            "Expected error for invalid observe registration"
+        );
+
+        // A deregister flag cannot be used to register.
+        req.set_observe_flag(ObserveOption::Deregister);
+        let res = client
+            .observe_with(req, |_msg| {
+                unreachable!("Handler should not be called for invalid observe registration");
+            })
+            .await;
+
+        assert!(
+            res.is_err(),
+            "Expected error for invalid observe registration"
+        );
     }
 }
