@@ -5,6 +5,7 @@
 //!
 //! Features:
 //! - CoAP core protocol [RFC 7252](https://tools.ietf.org/rfc/rfc7252.txt)
+//! - CoAP over TCP [RFC 8323](https://tools.ietf.org/html/rfc8323)
 //! - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
 //! - *Too Many Requests* Response Code [RFC 8516](https://tools.ietf.org/html/rfc8516)
 //! - Block-Wise Transfers [RFC 7959](https://tools.ietf.org/html/rfc7959)
@@ -93,6 +94,7 @@ extern crate quickcheck;
 pub use self::client::UdpCoAPClient;
 pub use self::observer::Observer;
 pub use self::server::Server;
+pub use self::tcp::TcpCoAPClient;
 pub mod client;
 #[cfg(feature = "dtls")]
 pub mod dtls;
@@ -101,3 +103,4 @@ pub mod request;
 #[cfg(feature = "router")]
 pub mod router;
 pub mod server;
+pub mod tcp;
