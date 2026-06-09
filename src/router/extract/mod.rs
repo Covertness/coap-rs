@@ -3,12 +3,14 @@
 use crate::router::{request::Request, response::IntoResponse};
 use std::future::Future;
 
+mod cbor;
 mod json;
 mod path;
 mod query;
 mod state;
 mod tuple;
 
+pub use cbor::Cbor;
 pub use json::Json;
 pub use path::Path;
 pub use query::Query;
