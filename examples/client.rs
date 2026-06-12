@@ -112,11 +112,13 @@ async fn example_delete() {
 async fn example_observe() {
     let client = UdpCoAPClient::new("127.0.0.1:5683").await.unwrap();
     let observe_channel = client
-        .observe("/hello/put", |msg| {
-            println!(
-                "resource changed {}",
-                String::from_utf8(msg.payload).unwrap()
-            );
+        .observe("/hello/put", |result| {
+            if let Ok(msg) = result {
+                println!(
+                    "resource changed {}",
+                    String::from_utf8(msg.payload).unwrap()
+                );
+            }
         })
         .await
         .unwrap();
