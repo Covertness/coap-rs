@@ -784,9 +784,10 @@ pub mod test {
         let payload1_clone = payload1.clone();
         let payload2_clone = payload2.clone();
         client
-            .observe(path, move |msg| {
+            .observe(path, move |result| {
+                let msg = result.unwrap();
                 if let Ok(n) = rx.try_recv() {
-                    receive_step = n
+                    receive_step = n;
                 }
 
                 match receive_step {
@@ -831,7 +832,8 @@ pub mod test {
             .unwrap();
 
         client
-            .observe(path, move |msg| {
+            .observe(path, move |result| {
+                let msg = result.unwrap();
                 assert_eq!(msg.payload, b"test".to_vec());
                 tx.send(()).unwrap();
             })

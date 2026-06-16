@@ -671,7 +671,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         self.receive(&mut request).await
     }
 
-    pub async fn observe<H: FnMut(Message) + Send + 'static>(
+    pub async fn observe<H: FnMut(IoResult<Message>) + Send + 'static>(
         &self,
         resource_path: &str,
         handler: H,
@@ -686,7 +686,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
     /// Observe a resource with the handler and specified timeout using the given transport.
     /// Use the oneshot sender to cancel observation. If this sender is dropped without explicitly
     /// cancelling it, the observation will continue forever.
-    pub async fn observe_with_timeout<H: FnMut(Message) + Send + 'static>(
+    pub async fn observe_with_timeout<H: FnMut(IoResult<Message>) + Send + 'static>(
         &mut self,
         resource_path: &str,
         handler: H,
@@ -703,7 +703,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
     /// Use this method if you need to set some specific options in your
     /// requests. This method will add observe flags and a message id as a fallback
     /// Use this method if you plan on re-using the same client for requests
-    pub async fn observe_with<H: FnMut(Message) + Send + 'static>(
+    pub async fn observe_with<H: FnMut(IoResult<Message>) + Send + 'static>(
         &self,
         request: CoapRequest<SocketAddr>,
         mut handler: H,
@@ -777,7 +777,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         Ok(tx)
     }
 
-    async fn send_observe_registration<H: FnMut(Message) + Send + 'static>(
+    async fn send_observe_registration<H: FnMut(IoResult<Message>) + Send + 'static>(
         &self,
         register_packet: &mut CoapRequest<SocketAddr>,
         receiver: &mut UnboundedReceiver<IoResult<Packet>>,
@@ -840,7 +840,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
             .await;
     }
 
-    async fn receive_and_handle_message_observe<H: FnMut(Message) + Send + 'static>(
+    async fn receive_and_handle_message_observe<H: FnMut(IoResult<Message>) + Send + 'static>(
         &self,
         request: &mut CoapRequest<SocketAddr>,
         socket_result: IoResult<Packet>,
@@ -873,26 +873,34 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                             .add_option_as::<BlockValue>(CoapOption::Block2, next_block2);
 
                         let full_datagram = self
-                            .receive_with_etag_validation(request, expected_etag.as_deref())
+                            .receive_with_etag_validation(
+                                request,
+                                expected_etag.as_deref(),
+                            )
                             .await;
 
-                        if let Ok(full_datagram) = full_datagram {
-                            handler(full_datagram.message.clone());
+                        match full_datagram {
+                            Ok(full_datagram) => {
+                                handler(Ok(full_datagram.message.clone()));
+                            }
+                            Err(e) => {
+                                handler(Err(e));
+                            }
                         }
                     } else {
-                        handler(response.message);
+                        handler(Ok(response.message));
                     }
                 } else {
-                    handler(response.message);
+                    handler(Ok(response.message));
                 }
             }
             Err(e) => match e.kind() {
                 ErrorKind::WouldBlock => {
                     info!("Observe timeout");
                 }
-                _ => warn!("observe failed {:?}", e),
+                _ => handler(Err(e)),
             },
-        };
+        }
     }
 
     /// sends a request through the transport. If a request is confirmable, it will attempt
@@ -1008,8 +1016,8 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
     ) -> IoResult<CoapResponse> {
         let mut block2_state = BlockState::default();
         loop {
-            if let Some(expected) = expected_etag {
-                if let Some(ref response) = request.response {
+            if let Some(ref response) = request.response {
+                if let Some(expected) = expected_etag {
                     let etag_matches = response
                         .message
                         .get_option(CoapOption::ETag)
@@ -1115,8 +1123,9 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
     }
 
     // Handle blockwise transfers.
-    // Returns true if the datagram contains more blocks.
-    // Returns false if it is the last block or if the datagram is not part of a blockwise transfer.
+    // Returns Ok(true) if the datagram contains more blocks.
+    // Returns Ok(false) if it is the last block or if the datagram is not part of a blockwise transfer.
+    // Returns Err if the response block number does not match the expected sequence.
     fn handle_blockwise(
         request: &mut CoapRequest<SocketAddr>,
         state: &mut BlockState,
@@ -1124,6 +1133,20 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         let packet = request.response.as_ref().unwrap().message.clone();
 
         if let Some(block2) = Self::get_block2_option(&packet) {
+            // Validate that the response block number matches what we expected
+            if let Some(expected) = state.expected_block_num {
+                if block2.num != expected {
+                    debug!(
+                        "Block number mismatch: expected {}, got {}. Aborting transfer.",
+                        expected, block2.num
+                    );
+                    return Err(HandlingError::internal(format!(
+                        "Block number mismatch: expected {}, got {}",
+                        expected, block2.num
+                    )));
+                }
+            }
+
             if state.cached_payload.is_none() {
                 state.cached_payload = Some(Vec::new());
             }
@@ -1139,10 +1162,12 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
 
             if Self::contains_more_blocks(&packet) {
                 // Prepare request for requesting next block
+                let next_num = block2.num + 1;
+                state.expected_block_num = Some(next_num);
                 request.message.clear_option(CoapOption::Block1);
                 request.message.clear_option(CoapOption::Block2);
                 let mut next_block2 = block2.clone();
-                next_block2.num += 1;
+                next_block2.num = next_num;
                 next_block2.more = false;
                 request
                     .message
@@ -1179,6 +1204,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
 #[derive(Debug, Clone, Default)]
 pub struct BlockState {
     cached_payload: Option<Vec<u8>>,
+    expected_block_num: Option<u16>,
 }
 
 #[cfg(test)]
@@ -1486,11 +1512,11 @@ mod test {
         client.set_receive_timeout(Duration::from_secs(1));
 
         // Attempt to observe non-existing resource should fail with NotFound
-        let failed_observe_result = client.observe("/dont_observe_me", |_m| {}).await;
+        let failed_observe_result = client.observe("/dont_observe_me", |_| {}).await;
         assert!(failed_observe_result.is_err());
 
         // The client should remain usable after the failed registration
-        let working_observe_result = client.observe("/observe_me", |_m| {}).await;
+        let working_observe_result = client.observe("/observe_me", |_| {}).await;
         assert!(working_observe_result.is_ok());
 
         // Clean up the observe registration
@@ -1517,7 +1543,7 @@ mod test {
             .unwrap();
         client.set_transport_retries(1);
 
-        let expect_no_timely_response_handler = move |_m: Message| {
+        let expect_no_timely_response_handler = move |_: IoResult<Message>| {
             // This handler should never be called because we have
             // a short timeout and the server is slow.
             unreachable!("handler should not be called: timeout shorter than server delay");
@@ -1527,7 +1553,7 @@ mod test {
         let client_handler_called = Arc::new(std::sync::Mutex::new(false));
         let client_handler_called_clone = client_handler_called.clone();
 
-        let expect_timely_response_handler = move |_m: Message| {
+        let expect_timely_response_handler = move |_: IoResult<Message>| {
             let mut client_handler_called = client_handler_called_clone.lock().unwrap();
             *client_handler_called = true;
         };
@@ -1590,7 +1616,8 @@ mod test {
         let client_handler_called = Arc::new(std::sync::Mutex::new(false));
         let client_handler_called_clone = client_handler_called.clone();
 
-        let handler = move |m: Message| {
+        let handler = move |result: IoResult<Message>| {
+            let m = result.unwrap();
             let mut client_handler_called = client_handler_called_clone.lock().unwrap();
             *client_handler_called = true;
             assert!(m.payload.len() == 2048);
@@ -1663,7 +1690,7 @@ mod test {
         request.set_method(Method::Get);
 
         // Act
-        let terminator = client.observe_with(request, |_| {}).await.unwrap();
+        let terminator = client.observe_with(request, |_: IoResult<Message>| {}).await.unwrap();
         let _ = terminator.send(ObserveMessage::Terminate);
 
         // Assert: wait for the server to receive the deregister and report the result
@@ -2043,7 +2070,8 @@ mod test {
         );
 
         let unsubscriber = client
-            .observe_with(observe_req, move |msg| {
+            .observe_with(observe_req, move |result| {
+                let msg = result.unwrap();
                 let mut lock = received_payloads_clone.lock().unwrap();
                 lock.push(msg.payload.clone());
             })
@@ -2103,7 +2131,7 @@ mod test {
         let handler_counter_clone = handler_counter.clone();
 
         let unsubscriber = client
-            .observe("/large", move |_msg| {
+            .observe("/large", move |_: IoResult<Message>| {
                 handler_counter_clone.fetch_add(1, Ordering::Relaxed);
             })
             .await
@@ -2167,7 +2195,8 @@ mod test {
         req.set_path("/large");
 
         let unsubscriber = client
-            .observe_with(req, move |msg| {
+            .observe_with(req, move |result| {
+                let msg = result.unwrap();
                 // Verify that even without Block2 and larger than default block size, full data is received at once
                 assert_eq!(msg.payload.len(), 1200);
                 assert_eq!(msg.payload, payload);
@@ -2221,5 +2250,168 @@ mod test {
             res.is_err(),
             "Expected error for invalid observe registration"
         );
+    }
+    
+    #[test]
+    fn test_handle_blockwise_rejects_mismatched_block_number() {
+        // Arrange: build a request whose response carries Block2 num=5
+        let mut request: CoapRequest<SocketAddr> = CoapRequest::new();
+        let mut response_msg = Message::new();
+        let wrong_block = BlockValue::new(5, true, 1024).unwrap();
+        response_msg.add_option_as::<BlockValue>(CoapOption::Block2, wrong_block);
+        response_msg.payload = vec![0xAA; 1024];
+        request.response = Some(CoapResponse {
+            message: response_msg,
+        });
+
+        let mut state = BlockState {
+            cached_payload: Some(vec![0u8; 1024]),
+            expected_block_num: Some(1),
+        };
+
+        // Act
+        let result =
+            CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
+
+        // Assert
+        assert!(result.is_err(), "Expected block number mismatch error");
+        let err_msg = format!("{}", result.unwrap_err());
+        assert!(
+            err_msg.contains("Block number mismatch"),
+            "Error should mention block number mismatch, got: {err_msg}"
+        );
+    }
+
+    #[test]
+    fn test_handle_blockwise_accepts_matching_block_number() {
+        // Arrange: response carries Block2 num=1, state expects 1
+        let mut request: CoapRequest<SocketAddr> = CoapRequest::new();
+        let mut response_msg = Message::new();
+        let block = BlockValue::new(1, true, 1024).unwrap();
+        response_msg.add_option_as::<BlockValue>(CoapOption::Block2, block);
+        response_msg.payload = vec![0xBB; 1024];
+        request.response = Some(CoapResponse {
+            message: response_msg,
+        });
+
+        let mut state = BlockState {
+            cached_payload: Some(vec![0u8; 1024]),
+            expected_block_num: Some(1),
+        };
+
+        // Act
+        let result =
+            CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
+
+        // Assert: should succeed and indicate more blocks
+        assert!(result.is_ok());
+        assert!(result.unwrap(), "Expected more blocks");
+        assert_eq!(state.expected_block_num, Some(2));
+    }
+
+    #[test]
+    fn test_handle_blockwise_skips_guard_when_no_expected_block() {
+        // Arrange: first block (expected_block_num is None)
+        let mut request: CoapRequest<SocketAddr> = CoapRequest::new();
+        let mut response_msg = Message::new();
+        let block = BlockValue::new(0, true, 1024).unwrap();
+        response_msg.add_option_as::<BlockValue>(CoapOption::Block2, block);
+        response_msg.payload = vec![0xCC; 1024];
+        request.response = Some(CoapResponse {
+            message: response_msg,
+        });
+
+        let mut state = BlockState::default();
+
+        // Act
+        let result =
+            CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
+
+        // Assert: no mismatch error; state should now expect block 1
+        assert!(result.is_ok());
+        assert!(result.unwrap(), "Expected more blocks");
+        assert_eq!(state.expected_block_num, Some(1));
+    }
+
+    fn make_blockwise_observe_server_with_wrong_block_num() -> FakeObserveHandlerFn {
+        Box::new(move |mut req: Box<CoapRequest<SocketAddr>>| {
+            Box::pin(async move {
+                let path = req.get_path().to_string();
+                let has_observe = req.message.get_option(CoapOption::Observe).is_some();
+                let maybe_block2 = req
+                    .message
+                    .get_first_option_as::<BlockValue>(CoapOption::Block2)
+                    .and_then(|x| x.ok());
+
+                if let Some(resp) = req.response.as_mut() {
+                    match (path.as_str(), has_observe, maybe_block2) {
+                        ("bad_block", true, None) => {
+                            // First observe notification: block 0 with more=true
+                            resp.message.header.code =
+                                MessageClass::Response(Status::Content);
+                            let block = BlockValue::new(0, true, 1024).unwrap();
+                            resp.message
+                                .add_option_as::<BlockValue>(CoapOption::Block2, block);
+                            resp.message.payload = vec![b'a'; 1024];
+                        }
+                        ("bad_block", _, Some(_block2)) => {
+                            // Client requests block 1, but we reply with block 99
+                            resp.message.header.code =
+                                MessageClass::Response(Status::Content);
+                            let wrong_block = BlockValue::new(99, false, 1024).unwrap();
+                            resp.message
+                                .add_option_as::<BlockValue>(CoapOption::Block2, wrong_block);
+                            resp.message.payload = vec![b'z'; 1024];
+                        }
+                        _ => {
+                            resp.message.header.code =
+                                MessageClass::Response(Status::NotFound);
+                        }
+                    }
+                }
+                req
+            })
+        })
+    }
+
+    #[tokio::test]
+    async fn test_observe_handler_receives_error_on_block_mismatch() {
+        let server_port = server::test::spawn_server_disable_observe(
+            "127.0.0.1:0",
+            make_blockwise_observe_server_with_wrong_block_num(),
+        )
+        .recv()
+        .await
+        .unwrap();
+
+        let client = UdpCoAPClient::new(("127.0.0.1", server_port))
+            .await
+            .unwrap();
+
+        let handler_got_error = Arc::new(std::sync::Mutex::new(false));
+        let handler_got_error_clone = handler_got_error.clone();
+
+        let handler = move |result: IoResult<Message>| {
+            if result.is_err() {
+                *handler_got_error_clone.lock().unwrap() = true;
+            }
+        };
+
+        let terminator = client.observe("/bad_block", handler).await.unwrap();
+
+        let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
+        while tokio::time::Instant::now() < deadline {
+            if *handler_got_error.lock().unwrap() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+
+        assert!(
+            *handler_got_error.lock().unwrap(),
+            "Observe handler should have received an Err due to block number mismatch"
+        );
+
+        let _ = terminator.send(ObserveMessage::Terminate);
     }
 }
