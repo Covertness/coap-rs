@@ -2,7 +2,7 @@
 
 [![CircleCI](https://circleci.com/gh/Covertness/coap-rs.svg?style=svg)](https://circleci.com/gh/Covertness/coap-rs)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/ic36jdu4xy6doc59?svg=true)](https://ci.appveyor.com/project/Covertness/coap-rs)
-![Downloads](https://img.shields.io/crates/d/coap.svg?style=flat)
+![Downloads](https://img.shields.io/crates/d/coap.svg)
 [![Coverage Status](https://coveralls.io/repos/github/Covertness/coap-rs/badge.svg?branch=master)](https://coveralls.io/github/Covertness/coap-rs?branch=master)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -24,7 +24,7 @@ First add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-coap = "0.26"
+coap = "0.27"
 coap-lite = "0.13.3"
 tokio = {version = "^1.32", features = ["full"]}
 ```
