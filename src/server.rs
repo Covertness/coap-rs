@@ -1,7 +1,10 @@
 #[cfg(feature = "router")]
 use crate::router::{request::Request, Router};
 use async_trait::async_trait;
-use coap_lite::{BlockHandler, BlockHandlerConfig, CoapOption, CoapRequest, CoapResponse, Packet};
+use coap_lite::{
+    BlockHandler, BlockHandlerConfig, CoapOption, CoapRequest, CoapResponse, ContentFormat,
+    MessageClass, MessageType, Packet, RequestType, ResponseType,
+};
 use log::debug;
 use std::{
     future::Future,
@@ -308,11 +311,145 @@ pub enum ShouldForwardToHandler {
 }
 
 impl ServerCoapState {
+    fn set_error_response(
+        request: &mut CoapRequest<SocketAddr>,
+        status: ResponseType,
+        payload: Option<Vec<u8>>,
+    ) {
+        if let Some(response) = request.response.as_mut() {
+            response.message.header.code = MessageClass::Response(status);
+            if let Some(payload) = payload {
+                response.message.payload = payload;
+            }
+        }
+    }
+
+    fn set_reset_response(request: &mut CoapRequest<SocketAddr>) {
+        if let Some(response) = request.response.as_mut() {
+            response.message = Packet::new();
+            response.message.header.set_type(MessageType::Reset);
+            response.message.header.code = MessageClass::Empty;
+            response.message.header.message_id = request.message.header.message_id;
+        }
+    }
+
+    fn is_reserved_class_code(code: u8) -> bool {
+        let class = (code & 0xE0) >> 5;
+        matches!(class, 1 | 6 | 7)
+    }
+
+    fn should_reject_confirmable_with_reset(request: &CoapRequest<SocketAddr>) -> bool {
+        if request.message.header.get_type() != MessageType::Confirmable {
+            return false;
+        }
+
+        match request.message.header.code {
+            MessageClass::Empty => true,
+            MessageClass::Reserved(code) => Self::is_reserved_class_code(code),
+            _ => false,
+        }
+    }
+
+    fn unknown_critical_options(request: &CoapRequest<SocketAddr>) -> Vec<u16> {
+        request
+            .message
+            .options()
+            .filter_map(|(number, _)| {
+                if let CoapOption::Unknown(value) = CoapOption::from(*number) {
+                    if value % 2 == 1 {
+                        return Some(value);
+                    }
+                }
+                None
+            })
+            .collect()
+    }
+
+    fn decode_coap_u16(value: &[u8]) -> Option<u16> {
+        if value.len() > 2 {
+            return None;
+        }
+        let mut out = 0u16;
+        for byte in value {
+            out = (out << 8) | (*byte as u16);
+        }
+        Some(out)
+    }
+
+    fn request_has_supported_accept(request: &CoapRequest<SocketAddr>) -> bool {
+        let Some(values) = request.message.get_option(CoapOption::Accept) else {
+            return true;
+        };
+
+        values.iter().any(|value| {
+            let Some(format_id) = Self::decode_coap_u16(value) else {
+                return false;
+            };
+            ContentFormat::try_from(format_id as usize).is_ok()
+        })
+    }
+
+    fn request_accepts_response_content_format(request: &CoapRequest<SocketAddr>) -> bool {
+        let Some(accept_values) = request.message.get_option(CoapOption::Accept) else {
+            return true;
+        };
+
+        let Some(response) = request.response.as_ref() else {
+            return true;
+        };
+
+        let Some(content_format) = response.message.get_content_format() else {
+            return false;
+        };
+        let content_format = u16::try_from(usize::from(content_format)).ok();
+
+        accept_values.iter().any(|value| {
+            let Some(accept) = Self::decode_coap_u16(value) else {
+                return false;
+            };
+            Some(accept) == content_format
+        })
+    }
+
+    fn has_conditional_options(request: &CoapRequest<SocketAddr>) -> bool {
+        request.message.get_option(CoapOption::IfMatch).is_some()
+            || request.message.get_option(CoapOption::IfNoneMatch).is_some()
+    }
+
     pub async fn intercept_request(
         &mut self,
         request: &mut CoapRequest<SocketAddr>,
         responder: Arc<dyn Responder>,
     ) -> ShouldForwardToHandler {
+        if Self::should_reject_confirmable_with_reset(request) {
+            Self::set_reset_response(request);
+            return ShouldForwardToHandler::False;
+        }
+
+        let unknown_critical = Self::unknown_critical_options(request);
+        if request.message.header.get_type() == MessageType::Confirmable && !unknown_critical.is_empty() {
+            let diagnostic = format!("Unrecognized critical options: {:?}", unknown_critical)
+                .into_bytes();
+            Self::set_error_response(request, ResponseType::BadOption, Some(diagnostic));
+            return ShouldForwardToHandler::False;
+        }
+
+        if !Self::request_has_supported_accept(request) {
+            Self::set_error_response(request, ResponseType::NotAcceptable, None);
+            return ShouldForwardToHandler::False;
+        }
+
+        // Fail-closed default for conditional requests because this layer has no resource-version store.
+        if Self::has_conditional_options(request) {
+            Self::set_error_response(request, ResponseType::PreconditionFailed, None);
+            return ShouldForwardToHandler::False;
+        }
+
+        if *request.get_method() == RequestType::UnKnown {
+            Self::set_error_response(request, ResponseType::MethodNotAllowed, None);
+            return ShouldForwardToHandler::False;
+        }
+
         match self.block_handler.intercept_request(request) {
             Ok(true) => return ShouldForwardToHandler::False,
             Err(_err) => return ShouldForwardToHandler::False,
@@ -361,6 +498,10 @@ impl ServerCoapState {
         if let Err(err) = self.block_handler.intercept_response(request) {
             let _ = request.apply_from_error(err);
         }
+
+        if !Self::request_accepts_response_content_format(request) {
+            Self::set_error_response(request, ResponseType::NotAcceptable, None);
+        }
     }
 
     pub fn new() -> Self {
@@ -383,6 +524,26 @@ pub struct Server {
 }
 
 impl Server {
+    fn parse_reset_message_id_from_raw(raw: &[u8]) -> Option<u16> {
+        if raw.len() < 4 {
+            return None;
+        }
+        let version = (raw[0] & 0xC0) >> 6;
+        let message_type = (raw[0] & 0x30) >> 4;
+        if version != 1 || message_type != 0 {
+            return None;
+        }
+        Some(u16::from_be_bytes([raw[2], raw[3]]))
+    }
+
+    fn build_reset(message_id: u16) -> Option<Vec<u8>> {
+        let mut packet = Packet::new();
+        packet.header.set_type(MessageType::Reset);
+        packet.header.code = MessageClass::Empty;
+        packet.header.message_id = message_id;
+        packet.to_bytes().ok()
+    }
+
     /// Creates a CoAP server listening on the given address.
     pub fn new_udp<A: ToSocketAddrs>(addr: A) -> Result<Self, io::Error> {
         let listener: Vec<Box<dyn Listener>> = vec![Box::new(UdpCoapListener::new(addr)?)];
@@ -423,33 +584,42 @@ impl Server {
                 .recv()
                 .await
                 .ok_or_else(|| std::io::Error::other("listen channel closed"))?;
-            if let Ok(packet) = Packet::from_bytes(&bytes) {
-                let mut request = Box::new(CoapRequest::<SocketAddr>::from_packet(
-                    packet,
-                    respond.address(),
-                ));
-                let mut coap_state = self.coap_state.lock().await;
-                let should_forward = coap_state
-                    .intercept_request(&mut request, respond.clone())
-                    .await;
+            match Packet::from_bytes(&bytes) {
+                Ok(packet) => {
+                    let mut request = Box::new(CoapRequest::<SocketAddr>::from_packet(
+                        packet,
+                        respond.address(),
+                    ));
+                    let mut coap_state = self.coap_state.lock().await;
+                    let should_forward = coap_state
+                        .intercept_request(&mut request, respond.clone())
+                        .await;
 
-                match should_forward {
-                    ShouldForwardToHandler::True => {
-                        let handler_clone = handler_arc.clone();
-                        let coap_state_clone = self.coap_state.clone();
-                        tokio::spawn(async move {
-                            request = handler_clone.handle_request(request).await;
-                            coap_state_clone
-                                .lock()
-                                .await
-                                .intercept_response(request.as_mut())
-                                .await;
+                    match should_forward {
+                        ShouldForwardToHandler::True => {
+                            let handler_clone = handler_arc.clone();
+                            let coap_state_clone = self.coap_state.clone();
+                            tokio::spawn(async move {
+                                request = handler_clone.handle_request(request).await;
+                                coap_state_clone
+                                    .lock()
+                                    .await
+                                    .intercept_response(request.as_mut())
+                                    .await;
 
+                                Self::respond_to_request(request, respond).await;
+                            });
+                        }
+                        ShouldForwardToHandler::False => {
                             Self::respond_to_request(request, respond).await;
-                        });
+                        }
                     }
-                    ShouldForwardToHandler::False => {
-                        Self::respond_to_request(request, respond).await;
+                }
+                Err(_) => {
+                    if let Some(message_id) = Self::parse_reset_message_id_from_raw(&bytes) {
+                        if let Some(reset) = Self::build_reset(message_id) {
+                            respond.respond(reset).await;
+                        }
                     }
                 }
             }
@@ -503,7 +673,10 @@ pub mod test {
 
     use super::super::*;
     use super::*;
-    use coap_lite::{block_handler::BlockValue, CoapOption, RequestType};
+    use coap_lite::{
+        block_handler::BlockValue, CoapOption, MessageClass, MessageType, RequestType,
+        ResponseType,
+    };
     use std::str;
     use std::time::Duration;
 
@@ -540,6 +713,64 @@ pub mod test {
             response.message.payload = uri_path_list.front().unwrap().clone();
         }
         req
+    }
+
+    #[test]
+    fn test_unknown_critical_option_is_detected() {
+        let mut req: CoapRequest<SocketAddr> = CoapRequest::new();
+        req.message
+            .add_option(CoapOption::Unknown(999), b"x".to_vec());
+
+        let unknown = ServerCoapState::unknown_critical_options(&req);
+        assert_eq!(unknown, vec![999]);
+    }
+
+    #[test]
+    fn test_unsupported_accept_is_rejected() {
+        let mut req: CoapRequest<SocketAddr> = CoapRequest::new();
+        req.message
+            .add_option(CoapOption::Accept, vec![0x27, 0x0F]); // 9999
+
+        assert!(!ServerCoapState::request_has_supported_accept(&req));
+    }
+
+    #[test]
+    fn test_confirmable_reserved_and_empty_are_rejected_with_reset() {
+        let mut reserved_req: CoapRequest<SocketAddr> = CoapRequest::new();
+        reserved_req.message.header.set_type(MessageType::Confirmable);
+        reserved_req.message.header.code = MessageClass::Reserved(0x20); // class 1.xx
+
+        assert!(ServerCoapState::should_reject_confirmable_with_reset(
+            &reserved_req
+        ));
+
+        let mut empty_req: CoapRequest<SocketAddr> = CoapRequest::new();
+        empty_req.message.header.set_type(MessageType::Confirmable);
+        empty_req.message.header.code = MessageClass::Empty;
+
+        assert!(ServerCoapState::should_reject_confirmable_with_reset(
+            &empty_req
+        ));
+    }
+
+    #[test]
+    fn test_parse_reset_message_id_from_raw_confirmable() {
+        let raw = [0x40, 0x01, 0x12, 0x34];
+        let message_id = Server::parse_reset_message_id_from_raw(&raw);
+        assert_eq!(message_id, Some(0x1234));
+    }
+
+    #[test]
+    fn test_unknown_method_gets_method_not_allowed_response() {
+        let mut req: CoapRequest<SocketAddr> = CoapRequest::new();
+        req.response = coap_lite::CoapResponse::new(&req.message);
+        req.message.header.code = MessageClass::Request(RequestType::UnKnown);
+
+        ServerCoapState::set_error_response(&mut req, ResponseType::MethodNotAllowed, None);
+        assert_eq!(
+            req.response.unwrap().message.header.code,
+            MessageClass::Response(ResponseType::MethodNotAllowed)
+        );
     }
 
     pub fn spawn_server_with_all_coap<
