@@ -181,25 +181,20 @@ async fn receive_loop<T: ClientTransport + 'static>(
         };
 
         let token = packet.message.get_token();
-        let sender = transport_sync.get_sender(token).await;
-
-        // RFC 7641 §3.2: do not ACK a confirmable notification with an unknown token.
-        // For unknown confirmable responses, send a Reset to reject the message.
-        if sender.is_none() {
+        let Some(sender) = transport_sync.get_sender(token).await else {
+            // RFC 7641 §3.2: do not ACK a confirmable notification with an unknown token.
+            // For unknown confirmable responses, send a Reset to reject the message.
             if let Some(reset) = parse_for_reset(&packet) {
                 transport_instance.send(&reset).await?;
             }
             info!("received unexpected response for token {:?}", token);
             continue;
-        }
+        };
 
         if let Some(ack) = parse_for_ack(&packet) {
             transport_instance.send(&ack).await?;
         }
 
-        let Some(sender) = sender else {
-            continue;
-        };
         let Ok(_) = sender.send(Ok(packet)) else {
             debug!("unexpected drop of sender");
             continue;

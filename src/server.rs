@@ -2,8 +2,8 @@
 use crate::router::{request::Request, Router};
 use async_trait::async_trait;
 use coap_lite::{
-    BlockHandler, BlockHandlerConfig, CoapOption, CoapRequest, CoapResponse, ContentFormat,
-    MessageClass, MessageType, Packet, RequestType, ResponseType,
+    BlockHandler, BlockHandlerConfig, CoapOption, CoapRequest, CoapResponse, MessageClass,
+    MessageType, Packet, RequestType, ResponseType,
 };
 use log::debug;
 use std::{
@@ -381,12 +381,7 @@ impl ServerCoapState {
             return true;
         };
 
-        values.iter().any(|value| {
-            let Some(format_id) = Self::decode_coap_u16(value) else {
-                return false;
-            };
-            ContentFormat::try_from(format_id as usize).is_ok()
-        })
+        values.iter().all(|value| Self::decode_coap_u16(value).is_some())
     }
 
     fn request_accepts_response_content_format(request: &CoapRequest<SocketAddr>) -> bool {
@@ -399,7 +394,9 @@ impl ServerCoapState {
         };
 
         let Some(content_format) = response.message.get_content_format() else {
-            return false;
+            // If the response omits Content-Format, this layer cannot reliably
+            // validate the Accept constraint.
+            return true;
         };
         let content_format = u16::try_from(usize::from(content_format)).ok();
 
@@ -726,12 +723,45 @@ pub mod test {
     }
 
     #[test]
-    fn test_unsupported_accept_is_rejected() {
+    fn test_unknown_accept_code_is_allowed() {
         let mut req: CoapRequest<SocketAddr> = CoapRequest::new();
         req.message
             .add_option(CoapOption::Accept, vec![0x27, 0x0F]); // 9999
 
+        assert!(ServerCoapState::request_has_supported_accept(&req));
+    }
+
+    #[test]
+    fn test_malformed_accept_encoding_is_rejected() {
+        let mut req: CoapRequest<SocketAddr> = CoapRequest::new();
+        req.message
+            .add_option(CoapOption::Accept, vec![0x00, 0x00, 0x01]); // >2 bytes is invalid CoAP uint
+
         assert!(!ServerCoapState::request_has_supported_accept(&req));
+    }
+
+    #[test]
+    fn test_accept_check_allows_missing_response_content_format() {
+        let mut req: CoapRequest<SocketAddr> = CoapRequest::new();
+        req.message.add_option(CoapOption::Accept, vec![0x00]);
+        req.response = coap_lite::CoapResponse::new(&req.message);
+
+        assert!(ServerCoapState::request_accepts_response_content_format(&req));
+    }
+
+    #[test]
+    fn test_accept_check_rejects_mismatched_response_content_format() {
+        let mut req: CoapRequest<SocketAddr> = CoapRequest::new();
+        req.message.add_option(CoapOption::Accept, vec![0x00]);
+        req.response = coap_lite::CoapResponse::new(&req.message);
+
+        if let Some(response) = req.response.as_mut() {
+            response
+                .message
+                .add_option(CoapOption::ContentFormat, vec![0x2A]);
+        }
+
+        assert!(!ServerCoapState::request_accepts_response_content_format(&req));
     }
 
     #[test]
