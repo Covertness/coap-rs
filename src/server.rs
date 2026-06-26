@@ -320,6 +320,9 @@ impl ServerCoapState {
             response.message.header.code = MessageClass::Response(status);
             if let Some(payload) = payload {
                 response.message.payload = payload;
+            } else {
+                response.message.payload.clear();
+                response.message.clear_option(CoapOption::ContentFormat);
             }
         }
     }
