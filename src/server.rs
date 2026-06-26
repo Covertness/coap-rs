@@ -411,11 +411,6 @@ impl ServerCoapState {
         })
     }
 
-    fn has_conditional_options(request: &CoapRequest<SocketAddr>) -> bool {
-        request.message.get_option(CoapOption::IfMatch).is_some()
-            || request.message.get_option(CoapOption::IfNoneMatch).is_some()
-    }
-
     pub async fn intercept_request(
         &mut self,
         request: &mut CoapRequest<SocketAddr>,
@@ -436,12 +431,6 @@ impl ServerCoapState {
 
         if !Self::request_has_supported_accept(request) {
             Self::set_error_response(request, ResponseType::NotAcceptable, None);
-            return ShouldForwardToHandler::False;
-        }
-
-        // Fail-closed default for conditional requests because this layer has no resource-version store.
-        if Self::has_conditional_options(request) {
-            Self::set_error_response(request, ResponseType::PreconditionFailed, None);
             return ShouldForwardToHandler::False;
         }
 
