@@ -5,7 +5,7 @@ use coap_lite::{
     block_handler::{extending_splice, BlockValue},
     error::HandlingError,
     CoapOption, CoapRequest, CoapResponse, MessageClass, MessageType, ObserveOption,
-    Packet as Message, RequestType as Method,
+    Packet as Message, RequestType as Method, ResponseType,
 };
 use core::mem;
 
@@ -951,21 +951,32 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
 
             request.message.header.message_id = self.gen_message_id();
             let resp = self.send_single_request(request).await?;
-            // continue receiving responses until last element
-            if it.peek().is_some() {
-                let maybe_block1 = resp
-                    .message
-                    .get_first_option_as::<BlockValue>(CoapOption::Block1)
-                    .ok_or(Error::new(
-                        ErrorKind::Unsupported,
-                        "endpoint does not support blockwise transfers. Try setting block1_size to a larger value",
-                    ))?;
-                let block1_resp = maybe_block1.map_err(|_| {
-                    Error::new(
-                        ErrorKind::InvalidData,
-                        "endpoint responded with invalid block",
-                    )
-                })?;
+
+            let maybe_block1 = resp
+                .message
+                .get_first_option_as::<BlockValue>(CoapOption::Block1)
+                .ok_or(Error::new(
+                    ErrorKind::Unsupported,
+                    "endpoint does not support blockwise transfers. Try setting block1_size to a larger value",
+                ))?;
+            let block1_resp = maybe_block1.map_err(|_| {
+                Error::new(
+                    ErrorKind::InvalidData,
+                    "endpoint responded with invalid block",
+                )
+            })?;
+            if block1_resp.num != block.num {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    format!(
+                        "endpoint acked block {} but block {} was sent",
+                        block1_resp.num, block.num
+                    ),
+                ));
+            }
+            let is_continue =
+                resp.message.header.code == MessageClass::Response(ResponseType::Continue);
+            if more_blocks {
                 //TODO: negotiate smaller block size
                 if block1_resp.size_exponent != block.size_exponent {
                     return Err(Error::new(
@@ -973,6 +984,17 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                         "negotiating block size is currently unsupported",
                     ));
                 }
+                if !is_continue {
+                    return Err(Error::new(
+                        ErrorKind::InvalidData,
+                        "endpoint responded with a final response before all blocks were sent",
+                    ));
+                }
+            } else if is_continue {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    "endpoint responded with 2.31 Continue to the final block",
+                ));
             }
             result = Ok(resp);
         }
