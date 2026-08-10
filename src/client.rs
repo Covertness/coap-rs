@@ -985,10 +985,12 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                     ));
                 }
                 if !is_continue {
-                    return Err(Error::new(
-                        ErrorKind::InvalidData,
-                        "endpoint responded with a final response before all blocks were sent",
-                    ));
+                    // The endpoint answered early (e.g. a 4.xx/5.xx error) instead of
+                    // acking with 2.31 Continue. Stop sending further chunks and hand
+                    // the response back to the caller rather than masking it as an I/O
+                    // error - the num/size checks above already ruled out a stale or
+                    // mismatched response.
+                    return Ok(resp);
                 }
             } else if is_continue {
                 return Err(Error::new(
@@ -2468,6 +2470,9 @@ mod test {
                 .await
                 .ok_or_else(|| Error::other("scripted peer exhausted"))?;
             let n = bytes.len();
+            if n > buf.len() {
+                return Err(Error::other("scripted peer response exceeds receive buffer"));
+            }
             buf[..n].copy_from_slice(&bytes);
             Ok((n, None))
         }
@@ -2568,6 +2573,55 @@ mod test {
             result.is_err(),
             "a Block1 response acking the wrong block number must be rejected, \
              got: {result:?}"
+        );
+    }
+
+    /// A legitimate 4.xx/5.xx response on a non-final chunk (correctly
+    /// acking the block just sent) must be handed back to the caller as-is,
+    /// not masked as an opaque I/O error, and no further chunks should be
+    /// sent once the endpoint has answered early.
+    #[tokio::test]
+    async fn test_block1_write_returns_early_error_response_without_masking_it() {
+        let peer = ScriptedBlock1Peer::new(vec![block1_response(
+            Status::BadRequest,
+            FIRST_BLOCK_NUM,
+            false,
+            TEST_BLOCK1_SIZE,
+        )]);
+        let mut client = CoAPClient::from_transport(peer);
+        client.set_block1_size(TEST_BLOCK1_SIZE);
+
+        let result = client.send(block1_write_request()).await;
+
+        let response = result.unwrap_or_else(|e| {
+            panic!("a legitimate error response must be returned to the caller, not converted into an I/O error, got: {e:?}")
+        });
+        assert_eq!(
+            response.message.header.code,
+            MessageClass::Response(Status::BadRequest)
+        );
+    }
+
+    /// `ScriptedBlock1Peer::recv` must reject a scripted response that does
+    /// not fit the caller-provided buffer instead of panicking on an
+    /// out-of-bounds slice copy.
+    #[tokio::test]
+    async fn test_scripted_block1_peer_recv_rejects_response_larger_than_buffer() {
+        let mut oversized = final_response(Status::Changed);
+        oversized.payload = vec![b'y'; 200];
+        let peer = ScriptedBlock1Peer::new(vec![oversized]);
+
+        let request = RequestBuilder::new("/big", Method::Put).build();
+        let request_bytes = request.message.to_bytes().unwrap();
+        peer.send(&request_bytes).await.unwrap();
+
+        let mut buf = [0u8; 64];
+        let result = peer.recv(&mut buf).await;
+
+        assert!(
+            result.is_err(),
+            "recv() must return an error rather than panicking when a scripted \
+             response does not fit the caller's buffer, got: {result:?}"
         );
     }
 }
