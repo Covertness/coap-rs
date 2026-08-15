@@ -1789,7 +1789,7 @@ mod test {
         async fn send(&self, buf: &[u8]) -> std::io::Result<usize> {
             self.current_fails.fetch_add(1, Ordering::Relaxed);
             self.current_fails
-                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
+                .try_update(Ordering::Relaxed, Ordering::Relaxed, |n| {
                     Some(n % self.num_fails)
                 })
                 .unwrap();
