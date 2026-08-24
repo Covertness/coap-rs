@@ -172,10 +172,6 @@ async fn receive_loop<T: ClientTransport + 'static>(
             trace!("unexpected malformed packet received");
             continue;
         };
-        if let Some(ack) = parse_for_ack(&packet) {
-            transport_instance.send(&ack).await?;
-        }
-
         match packet.message.header.code {
             MessageClass::Response(_) => {}
             m => {
@@ -186,9 +182,19 @@ async fn receive_loop<T: ClientTransport + 'static>(
 
         let token = packet.message.get_token();
         let Some(sender) = transport_sync.get_sender(token).await else {
+            // RFC 7641 §3.2: do not ACK a confirmable notification with an unknown token.
+            // For unknown confirmable responses, send a Reset to reject the message.
+            if let Some(reset) = parse_for_reset(&packet) {
+                transport_instance.send(&reset).await?;
+            }
             info!("received unexpected response for token {:?}", token);
             continue;
         };
+
+        if let Some(ack) = parse_for_ack(&packet) {
+            transport_instance.send(&ack).await?;
+        }
+
         let Ok(_) = sender.send(Ok(packet)) else {
             debug!("unexpected drop of sender");
             continue;
@@ -207,12 +213,27 @@ pub fn parse_for_ack(packet: &Packet) -> Option<Vec<u8>> {
     }
 }
 
+pub fn parse_for_reset(packet: &Packet) -> Option<Vec<u8>> {
+    match (packet.message.header.get_type(), packet.message.header.code) {
+        (MessageType::Confirmable, MessageClass::Response(_)) => Some(make_reset(packet)),
+        _ => None,
+    }
+}
+
 pub fn make_ack(packet: &Packet) -> Vec<u8> {
     let mut ack = Message::new();
     ack.header.set_type(MessageType::Acknowledgement);
     ack.header.message_id = packet.message.header.message_id;
     ack.header.code = MessageClass::Empty;
     ack.to_bytes().unwrap()
+}
+
+pub fn make_reset(packet: &Packet) -> Vec<u8> {
+    let mut reset = Message::new();
+    reset.header.set_type(MessageType::Reset);
+    reset.header.message_id = packet.message.header.message_id;
+    reset.header.code = MessageClass::Empty;
+    reset.to_bytes().unwrap()
 }
 
 /// a wrapper for transports responsible for retries and timeouts
@@ -1238,6 +1259,36 @@ mod test {
         assert!(UdpCoAPClient::parse_coap_url("coap://").is_err());
         assert!(UdpCoAPClient::parse_coap_url("coap://:5683").is_err());
         assert!(UdpCoAPClient::parse_coap_url("127.0.0.1").is_err());
+    }
+
+    #[test]
+    fn test_parse_for_reset_on_confirmable_response() {
+        let mut msg = Message::new();
+        msg.header.set_type(MessageType::Confirmable);
+        msg.header.code = MessageClass::Response(Status::Content);
+        msg.header.message_id = 0x1234;
+        let packet = Packet {
+            address: None,
+            message: msg,
+        };
+
+        let reset = parse_for_reset(&packet);
+        assert!(reset.is_some());
+    }
+
+    #[test]
+    fn test_parse_for_reset_ignores_non_confirmable_response() {
+        let mut msg = Message::new();
+        msg.header.set_type(MessageType::Acknowledgement);
+        msg.header.code = MessageClass::Response(Status::Content);
+        msg.header.message_id = 0x1234;
+        let packet = Packet {
+            address: None,
+            message: msg,
+        };
+
+        let reset = parse_for_reset(&packet);
+        assert!(reset.is_none());
     }
 
     async fn request_handler(req: Box<CoapRequest<SocketAddr>>) -> Box<CoapRequest<SocketAddr>> {
