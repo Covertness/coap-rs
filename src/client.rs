@@ -5,7 +5,7 @@ use coap_lite::{
     block_handler::{extending_splice, BlockValue},
     error::HandlingError,
     CoapOption, CoapRequest, CoapResponse, MessageClass, MessageType, ObserveOption,
-    Packet as Message, RequestType as Method,
+    Packet as Message, RequestType as Method, ResponseType,
 };
 use core::mem;
 
@@ -951,21 +951,32 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
 
             request.message.header.message_id = self.gen_message_id();
             let resp = self.send_single_request(request).await?;
-            // continue receiving responses until last element
-            if it.peek().is_some() {
-                let maybe_block1 = resp
-                    .message
-                    .get_first_option_as::<BlockValue>(CoapOption::Block1)
-                    .ok_or(Error::new(
-                        ErrorKind::Unsupported,
-                        "endpoint does not support blockwise transfers. Try setting block1_size to a larger value",
-                    ))?;
-                let block1_resp = maybe_block1.map_err(|_| {
-                    Error::new(
-                        ErrorKind::InvalidData,
-                        "endpoint responded with invalid block",
-                    )
-                })?;
+
+            let maybe_block1 = resp
+                .message
+                .get_first_option_as::<BlockValue>(CoapOption::Block1)
+                .ok_or(Error::new(
+                    ErrorKind::Unsupported,
+                    "endpoint does not support blockwise transfers. Try setting block1_size to a larger value",
+                ))?;
+            let block1_resp = maybe_block1.map_err(|_| {
+                Error::new(
+                    ErrorKind::InvalidData,
+                    "endpoint responded with invalid block",
+                )
+            })?;
+            if block1_resp.num != block.num {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    format!(
+                        "endpoint acked block {} but block {} was sent",
+                        block1_resp.num, block.num
+                    ),
+                ));
+            }
+            let is_continue =
+                resp.message.header.code == MessageClass::Response(ResponseType::Continue);
+            if more_blocks {
                 //TODO: negotiate smaller block size
                 if block1_resp.size_exponent != block.size_exponent {
                     return Err(Error::new(
@@ -973,6 +984,19 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                         "negotiating block size is currently unsupported",
                     ));
                 }
+                if !is_continue {
+                    // The endpoint answered early (e.g. a 4.xx/5.xx error) instead of
+                    // acking with 2.31 Continue. Stop sending further chunks and hand
+                    // the response back to the caller rather than masking it as an I/O
+                    // error - the num/size checks above already ruled out a stale or
+                    // mismatched response.
+                    return Ok(resp);
+                }
+            } else if is_continue {
+                return Err(Error::new(
+                    ErrorKind::InvalidData,
+                    "endpoint responded with 2.31 Continue to the final block",
+                ));
             }
             result = Ok(resp);
         }
@@ -2413,5 +2437,191 @@ mod test {
         );
 
         let _ = terminator.send(ObserveMessage::Terminate);
+    }
+
+    /// A fake peer that plays back a fixed script of responses, one per
+    /// request received, regardless of what the request contains. Used to
+    /// simulate a misbehaving/duplicate peer during Block1 (blockwise write)
+    /// transfers independently of this crate's own (correct) server-side
+    /// `BlockHandler`, which cannot be coaxed into sending a stale response.
+    struct ScriptedBlock1Peer {
+        responses: Mutex<std::vec::IntoIter<Message>>,
+        outgoing_tx: UnboundedSender<Vec<u8>>,
+        outgoing_rx: Mutex<UnboundedReceiver<Vec<u8>>>,
+    }
+
+    impl ScriptedBlock1Peer {
+        fn new(responses: Vec<Message>) -> Self {
+            let (outgoing_tx, outgoing_rx) = unbounded_channel();
+            Self {
+                responses: Mutex::new(responses.into_iter()),
+                outgoing_tx,
+                outgoing_rx: Mutex::new(outgoing_rx),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl ClientTransport for ScriptedBlock1Peer {
+        async fn recv(&self, buf: &mut [u8]) -> std::io::Result<(usize, Option<SocketAddr>)> {
+            let mut rx = self.outgoing_rx.lock().await;
+            let bytes = rx
+                .recv()
+                .await
+                .ok_or_else(|| Error::other("scripted peer exhausted"))?;
+            let n = bytes.len();
+            if n > buf.len() {
+                return Err(Error::other("scripted peer response exceeds receive buffer"));
+            }
+            buf[..n].copy_from_slice(&bytes);
+            Ok((n, None))
+        }
+
+        async fn send(&self, buf: &[u8]) -> std::io::Result<usize> {
+            let incoming = Message::from_bytes(buf).map_err(|_| Error::other("bad request"))?;
+            let mut responses = self.responses.lock().await;
+            let mut response = responses
+                .next()
+                .ok_or_else(|| Error::other("scripted peer has no more responses"))?;
+            response.set_token(incoming.get_token().to_vec());
+            response.header.message_id = incoming.header.message_id;
+            let bytes = response
+                .to_bytes()
+                .map_err(|_| Error::other("encode error"))?;
+            let _ = self.outgoing_tx.send(bytes);
+            Ok(buf.len())
+        }
+    }
+
+    fn block1_response(code: Status, num: usize, more: bool, size: usize) -> Message {
+        let mut msg = Message::new();
+        msg.header.set_type(MessageType::NonConfirmable);
+        msg.header.code = MessageClass::Response(code);
+        msg.add_option_as::<BlockValue>(
+            CoapOption::Block1,
+            BlockValue::new(num, more, size).unwrap(),
+        );
+        msg
+    }
+
+    fn final_response(code: Status) -> Message {
+        let mut msg = Message::new();
+        msg.header.set_type(MessageType::NonConfirmable);
+        msg.header.code = MessageClass::Response(code);
+        msg
+    }
+
+    /// Block1 size used by the tests below; chosen so `TEST_PAYLOAD_LEN`
+    /// does not divide evenly, forcing exactly two chunks.
+    const TEST_BLOCK1_SIZE: usize = 16;
+    /// Payload length that splits into two Block1 chunks under
+    /// `TEST_BLOCK1_SIZE`: one full-size chunk and one short final chunk.
+    const TEST_PAYLOAD_LEN: usize = 20;
+    const FIRST_BLOCK_NUM: usize = 0;
+    const WRONG_BLOCK_NUM: usize = 5;
+
+    fn block1_write_request() -> CoapRequest<SocketAddr> {
+        RequestBuilder::new("/big", Method::Put)
+            .data(Some(vec![b'x'; TEST_PAYLOAD_LEN]))
+            .confirmable(false)
+            .build()
+    }
+
+    /// Reproduces the reported bug: a stale/duplicate `2.31 Continue`
+    /// response for an earlier block (e.g. a delayed retransmission that
+    /// arrives after the client has already moved on to the next chunk)
+    /// gets matched to the request for the *last* Block1 chunk and is
+    /// blindly returned as the transfer's final result. `Continue` must
+    /// never be observable as the outcome of a completed block1 write.
+    #[tokio::test]
+    async fn test_block1_write_never_returns_continue_as_final_response() {
+        let peer = ScriptedBlock1Peer::new(vec![
+            // Reply to the first chunk: correctly ask for more.
+            block1_response(Status::Continue, FIRST_BLOCK_NUM, true, TEST_BLOCK1_SIZE),
+            // Reply to the final chunk: a stale duplicate of the first
+            // chunk's response instead of a genuine final answer.
+            block1_response(Status::Continue, FIRST_BLOCK_NUM, true, TEST_BLOCK1_SIZE),
+        ]);
+        let mut client = CoAPClient::from_transport(peer);
+        client.set_block1_size(TEST_BLOCK1_SIZE);
+
+        let result = client.send(block1_write_request()).await;
+
+        assert!(
+            result.is_err(),
+            "a stale Continue response must not be accepted as the final result \
+             of a block1 write, got: {result:?}"
+        );
+    }
+
+    /// The intermediate-response check in the block1 write loop only
+    /// validates `size_exponent`, never the block `num`. A response acking
+    /// the wrong block number must not be silently accepted.
+    #[tokio::test]
+    async fn test_block1_write_rejects_mismatched_block_number() {
+        let peer = ScriptedBlock1Peer::new(vec![
+            // Reply to the first chunk but ack the wrong block number.
+            block1_response(Status::Continue, WRONG_BLOCK_NUM, true, TEST_BLOCK1_SIZE),
+            final_response(Status::Changed),
+        ]);
+        let mut client = CoAPClient::from_transport(peer);
+        client.set_block1_size(TEST_BLOCK1_SIZE);
+
+        let result = client.send(block1_write_request()).await;
+
+        assert!(
+            result.is_err(),
+            "a Block1 response acking the wrong block number must be rejected, \
+             got: {result:?}"
+        );
+    }
+
+    /// A legitimate 4.xx/5.xx response on a non-final chunk (correctly
+    /// acking the block just sent) must be handed back to the caller as-is,
+    /// not masked as an opaque I/O error, and no further chunks should be
+    /// sent once the endpoint has answered early.
+    #[tokio::test]
+    async fn test_block1_write_returns_early_error_response_without_masking_it() {
+        let peer = ScriptedBlock1Peer::new(vec![block1_response(
+            Status::BadRequest,
+            FIRST_BLOCK_NUM,
+            false,
+            TEST_BLOCK1_SIZE,
+        )]);
+        let mut client = CoAPClient::from_transport(peer);
+        client.set_block1_size(TEST_BLOCK1_SIZE);
+
+        let result = client.send(block1_write_request()).await;
+
+        let response = result.unwrap_or_else(|e| {
+            panic!("a legitimate error response must be returned to the caller, not converted into an I/O error, got: {e:?}")
+        });
+        assert_eq!(
+            response.message.header.code,
+            MessageClass::Response(Status::BadRequest)
+        );
+    }
+
+    /// `ScriptedBlock1Peer::recv` must reject a scripted response that does
+    /// not fit the caller-provided buffer instead of panicking on an
+    /// out-of-bounds slice copy.
+    #[tokio::test]
+    async fn test_scripted_block1_peer_recv_rejects_response_larger_than_buffer() {
+        let mut oversized = final_response(Status::Changed);
+        oversized.payload = vec![b'y'; 200];
+        let peer = ScriptedBlock1Peer::new(vec![oversized]);
+
+        let request = RequestBuilder::new("/big", Method::Put).build();
+        let request_bytes = request.message.to_bytes().unwrap();
+        peer.send(&request_bytes).await.unwrap();
+
+        let mut buf = [0u8; 64];
+        let result = peer.recv(&mut buf).await;
+
+        assert!(
+            result.is_err(),
+            "recv() must return an error rather than panicking when a scripted \
+             response does not fit the caller's buffer, got: {result:?}"
+        );
     }
 }
