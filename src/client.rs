@@ -1139,11 +1139,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         state: &mut BlockState,
     ) -> std::result::Result<bool, HandlingError> {
         let contains_more = Self::handle_blockwise(request, state)?;
-        if contains_more {
-            return Ok(true);
-        }
-
-        Ok(false)
+        Ok(contains_more)
     }
 
     // Handle blockwise transfers.
