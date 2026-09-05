@@ -17,6 +17,7 @@ regex = "^1.5"
 tokio = { version = "^1.32", default-features = false, features = [
     "sync",
     "time",
+    "macros"
 ] }
 tokio-stream = { version = "^0.1", features = [
     "time",
