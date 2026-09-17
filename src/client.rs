@@ -27,7 +27,7 @@ use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
     oneshot, Mutex,
 };
-use tokio::time::timeout;
+use tokio::time;
 use tokio::{
     net::{lookup_host, ToSocketAddrs, UdpSocket},
     sync::RwLock,
@@ -156,7 +156,7 @@ async fn receive_loop<T: ClientTransport + 'static>(
             return Ok(());
         };
         // we do a timeout here to ensure that we do not block forever
-        let Ok(recv_res) = timeout(
+        let Ok(recv_res) = time::timeout(
             Duration::from_millis(300),
             transport_instance.receive_packet(),
         )
@@ -221,6 +221,7 @@ struct CoapClientTransport<T: ClientTransport> {
     pub(crate) synchronizer: TransportSynchronizer,
     pub(crate) retries: usize,
     pub(crate) timeout: Duration,
+    pub(crate) random_factor: f32,
 }
 
 impl<T: ClientTransport> Clone for CoapClientTransport<T> {
@@ -229,13 +230,21 @@ impl<T: ClientTransport> Clone for CoapClientTransport<T> {
             transport: self.transport.clone(),
             synchronizer: self.synchronizer.clone(),
             retries: self.retries,
+            random_factor: self.random_factor,
             timeout: self.timeout,
         }
     }
 }
 
 impl<T: ClientTransport> CoapClientTransport<T> {
+    /// Total number of attempts for confirmable messages.
+    /// Corresponds to MAX_RETRANSMIT + 1 (includes first attempt).
     pub const DEFAULT_NUM_RETRIES: usize = 5;
+
+    /// Random factor used for calculating retransmission timeouts.
+    /// Matches ACK_RANDOM_FACTOR.
+    pub const DEFAULT_RANDOM_FACTOR: f32 = 1.5;
+
     async fn establish_receiver_for(&self, packet: &Packet) -> UnboundedReceiver<IoResult<Packet>> {
         let (tx, rx) = unbounded_channel();
         let token = packet.message.get_token().to_owned();
@@ -250,11 +259,16 @@ impl<T: ClientTransport> CoapClientTransport<T> {
         receiver: &mut UnboundedReceiver<IoResult<Packet>>,
     ) -> IoResult<Packet> {
         let mut res = Err(Error::new(ErrorKind::InvalidData, "not enough retries"));
+        let factor = rand::random_range(1.0..=self.random_factor);
+        let mut random_timeout = self.timeout.mul_f32(factor);
         for _ in 0..self.retries {
-            res = self.try_send_non_confirmable_message(msg, receiver).await;
+            res = self
+                .try_send_non_confirmable_message(msg, receiver, random_timeout)
+                .await;
             if res.is_ok() {
                 return res;
             }
+            random_timeout *= 2;
         }
         res
     }
@@ -269,11 +283,12 @@ impl<T: ClientTransport> CoapClientTransport<T> {
         &self,
         msg: &Packet,
         receiver: &mut UnboundedReceiver<IoResult<Packet>>,
+        timeout: Duration,
     ) -> IoResult<Packet> {
         let bytes = Self::encode_message(&msg.message)?;
         self.transport.send(&bytes).await?;
         let try_receive: Result<Option<Result<Packet, Error>>, tokio::time::error::Elapsed> =
-            timeout(self.timeout, receiver.recv()).await;
+            time::timeout(timeout, receiver.recv()).await;
         if let Ok(Some(res)) = try_receive {
             return res;
         }
@@ -289,7 +304,7 @@ impl<T: ClientTransport> CoapClientTransport<T> {
             return self.try_send_confirmable_message(packet, receiver).await;
         } else {
             return self
-                .try_send_non_confirmable_message(packet, receiver)
+                .try_send_non_confirmable_message(packet, receiver, self.timeout)
                 .await;
         }
     }
@@ -311,6 +326,7 @@ impl<T: ClientTransport> CoapClientTransport<T> {
             synchronizer,
             retries: Self::DEFAULT_NUM_RETRIES,
             timeout: Duration::from_secs(DEFAULT_RECEIVE_TIMEOUT_SECONDS),
+            random_factor: Self::DEFAULT_RANDOM_FACTOR,
         }
     }
 }
@@ -873,10 +889,7 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
                             .add_option_as::<BlockValue>(CoapOption::Block2, next_block2);
 
                         let full_datagram = self
-                            .receive_with_etag_validation(
-                                request,
-                                expected_etag.as_deref(),
-                            )
+                            .receive_with_etag_validation(request, expected_etag.as_deref())
                             .await;
 
                         match full_datagram {
@@ -1084,8 +1097,15 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
     }
 
     /// Set the receive timeout.
+    /// Defaults to [DEFAULT_RECEIVE_TIMEOUT_SECONDS].
     pub fn set_receive_timeout(&mut self, dur: Duration) {
         self.transport.timeout = dur;
+    }
+
+    /// Set the random factor applied to the timeout according to the CoAP specification.
+    /// Defaults to [CoapClientTransport::DEFAULT_RANDOM_FACTOR].
+    pub fn set_random_factor(&mut self, factor: f32) {
+        self.transport.random_factor = factor;
     }
 
     pub fn set_transport_retries(&mut self, num_retries: usize) {
@@ -1710,7 +1730,10 @@ mod test {
         request.set_method(Method::Get);
 
         // Act
-        let terminator = client.observe_with(request, |_: IoResult<Message>| {}).await.unwrap();
+        let terminator = client
+            .observe_with(request, |_: IoResult<Message>| {})
+            .await
+            .unwrap();
         let _ = terminator.send(ObserveMessage::Terminate);
 
         // Assert: wait for the server to receive the deregister and report the result
@@ -2271,7 +2294,7 @@ mod test {
             "Expected error for invalid observe registration"
         );
     }
-    
+
     #[test]
     fn test_handle_blockwise_rejects_mismatched_block_number() {
         // Arrange: build a request whose response carries Block2 num=5
@@ -2290,8 +2313,7 @@ mod test {
         };
 
         // Act
-        let result =
-            CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
+        let result = CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
 
         // Assert
         assert!(result.is_err(), "Expected block number mismatch error");
@@ -2320,8 +2342,7 @@ mod test {
         };
 
         // Act
-        let result =
-            CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
+        let result = CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
 
         // Assert: should succeed and indicate more blocks
         assert!(result.is_ok());
@@ -2344,8 +2365,7 @@ mod test {
         let mut state = BlockState::default();
 
         // Act
-        let result =
-            CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
+        let result = CoAPClient::<UdpTransport>::handle_blockwise(&mut request, &mut state);
 
         // Assert: no mismatch error; state should now expect block 1
         assert!(result.is_ok());
@@ -2367,8 +2387,7 @@ mod test {
                     match (path.as_str(), has_observe, maybe_block2) {
                         ("bad_block", true, None) => {
                             // First observe notification: block 0 with more=true
-                            resp.message.header.code =
-                                MessageClass::Response(Status::Content);
+                            resp.message.header.code = MessageClass::Response(Status::Content);
                             let block = BlockValue::new(0, true, 1024).unwrap();
                             resp.message
                                 .add_option_as::<BlockValue>(CoapOption::Block2, block);
@@ -2376,16 +2395,14 @@ mod test {
                         }
                         ("bad_block", _, Some(_block2)) => {
                             // Client requests block 1, but we reply with block 99
-                            resp.message.header.code =
-                                MessageClass::Response(Status::Content);
+                            resp.message.header.code = MessageClass::Response(Status::Content);
                             let wrong_block = BlockValue::new(99, false, 1024).unwrap();
                             resp.message
                                 .add_option_as::<BlockValue>(CoapOption::Block2, wrong_block);
                             resp.message.payload = vec![b'z'; 1024];
                         }
                         _ => {
-                            resp.message.header.code =
-                                MessageClass::Response(Status::NotFound);
+                            resp.message.header.code = MessageClass::Response(Status::NotFound);
                         }
                     }
                 }
@@ -2467,7 +2484,9 @@ mod test {
                 .ok_or_else(|| Error::other("scripted peer exhausted"))?;
             let n = bytes.len();
             if n > buf.len() {
-                return Err(Error::other("scripted peer response exceeds receive buffer"));
+                return Err(Error::other(
+                    "scripted peer response exceeds receive buffer",
+                ));
             }
             buf[..n].copy_from_slice(&bytes);
             Ok((n, None))
