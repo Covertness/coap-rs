@@ -1103,9 +1103,10 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
     }
 
     /// Set the random factor applied to the timeout according to the CoAP specification.
+    /// Values below 1 are clamped to 1, and a value of 1.0 disables randomization.
     /// Defaults to [CoapClientTransport::DEFAULT_RANDOM_FACTOR].
     pub fn set_random_factor(&mut self, factor: f32) {
-        self.transport.random_factor = factor;
+        self.transport.random_factor = factor.max(1.0);
     }
 
     pub fn set_transport_retries(&mut self, num_retries: usize) {
