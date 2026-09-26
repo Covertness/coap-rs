@@ -383,9 +383,30 @@ pub struct Server {
 }
 
 impl Server {
-    /// Creates a CoAP server listening on the given address.
+    /// Creates a CoAP server listening on the given UDP address.
     pub fn new_udp<A: ToSocketAddrs>(addr: A) -> Result<Self, io::Error> {
         let listener: Vec<Box<dyn Listener>> = vec![Box::new(UdpCoapListener::new(addr)?)];
+        Ok(Self::from_listeners(listener))
+    }
+
+    /// Creates a CoAP server listening on the given TCP address (RFC 8323).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use coap::Server;
+    /// use coap_lite::{CoapRequest, RequestType as Method};
+    /// use std::net::SocketAddr;
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///     let mut server = Server::new_tcp("127.0.0.1:5683").await.unwrap();
+    ///     server.run(|req: Box<CoapRequest<SocketAddr>>| async { req }).await.unwrap();
+    /// }
+    /// ```
+    pub async fn new_tcp<A: tokio::net::ToSocketAddrs>(addr: A) -> Result<Self, io::Error> {
+        use crate::tcp::TcpCoapListener;
+        let listener: Vec<Box<dyn Listener>> = vec![Box::new(TcpCoapListener::new(addr).await?)];
         Ok(Self::from_listeners(listener))
     }
 
