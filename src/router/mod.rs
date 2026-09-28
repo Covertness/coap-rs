@@ -14,7 +14,7 @@ use handler::{BoxedHandler, Handler, HandlerWrapper};
 use method_routing::MethodRouter;
 pub use method_routing::{delete, fallback, get, post, put};
 pub use request::Request;
-use response::IntoResponse;
+use response::{IntoResponse, StatusCode};
 use route::{Route, RouteError};
 
 /// A simple router that matches incoming CoAP requests to registered handlers based on method and path.
@@ -107,7 +107,16 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
         match self.fallback {
             Some(ref fallback) => fallback.call(req, self.state.clone()).await,
             None => {
-                RouteError::NotFound.into_response().fill_response(&mut req);
+                match req.method() {
+                    Method::Get | Method::Delete | Method::Post | Method::Put => {
+                        RouteError::NotFound.into_response().fill_response(&mut req);
+                    }
+                    _ => {
+                        StatusCode::MethodNotAllowed
+                            .into_response()
+                            .fill_response(&mut req);
+                    }
+                }
                 req
             }
         }
