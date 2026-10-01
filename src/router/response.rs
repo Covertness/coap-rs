@@ -1,6 +1,7 @@
 //! Response types and traits for the router.
 
 use crate::router::request::Request;
+pub use coap_lite::CoapOption;
 pub use coap_lite::ResponseType as StatusCode;
 use std::convert::Infallible;
 
@@ -11,6 +12,8 @@ pub struct Response {
     pub status_code: Option<StatusCode>,
     /// The payload to include in the response message, if any.
     pub payload: Option<Vec<u8>>,
+    /// Additional CoAP options (e.g. `ContentFormat`) to add to the response message.
+    pub options: Vec<(CoapOption, Vec<u8>)>,
 }
 
 impl Response {
@@ -19,6 +22,7 @@ impl Response {
         Self {
             status_code: None,
             payload: None,
+            options: Vec::new(),
         }
     }
 
@@ -34,6 +38,12 @@ impl Response {
         self
     }
 
+    /// Adds a CoAP option to this response. `value` is the option's raw, already-encoded value.
+    pub fn add_option(mut self, option: CoapOption, value: Vec<u8>) -> Self {
+        self.options.push((option, value));
+        self
+    }
+
     /// Fills the given request's response with the response type and payload from this `Response`.
     ///
     /// This method consumes the `Response` and modifies the request's response in-place.
@@ -44,6 +54,9 @@ impl Response {
             }
             if let Some(payload) = &self.payload {
                 response.message.payload = payload.clone();
+            }
+            for (option, value) in self.options {
+                response.message.add_option(option, value);
             }
         }
     }
@@ -176,6 +189,15 @@ mod tests {
         let response = IntoResponse::into_response(response);
         assert_eq!(response.status_code, Some(StatusCode::NotFound));
         assert_eq!(response.payload, b"Not found".to_vec().into());
+    }
+
+    #[test]
+    fn test_options() {
+        let response = Response::new().add_option(CoapOption::ContentFormat, vec![64]);
+        assert_eq!(
+            response.options,
+            vec![(CoapOption::ContentFormat, vec![64])]
+        );
     }
 
     #[test]
