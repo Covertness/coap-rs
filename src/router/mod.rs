@@ -9,12 +9,14 @@ pub mod response;
 pub mod route;
 pub mod util;
 
+use crate::discovery::{write_link_format, Link, WELL_KNOWN_CORE};
+use coap_lite::ContentFormat;
 pub use coap_lite::RequestType as Method;
 use handler::{BoxedHandler, Handler, HandlerWrapper};
 use method_routing::MethodRouter;
 pub use method_routing::{delete, fallback, get, post, put};
 pub use request::Request;
-use response::IntoResponse;
+use response::{IntoResponse, StatusCode};
 use route::{Route, RouteError};
 
 /// A simple router that matches incoming CoAP requests to registered handlers based on method and path.
@@ -26,6 +28,8 @@ pub struct Router<S = ()> {
     fallback: Option<BoxedHandler<S>>,
     /// Shared application state available to handlers through the `State` extractor.
     state: S,
+    /// Whether resource discovery at `/.well-known/core` is disabled.
+    disable_discovery: bool,
 }
 
 impl<S: Clone + Default + Send + Sync + 'static> Router<S> {
@@ -42,6 +46,7 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
             routes: Vec::new(),
             fallback: None,
             state,
+            disable_discovery: false,
         }
     }
 
@@ -79,6 +84,30 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
         self
     }
 
+    /// Disables resource discovery at `/.well-known/core` if `value` is `true`.
+    ///
+    /// Resource discovery is enabled by default and is only used when no registered route matches.
+    pub fn disable_discovery(self, value: bool) -> Self {
+        Self {
+            disable_discovery: value,
+            ..self
+        }
+    }
+
+    /// Returns the links advertised by resource discovery.
+    ///
+    /// Routes with path parameters are not advertised.
+    pub fn links(&self) -> Vec<Link> {
+        self.routes
+            .iter()
+            .filter(|(route, _)| !route.has_params())
+            .map(|(route, method_router)| Link {
+                href: format!("/{}", route.path().trim_matches('/')),
+                attributes: method_router.link_attributes().to_vec(),
+            })
+            .collect()
+    }
+
     /// Handles an incoming request by matching it against the registered routes and calling the appropriate handler.
     ///
     /// If no routes match, the fallback handler will be called if it is set, otherwise a Not Found response will be returned.
@@ -95,8 +124,41 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
                 }
             }
         }
+        // No route matched, answer resource discovery requests
+        if !self.disable_discovery && req.method() == Method::Get && req.path() == WELL_KNOWN_CORE {
+            return self.handle_discovery(req);
+        }
         // No route matched, use fallback or return not found
         self.handle_fallback(req).await
+    }
+
+    /// Handler for resource discovery requests to `/.well-known/core`.
+    ///
+    /// Responds with the links of the router in the CoRE Link Format, filtered by the request queries.
+    fn handle_discovery(&self, mut req: Request) -> Request {
+        let queries = match req.query_as_vec() {
+            Ok(queries) => queries,
+            Err(_) => {
+                (StatusCode::BadRequest, "Invalid query string")
+                    .into_response()
+                    .fill_response(&mut req);
+                return req;
+            }
+        };
+        let links: Vec<Link> = self
+            .links()
+            .into_iter()
+            .filter(|link| queries.iter().all(|query| link.matches_query(query)))
+            .collect();
+        (StatusCode::Content, write_link_format(&links))
+            .into_response()
+            .fill_response(&mut req);
+        if let Some(response) = req.response_mut() {
+            response
+                .message
+                .set_content_format(ContentFormat::ApplicationLinkFormat);
+        }
+        req
     }
 
     /// Handler for when no routes match an incoming request.
@@ -118,6 +180,9 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
 /// Test utilities for the router module.
 pub(crate) mod test_utils {
     use crate::{
+        discovery::{
+            LINK_ATTR_INTERFACE_DESCRIPTION, LINK_ATTR_OBSERVABLE, LINK_ATTR_RESOURCE_TYPE,
+        },
         router::{
             extract::{Json, Path, Query, State},
             method_routing::{delete, fallback, get, post, put},
@@ -302,7 +367,9 @@ pub(crate) mod test_utils {
                 "/state",
                 delete(delete_state)
                     .get(get_state)
-                    .fallback(route_fallback_handler),
+                    .fallback(route_fallback_handler)
+                    .link_attribute(LINK_ATTR_RESOURCE_TYPE, "state")
+                    .link_flag(LINK_ATTR_OBSERVABLE),
             )
             .route(
                 "/state/property/{key}",
@@ -310,7 +377,13 @@ pub(crate) mod test_utils {
                     .post(post_property)
                     .delete(delete_property),
             )
-            .route("/property", get(get_property).post(post_property_query))
+            .route(
+                "/property",
+                get(get_property)
+                    .post(post_property_query)
+                    .link_attribute(LINK_ATTR_RESOURCE_TYPE, "property")
+                    .link_attribute(LINK_ATTR_INTERFACE_DESCRIPTION, "core.p"),
+            )
             .route(
                 "/property/{key}",
                 post(post_property)
@@ -341,7 +414,10 @@ mod tests {
     use super::response::StatusCode;
     use super::test_utils::*;
     use crate::client::UdpCoAPClient as Client;
-    use coap_lite::RequestType as Method;
+    use crate::discovery::Link;
+    use crate::request::RequestBuilder;
+    use crate::Server;
+    use coap_lite::{ContentFormat, RequestType as Method};
     use tokio::time::{sleep, Duration};
 
     #[tokio::test]
@@ -521,6 +597,142 @@ mod tests {
         assert_eq!(status, StatusCode::Valid);
         let payload = String::from_utf8(response.message.payload).unwrap();
         assert_eq!(payload, "");
+
+        server_handle.abort();
+        let _ = server_handle.await;
+    }
+
+    #[test]
+    fn test_links() {
+        let router = build_router();
+        let links = router.links();
+        assert_eq!(
+            links,
+            vec![
+                Link::new("/state").attribute("rt", "state").flag("obs"),
+                Link::new("/property")
+                    .attribute("rt", "property")
+                    .attribute("if", "core.p"),
+                Link::new("/fallback"),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_discovery() {
+        // Start the server in the background
+        let addr = "127.0.0.1:5685";
+        let server_handle = tokio::spawn(async move {
+            run_router(addr).await;
+        });
+        sleep(Duration::from_millis(100)).await;
+
+        // Get all resources
+        let response = Client::get(&format!("coap://{}/.well-known/core", addr)).await;
+        assert!(response.is_ok());
+        let response = response.unwrap();
+        let status = *response.get_status();
+        let content_format = response.message.get_content_format();
+        let payload = String::from_utf8(response.message.payload).unwrap();
+        assert_eq!(status, StatusCode::Content);
+        assert_eq!(content_format, Some(ContentFormat::ApplicationLinkFormat));
+        assert_eq!(
+            payload,
+            r#"</state>;rt=state;obs,</property>;rt=property;if="core.p",</fallback>"#
+        );
+
+        // Discover all resources
+        let links = Client::discover(&format!("coap://{}", addr)).await;
+        assert!(links.is_ok());
+        let links = links.unwrap();
+        assert_eq!(links, build_router().links());
+
+        // Filter resources by resource type
+        let links = Client::discover(&format!("coap://{}?rt=prop*", addr)).await;
+        assert!(links.is_ok());
+        let links = links.unwrap();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].href, "/property");
+
+        // Filter resources by href
+        let links = Client::discover(&format!("coap://{}?href=/state", addr)).await;
+        assert!(links.is_ok());
+        let links = links.unwrap();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].href, "/state");
+
+        // Filter resources with a percent-encoded query
+        let links = Client::discover(&format!("coap://{}?if=core%2Ep", addr)).await;
+        assert!(links.is_ok());
+        let links = links.unwrap();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].href, "/property");
+
+        // Filter resources without match
+        let links = Client::discover(&format!("coap://{}?rt=unknown", addr)).await;
+        assert!(links.is_ok());
+        assert!(links.unwrap().is_empty());
+
+        // Discover resources with a timeout
+        let links = Client::discover_with_timeout(
+            &format!("coap://{}?rt=state", addr),
+            Duration::from_secs(1),
+        )
+        .await;
+        assert!(links.is_ok());
+        let links = links.unwrap();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].href, "/state");
+
+        // Invalid UTF-8 in query (should return bad request)
+        let client = Client::new(addr).await.unwrap();
+        let request = RequestBuilder::new("/.well-known/core", Method::Get)
+            .queries(vec![vec![0xff]])
+            .build();
+        let response = client.send(request).await;
+        assert!(response.is_ok());
+        let response = response.unwrap();
+        let status = *response.get_status();
+        let payload = String::from_utf8(response.message.payload).unwrap();
+        assert_eq!(status, StatusCode::BadRequest);
+        assert_eq!(payload, "Invalid query string");
+
+        // Other methods are not handled by discovery (should trigger global fallback)
+        let response = Client::post(&format!("coap://{}/.well-known/core", addr), Vec::new()).await;
+        assert!(response.is_ok());
+        let response = response.unwrap();
+        let status = *response.get_status();
+        let payload = String::from_utf8(response.message.payload).unwrap();
+        assert_eq!(status, StatusCode::BadRequest);
+        assert_eq!(payload, "Fallback response");
+
+        server_handle.abort();
+        let _ = server_handle.await;
+    }
+
+    #[tokio::test]
+    async fn test_disable_discovery() {
+        // Start the server in the background
+        let addr = "127.0.0.1:5686";
+        let server_handle = tokio::spawn(async move {
+            let router = build_router().disable_discovery(true);
+            let server = Server::new_udp(addr).unwrap();
+            server.serve(router).await.unwrap();
+        });
+        sleep(Duration::from_millis(100)).await;
+
+        // Discovery is disabled (should trigger global fallback)
+        let response = Client::get(&format!("coap://{}/.well-known/core", addr)).await;
+        assert!(response.is_ok());
+        let response = response.unwrap();
+        let status = *response.get_status();
+        let payload = String::from_utf8(response.message.payload).unwrap();
+        assert_eq!(status, StatusCode::BadRequest);
+        assert_eq!(payload, "Fallback response");
+
+        // Client discovery fails
+        let links = Client::discover(&format!("coap://{}", addr)).await;
+        assert!(links.is_err());
 
         server_handle.abort();
         let _ = server_handle.await;

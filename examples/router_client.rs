@@ -7,6 +7,9 @@ use std::io::ErrorKind;
 
 #[tokio::main]
 async fn main() {
+    println!("Discover resources:");
+    example_discover().await;
+
     println!("GET url:");
     example_get().await;
 
@@ -15,6 +18,26 @@ async fn main() {
 
     println!("GET url again:");
     example_get().await;
+}
+
+async fn example_discover() {
+    let url = "coap://127.0.0.1:5683?rt=temperature";
+    println!("Client request: {}", url);
+
+    match UdpCoAPClient::discover(url).await {
+        Ok(links) => {
+            for link in links {
+                println!("Server resource: {} {:?}", link.href, link.attributes);
+            }
+        }
+        Err(e) => {
+            match e.kind() {
+                ErrorKind::WouldBlock => println!("Request timeout"), // Unix
+                ErrorKind::TimedOut => println!("Request timeout"),   // Windows
+                _ => println!("Request error: {:?}", e),
+            }
+        }
+    }
 }
 
 async fn example_get() {

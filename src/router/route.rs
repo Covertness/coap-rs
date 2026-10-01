@@ -50,6 +50,8 @@ impl IntoResponse for RouteError {
 /// A route definition, including the HTTP method, the route pattern, and the compiled regex for matching.
 #[derive(Debug, Clone)]
 pub struct Route {
+    /// The route pattern this route was created from.
+    path: String,
     /// The compiled regex pattern for matching request paths against this route.
     regex: Regex,
     /// The names of the path parameters in the order they appear in the route pattern.
@@ -62,7 +64,21 @@ impl Route {
         let route = route.to_string();
         let (regex, param_names) = Self::build_regex(&route);
 
-        Route { regex, param_names }
+        Route {
+            path: route,
+            regex,
+            param_names,
+        }
+    }
+
+    /// Returns the route pattern this route was created from.
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    /// Returns `true` if the route pattern contains path parameters.
+    pub fn has_params(&self) -> bool {
+        !self.param_names.is_empty()
     }
 
     /// Build a regex pattern from a route string

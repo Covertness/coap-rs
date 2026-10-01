@@ -16,6 +16,8 @@ pub struct MethodRouter<S> {
     put: Option<BoxedHandler<S>>,
     /// Optional fallback handler that is called when no method-specific handler matches.
     fallback: Option<BoxedHandler<S>>,
+    /// Link attributes advertised for this route by resource discovery.
+    link_attributes: Vec<(String, Option<String>)>,
 }
 
 impl<S: Clone + Send + Sync + 'static> MethodRouter<S> {
@@ -86,6 +88,28 @@ impl<S: Clone + Send + Sync + 'static> MethodRouter<S> {
         }
     }
 
+    /// Adds a link attribute with a value to this method router that is advertised by resource
+    /// discovery.
+    pub fn link_attribute(mut self, key: impl ToString, value: impl ToString) -> Self {
+        self.link_attributes
+            .push((key.to_string(), Some(value.to_string())));
+        self
+    }
+
+    /// Adds a link attribute without a value (e.g. `obs`) to this method router that is
+    /// advertised by resource discovery.
+    pub fn link_flag(mut self, key: impl ToString) -> Self {
+        self.link_attributes.push((key.to_string(), None));
+        self
+    }
+
+    /// Returns the link attributes advertised for this route by resource discovery.
+    ///
+    /// Attributes without a value (e.g. `obs`) have `None` as value.
+    pub fn link_attributes(&self) -> &[(String, Option<String>)] {
+        &self.link_attributes
+    }
+
     /// Tries to handle the given request using the handler for its method, if it exists.
     /// If the handler returns an error, the fallback handler will be tried if it exists.
     /// If no handler matches, the request is returned as an error.
@@ -121,6 +145,7 @@ where
         post: None,
         put: None,
         fallback: None,
+        link_attributes: Vec::new(),
     }
 }
 
@@ -138,6 +163,7 @@ where
         post: None,
         put: None,
         fallback: None,
+        link_attributes: Vec::new(),
     }
 }
 
@@ -155,6 +181,7 @@ where
         post: Some(handler),
         put: None,
         fallback: None,
+        link_attributes: Vec::new(),
     }
 }
 
@@ -172,6 +199,7 @@ where
         post: None,
         put: Some(handler),
         fallback: None,
+        link_attributes: Vec::new(),
     }
 }
 
@@ -189,5 +217,6 @@ where
         post: None,
         put: None,
         fallback: Some(handler),
+        link_attributes: Vec::new(),
     }
 }

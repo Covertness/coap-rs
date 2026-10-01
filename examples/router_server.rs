@@ -1,6 +1,7 @@
 extern crate coap;
 
 use coap::{
+    discovery::LINK_ATTR_RESOURCE_TYPE,
     router::{
         extract::{Json, Path, Query, State},
         get, post, Router,
@@ -58,7 +59,10 @@ async fn main() {
     }));
 
     let router = Router::new()
-        .route("/temperature", get(get_temperature))
+        .route(
+            "/temperature",
+            get(get_temperature).link_attribute(LINK_ATTR_RESOURCE_TYPE, "temperature"),
+        )
         .route("/temperature/{room}", post(set_temperature))
         .with_state(state);
 

@@ -13,6 +13,7 @@ Features:
 - CoAP Observe option [RFC 7641](https://tools.ietf.org/rfc/rfc7641.txt)
 - *Too Many Requests* Response Code [RFC 8516](https://tools.ietf.org/html/rfc8516)
 - Block-Wise Transfers [RFC 7959](https://tools.ietf.org/html/rfc7959)
+- CoRE Resource Discovery [RFC 6690](https://tools.ietf.org/html/rfc6690)
 - DTLS support via [webrtc-rs](https://github.com/webrtc-rs/webrtc)
 - EDHOC key exchange [RFC 9528](https://tools.ietf.org/html/rfc9528) via [lakers](https://github.com/openwsn-berkeley/lakers)
 - Option to provide custom transports for client and server
@@ -35,6 +36,7 @@ tokio = {version = "^1.32", features = ["full"]}
 ### Server:
 ```rust
 use coap::{
+    discovery::LINK_ATTR_RESOURCE_TYPE,
     router::{
         extract::{Json, Path, Query, State},
         get, post, Router,
@@ -88,7 +90,10 @@ async fn main() {
     }));
 
     let router = Router::new()
-        .route("/temperature", get(get_temperature))
+        .route(
+            "/temperature",
+            get(get_temperature).link_attribute(LINK_ATTR_RESOURCE_TYPE, "temperature"),
+        )
         .route("/temperature/{room}", post(set_temperature))
         .with_state(state);
 
@@ -110,6 +115,22 @@ async fn main() {
 
     let response = UdpCoAPClient::get(url).await.unwrap();
     println!("Server reply: {}", String::from_utf8(response.message.payload).unwrap());
+}
+```
+
+### Resource Discovery:
+```rust
+use coap::UdpCoAPClient;
+
+#[tokio::main]
+async fn main() {
+    let url = "coap://127.0.0.1:5683?rt=temperature";
+    println!("Client request: {}", url);
+
+    let links = UdpCoAPClient::discover(url).await.unwrap();
+    for link in links {
+        println!("Server resource: {} {:?}", link.href, link.attributes);
+    }
 }
 ```
 
