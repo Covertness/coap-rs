@@ -35,7 +35,6 @@ tokio = {version = "^1.32", features = ["full"]}
 ### Server:
 ```rust
 use coap::{
-    discovery::LINK_ATTR_RESOURCE_TYPE,
     router::{
         extract::{Json, Path, Query, State},
         get, post, Router,
@@ -89,10 +88,7 @@ async fn main() {
     }));
 
     let router = Router::new()
-        .route(
-            "/temperature",
-            get(get_temperature).link_attribute(LINK_ATTR_RESOURCE_TYPE, "temperature"),
-        )
+        .route("/temperature", get(get_temperature))
         .route("/temperature/{room}", post(set_temperature))
         .with_state(state);
 
@@ -118,6 +114,17 @@ async fn main() {
 ```
 
 ### Resource Discovery:
+Resource discovery at `/.well-known/core` is disabled by default. Enable it on the router and optionally add link attributes to routes:
+```rust
+let router = Router::new()
+    .route(
+        "/temperature",
+        get(get_temperature).link_attribute(LINK_ATTR_RESOURCE_TYPE, "temperature"),
+    )
+    .enable_discovery(true);
+```
+
+Discover the resources with the client:
 ```rust
 use coap::UdpCoAPClient;
 

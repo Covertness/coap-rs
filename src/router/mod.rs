@@ -28,8 +28,8 @@ pub struct Router<S = ()> {
     fallback: Option<BoxedHandler<S>>,
     /// Shared application state available to handlers through the `State` extractor.
     state: S,
-    /// Whether resource discovery at `/.well-known/core` is disabled.
-    disable_discovery: bool,
+    /// Whether resource discovery at `/.well-known/core` is enabled.
+    enable_discovery: bool,
 }
 
 impl<S: Clone + Default + Send + Sync + 'static> Router<S> {
@@ -46,7 +46,7 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
             routes: Vec::new(),
             fallback: None,
             state,
-            disable_discovery: false,
+            enable_discovery: false,
         }
     }
 
@@ -84,12 +84,12 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
         self
     }
 
-    /// Disables resource discovery at `/.well-known/core` if `value` is `true`.
+    /// Enables resource discovery at `/.well-known/core` if `value` is `true`.
     ///
-    /// Resource discovery is enabled by default and is only used when no registered route matches.
-    pub fn disable_discovery(self, value: bool) -> Self {
+    /// Resource discovery is disabled by default and is only used when no registered route matches.
+    pub fn enable_discovery(self, value: bool) -> Self {
         Self {
-            disable_discovery: value,
+            enable_discovery: value,
             ..self
         }
     }
@@ -125,7 +125,7 @@ impl<S: Clone + Send + Sync + 'static> Router<S> {
             }
         }
         // No route matched, answer resource discovery requests
-        if !self.disable_discovery && req.method() == Method::Get && req.path() == WELL_KNOWN_CORE {
+        if self.enable_discovery && req.method() == Method::Get && req.path() == WELL_KNOWN_CORE {
             return self.handle_discovery(req);
         }
         // No route matched, use fallback or return not found
@@ -623,7 +623,9 @@ mod tests {
         // Start the server in the background
         let addr = "127.0.0.1:5685";
         let server_handle = tokio::spawn(async move {
-            run_router(addr).await;
+            let router = build_router().enable_discovery(true);
+            let server = Server::new_udp(addr).unwrap();
+            server.serve(router).await.unwrap();
         });
         sleep(Duration::from_millis(100)).await;
 
@@ -711,17 +713,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_disable_discovery() {
+    async fn test_discovery_disabled_by_default() {
         // Start the server in the background
         let addr = "127.0.0.1:5686";
         let server_handle = tokio::spawn(async move {
-            let router = build_router().disable_discovery(true);
-            let server = Server::new_udp(addr).unwrap();
-            server.serve(router).await.unwrap();
+            run_router(addr).await;
         });
         sleep(Duration::from_millis(100)).await;
 
-        // Discovery is disabled (should trigger global fallback)
+        // Discovery is disabled by default (should trigger global fallback)
         let response = Client::get(&format!("coap://{}/.well-known/core", addr)).await;
         assert!(response.is_ok());
         let response = response.unwrap();
