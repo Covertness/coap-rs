@@ -241,9 +241,8 @@ impl<T: ClientTransport> Clone for CoapClientTransport<T> {
 }
 
 impl<T: ClientTransport> CoapClientTransport<T> {
-    /// Total number of attempts for confirmable messages.
-    /// Corresponds to MAX_RETRANSMIT + 1 (includes first attempt).
-    pub const DEFAULT_NUM_RETRIES: usize = 5;
+    /// Number of retransmissions for confirmable messages (MAX_RETRANSMIT).
+    pub const DEFAULT_NUM_RETRIES: usize = 4;
 
     /// Random factor used for calculating retransmission timeouts.
     /// Matches ACK_RANDOM_FACTOR.
@@ -265,7 +264,7 @@ impl<T: ClientTransport> CoapClientTransport<T> {
         let mut res = Err(Error::new(ErrorKind::InvalidData, "not enough retries"));
         let factor = rand::random_range(1.0..=self.random_factor);
         let mut random_timeout = self.timeout.mul_f32(factor);
-        for _ in 0..self.retries {
+        for _ in 0..=self.retries {
             res = self
                 .try_send_non_confirmable_message(msg, receiver, random_timeout)
                 .await;
@@ -1128,6 +1127,10 @@ impl<T: ClientTransport + 'static> CoAPClient<T> {
         self.transport.random_factor = factor.max(1.0);
     }
 
+    /// Set the maximum number of retries after the initial confirmable message.
+    ///
+    /// Defaults to 4, for up to 5 total attempts. Zero sends only the initial
+    /// message. Non-confirmable messages are not retried.
     pub fn set_transport_retries(&mut self, num_retries: usize) {
         self.transport.retries = num_retries;
     }
@@ -2021,7 +2024,7 @@ mod test {
         let server_addr = format!("127.0.0.1:{}", server_port);
         let mut client = get_faulty_client(
             &server_addr,
-            CoapClientTransport::<FaultyUdp>::DEFAULT_NUM_RETRIES as u32 + 1,
+            CoapClientTransport::<FaultyUdp>::DEFAULT_NUM_RETRIES as u32 + 2,
         )
         .await;
         let request_gen = || {
@@ -2034,11 +2037,81 @@ mod test {
         //this request will work, we do this to reset the state of the faulty udp
         client.send(request_gen()).await.unwrap();
 
-        client.set_transport_retries(CoapClientTransport::<UdpTransport>::DEFAULT_NUM_RETRIES + 2);
+        client.set_transport_retries(CoapClientTransport::<UdpTransport>::DEFAULT_NUM_RETRIES + 1);
         let resp = client.send(request_gen()).await.unwrap();
 
         assert_eq!(resp.message.payload, b"Rust".to_vec());
     }
+
+    struct CountingTransport(AtomicU32);
+
+    #[async_trait]
+    impl ClientTransport for CountingTransport {
+        async fn recv(&self, _buf: &mut [u8]) -> IoResult<(usize, Option<SocketAddr>)> {
+            std::future::pending().await
+        }
+
+        async fn send(&self, buf: &[u8]) -> IoResult<usize> {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            Ok(buf.len())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_retry_attempt_counts() {
+        for (retries, message_type, expected_attempts) in [
+            (None, MessageType::Confirmable, 5),
+            (Some(0), MessageType::Confirmable, 1),
+            (Some(1), MessageType::Confirmable, 2),
+            (Some(2), MessageType::Confirmable, 3),
+            (Some(2), MessageType::NonConfirmable, 1),
+        ] {
+            let counter = Arc::new(CountingTransport(AtomicU32::new(0)));
+            let mut transport =
+                CoapClientTransport::from_transport(counter.clone(), TransportSynchronizer::new());
+            if let Some(retries) = retries {
+                transport.retries = retries;
+            }
+            transport.timeout = Duration::ZERO;
+            transport.random_factor = 1.0;
+            let mut message = Message::new();
+            message.header.set_type(message_type);
+            let packet = Packet {
+                address: None,
+                message,
+            };
+            let (_sender, mut receiver) = unbounded_channel();
+
+            let error = transport
+                .do_request_response_for_packet_inner(&packet, &mut receiver)
+                .await
+                .unwrap_err();
+            assert_eq!(error.kind(), ErrorKind::TimedOut);
+            assert_eq!(counter.0.load(Ordering::Relaxed), expected_attempts);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_retries_stop_after_response() {
+        let counter = Arc::new(CountingTransport(AtomicU32::new(0)));
+        let transport =
+            CoapClientTransport::from_transport(counter.clone(), TransportSynchronizer::new());
+        let mut message = Message::new();
+        message.header.set_type(MessageType::Confirmable);
+        let packet = Packet {
+            address: None,
+            message,
+        };
+        let (sender, mut receiver) = unbounded_channel();
+        sender.send(Ok(packet.clone())).unwrap();
+
+        transport
+            .do_request_response_for_packet_inner(&packet, &mut receiver)
+            .await
+            .unwrap();
+        assert_eq!(counter.0.load(Ordering::Relaxed), 1);
+    }
+
     #[tokio::test]
     async fn test_non_confirmable_no_retries() {
         let server_port = server::test::spawn_server("127.0.0.1:0", |mut req| async {

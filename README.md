@@ -114,6 +114,11 @@ async fn main() {
 }
 ```
 
+Confirmable requests are sent once and retried up to four times by default.
+Use `set_transport_retries` to change the number of retries after the initial
+attempt; setting it to zero disables retries. Non-confirmable requests are
+never retried.
+
 ### Resource Discovery:
 Resource discovery at `/.well-known/core` is disabled by default. Enable it on the router and optionally add link attributes to routes:
 ```rust
